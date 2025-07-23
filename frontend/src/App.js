@@ -388,20 +388,249 @@ function AdminDashboard({ currentView, setCurrentView }) {
 }
 
 // Admin Dashboard Components
-function AdminDashboardHome() {
+function AdminDashboardHome({ analytics }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">📊 Overview</h3>
-        <p className="text-gray-600">Manage your quiz platform from here</p>
+    <div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-blue-100 text-blue-600">
+              👥
+            </div>
+            <div className="ml-4">
+              <h3 className="text-sm font-medium text-gray-500">Total Users</h3>
+              <p className="text-2xl font-semibold text-gray-900">{analytics.total_users || 0}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-green-100 text-green-600">
+              📝
+            </div>
+            <div className="ml-4">
+              <h3 className="text-sm font-medium text-gray-500">Total Quizzes</h3>
+              <p className="text-2xl font-semibold text-gray-900">{analytics.total_quizzes || 0}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-purple-100 text-purple-600">
+              📊
+            </div>
+            <div className="ml-4">
+              <h3 className="text-sm font-medium text-gray-500">Total Attempts</h3>
+              <p className="text-2xl font-semibold text-gray-900">{analytics.total_attempts || 0}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
+              🎯
+            </div>
+            <div className="ml-4">
+              <h3 className="text-sm font-medium text-gray-500">Average Score</h3>
+              <p className="text-2xl font-semibold text-gray-900">{analytics.average_score || 0}%</p>
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">👥 Users</h3>
-        <p className="text-gray-600">View and manage registered users</p>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">📈 Platform Overview</h3>
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Most Popular Quiz:</span>
+              <span className="font-medium">{analytics.most_popular_quiz || 'None'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Platform Status:</span>
+              <span className="text-green-600 font-medium">Active</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">🚀 Quick Actions</h3>
+          <div className="space-y-2">
+            <p className="text-gray-600">• Create new quizzes and manage content</p>
+            <p className="text-gray-600">• View detailed user test results</p>
+            <p className="text-gray-600">• Manage user accounts and permissions</p>
+            <p className="text-gray-600">• Organize quizzes by categories</p>
+          </div>
+        </div>
       </div>
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">📝 Quizzes</h3>
-        <p className="text-gray-600">Create and manage quizzes</p>
+    </div>
+  );
+}
+
+function AdminResultsView({ results }) {
+  const [filterBy, setFilterBy] = useState('all');
+  const [sortBy, setSortBy] = useState('date_desc');
+  
+  // Filter and sort results
+  const filteredAndSortedResults = results
+    .filter(result => {
+      if (filterBy === 'all') return true;
+      if (filterBy === 'high_score') return result.percentage >= 80;
+      if (filterBy === 'low_score') return result.percentage < 60;
+      return true;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'date_desc':
+          return new Date(b.attempted_at) - new Date(a.attempted_at);
+        case 'date_asc':
+          return new Date(a.attempted_at) - new Date(b.attempted_at);
+        case 'score_desc':
+          return b.percentage - a.percentage;
+        case 'score_asc':
+          return a.percentage - b.percentage;
+        case 'user_name':
+          return a.user.name.localeCompare(b.user.name);
+        default:
+          return 0;
+      }
+    });
+
+  const getScoreColor = (percentage) => {
+    if (percentage >= 80) return 'text-green-600 bg-green-100';
+    if (percentage >= 60) return 'text-yellow-600 bg-yellow-100';
+    return 'text-red-600 bg-red-100';
+  };
+
+  const getScoreBadge = (percentage) => {
+    if (percentage >= 80) return 'Excellent';
+    if (percentage >= 60) return 'Good';
+    return 'Needs Improvement';
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-gray-800">📈 User Test Results</h2>
+        <div className="flex gap-4">
+          <select
+            value={filterBy}
+            onChange={(e) => setFilterBy(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="all">All Results</option>
+            <option value="high_score">High Scores (80%+)</option>
+            <option value="low_score">Low Scores (&lt;60%)</option>
+          </select>
+          
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="date_desc">Newest First</option>
+            <option value="date_asc">Oldest First</option>
+            <option value="score_desc">Highest Score</option>
+            <option value="score_asc">Lowest Score</option>
+            <option value="user_name">User Name</option>
+          </select>
+        </div>
+      </div>
+
+      {filteredAndSortedResults.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500 text-lg">No test results found.</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b bg-gray-50">
+                <th className="text-left py-3 px-4 font-medium text-gray-700">User</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Quiz</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Category</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Score</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Percentage</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Performance</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-700">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAndSortedResults.map((result, index) => (
+                <tr key={index} className="border-b hover:bg-gray-50">
+                  <td className="py-3 px-4">
+                    <div>
+                      <p className="font-semibold text-gray-800">{result.user.name}</p>
+                      <p className="text-sm text-gray-500">{result.user.email}</p>
+                    </div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <p className="font-medium text-gray-800">{result.quiz.title}</p>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="inline-block px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded">
+                      {result.quiz.category}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <p className="font-semibold">{result.score}/{result.total_questions}</p>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className={`inline-block px-2 py-1 rounded text-sm font-semibold ${getScoreColor(result.percentage)}`}>
+                      {result.percentage.toFixed(1)}%
+                    </span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getScoreColor(result.percentage)}`}>
+                      {getScoreBadge(result.percentage)}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <p className="text-sm text-gray-600">
+                      {new Date(result.attempted_at).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(result.attempted_at).toLocaleTimeString()}
+                    </p>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      
+      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+        <h3 className="font-semibold text-gray-800 mb-2">📊 Summary Statistics</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+          <div>
+            <p className="text-gray-600">Total Results:</p>
+            <p className="font-semibold">{filteredAndSortedResults.length}</p>
+          </div>
+          <div>
+            <p className="text-gray-600">High Scores (80%+):</p>
+            <p className="font-semibold text-green-600">
+              {filteredAndSortedResults.filter(r => r.percentage >= 80).length}
+            </p>
+          </div>
+          <div>
+            <p className="text-gray-600">Average Score:</p>
+            <p className="font-semibold">
+              {filteredAndSortedResults.length > 0 
+                ? (filteredAndSortedResults.reduce((sum, r) => sum + r.percentage, 0) / filteredAndSortedResults.length).toFixed(1)
+                : 0}%
+            </p>
+          </div>
+          <div>
+            <p className="text-gray-600">Low Scores (&lt;60%):</p>
+            <p className="font-semibold text-red-600">
+              {filteredAndSortedResults.filter(r => r.percentage < 60).length}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
