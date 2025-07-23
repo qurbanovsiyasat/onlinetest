@@ -651,6 +651,15 @@ class OnlineTestMakerAPITester:
         self.test_admin_create_quiz()
         self.test_user_create_quiz_forbidden()
         
+        # NEW: Test recently fixed admin quizzes endpoint
+        self.test_admin_get_quizzes()
+        
+        # NEW: Test image upload functionality
+        self.test_admin_upload_image()
+        self.test_get_image()
+        self.test_user_upload_image_forbidden()
+        self.test_admin_create_quiz_with_image()
+        
         # User operations
         self.test_user_get_quizzes()
         self.test_user_take_quiz()
