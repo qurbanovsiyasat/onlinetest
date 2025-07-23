@@ -449,6 +449,10 @@ async def get_all_quiz_results(admin_user: User = Depends(get_admin_user)):
     # Enrich attempts with user and quiz information
     enriched_results = []
     for attempt in attempts:
+        # Skip attempts without user_id (old data)
+        if 'user_id' not in attempt:
+            continue
+            
         # Get user info
         user = await db.users.find_one({"id": attempt["user_id"]})
         user_info = {
