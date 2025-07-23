@@ -528,8 +528,59 @@ function AdminCreateQuiz({ setCurrentView }) {
       { text: '', is_correct: false },
       { text: '', is_correct: false },
       { text: '', is_correct: false }
-    ]
+    ],
+    image_url: null
   });
+
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const uploadImage = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      setUploadingImage(true);
+      const response = await apiCall('/admin/upload-image', {
+        method: 'POST',
+        data: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      return response.data.url;
+    } catch (error) {
+      alert('Error uploading image: ' + (error.response?.data?.detail || 'Unknown error'));
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      return;
+    }
+
+    const imageUrl = await uploadImage(file);
+    if (imageUrl) {
+      setCurrentQuestion({ ...currentQuestion, image_url: imageUrl });
+    }
+  };
+
+  const removeImage = () => {
+    setCurrentQuestion({ ...currentQuestion, image_url: null });
+  };
 
   const addQuestion = () => {
     if (!currentQuestion.question_text || !currentQuestion.options.every(opt => opt.text) || !currentQuestion.options.some(opt => opt.is_correct)) {
@@ -549,7 +600,8 @@ function AdminCreateQuiz({ setCurrentView }) {
         { text: '', is_correct: false },
         { text: '', is_correct: false },
         { text: '', is_correct: false }
-      ]
+      ],
+      image_url: null
     });
   };
 
@@ -567,7 +619,7 @@ function AdminCreateQuiz({ setCurrentView }) {
       alert('Quiz created successfully!');
       setCurrentView('quizzes');
     } catch (error) {
-      alert('Error creating quiz');
+      alert('Error creating quiz: ' + (error.response?.data?.detail || 'Unknown error'));
     }
   };
 
@@ -625,6 +677,58 @@ function AdminCreateQuiz({ setCurrentView }) {
           />
         </div>
 
+        {/* Image Upload Section */}
+        <div className="mb-4">
+          <label className="block text-gray-700 font-semibold mb-2">Question Image (Optional)</label>
+          {!currentQuestion.image_url ? (
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                id="imageUpload"
+                disabled={uploadingImage}
+              />
+              <label
+                htmlFor="imageUpload"
+                className={`cursor-pointer inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 ${
+                  uploadingImage ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                {uploadingImage ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    📷 Upload Image
+                  </>
+                )}
+              </label>
+              <p className="text-sm text-gray-500 mt-2">
+                Supported formats: JPG, PNG, GIF, WEBP (max 5MB)
+              </p>
+            </div>
+          ) : (
+            <div className="relative">
+              <img
+                src={currentQuestion.image_url}
+                alt="Question"
+                className="max-w-full h-auto rounded-lg shadow"
+                style={{ maxHeight: '300px' }}
+              />
+              <button
+                onClick={removeImage}
+                className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-700 transition duration-200"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="mb-4">
           <label className="block text-gray-700 font-semibold mb-2">Options</label>
           {currentQuestion.options.map((option, index) => (
@@ -673,6 +777,16 @@ function AdminCreateQuiz({ setCurrentView }) {
             {quiz.questions.map((question, index) => (
               <div key={index} className="bg-blue-50 p-4 rounded-lg">
                 <p className="font-semibold mb-2">{index + 1}. {question.question_text}</p>
+                {question.image_url && (
+                  <div className="mb-3">
+                    <img
+                      src={question.image_url}
+                      alt="Question"
+                      className="max-w-full h-auto rounded-lg shadow"
+                      style={{ maxHeight: '200px' }}
+                    />
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-2">
                   {question.options.map((option, optIndex) => (
                     <div key={optIndex} className={`p-2 rounded ${option.is_correct ? 'bg-green-100 text-green-800' : 'bg-gray-100'}`}>
