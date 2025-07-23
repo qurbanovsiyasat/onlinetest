@@ -612,6 +612,150 @@ class OnlineTestMakerAPITester:
         except Exception as e:
             return self.log_test("Admin Create Quiz with Image", False, f"Error: {str(e)}")
 
+    def test_admin_get_quiz_results(self):
+        """Test admin getting all quiz results"""
+        if not self.admin_token:
+            return self.log_test("Admin Get Quiz Results", False, "No admin token available")
+            
+        try:
+            response = requests.get(
+                f"{self.api_url}/admin/quiz-results",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                results = response.json()
+                details += f", Results Count: {len(results)}"
+                if len(results) > 0:
+                    first_result = results[0]
+                    details += f", First Result Score: {first_result.get('score', 0)}/{first_result.get('total_questions', 0)}"
+                    details += f", User: {first_result.get('user', {}).get('name', 'Unknown')}"
+                    details += f", Quiz: {first_result.get('quiz', {}).get('title', 'Unknown')}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Get Quiz Results", success, details)
+        except Exception as e:
+            return self.log_test("Admin Get Quiz Results", False, f"Error: {str(e)}")
+
+    def test_admin_get_analytics_summary(self):
+        """Test admin getting analytics summary"""
+        if not self.admin_token:
+            return self.log_test("Admin Get Analytics Summary", False, "No admin token available")
+            
+        try:
+            response = requests.get(
+                f"{self.api_url}/admin/analytics/summary",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                analytics = response.json()
+                details += f", Total Users: {analytics.get('total_users', 0)}"
+                details += f", Total Quizzes: {analytics.get('total_quizzes', 0)}"
+                details += f", Total Attempts: {analytics.get('total_attempts', 0)}"
+                details += f", Avg Score: {analytics.get('average_score', 0)}%"
+                details += f", Popular Quiz: {analytics.get('most_popular_quiz', 'None')}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Get Analytics Summary", success, details)
+        except Exception as e:
+            return self.log_test("Admin Get Analytics Summary", False, f"Error: {str(e)}")
+
+    def test_admin_get_user_quiz_results(self):
+        """Test admin getting quiz results for specific user"""
+        if not self.admin_token:
+            return self.log_test("Admin Get User Quiz Results", False, "No admin token available")
+        
+        # First get a user ID from the users list
+        try:
+            users_response = requests.get(
+                f"{self.api_url}/admin/users",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            if users_response.status_code != 200:
+                return self.log_test("Admin Get User Quiz Results", False, "Could not get users list")
+            
+            users = users_response.json()
+            test_user = None
+            for user in users:
+                if user.get('role') == 'user':
+                    test_user = user
+                    break
+            
+            if not test_user:
+                return self.log_test("Admin Get User Quiz Results", False, "No test user found")
+            
+            user_id = test_user.get('id')
+            response = requests.get(
+                f"{self.api_url}/admin/quiz-results/user/{user_id}",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                results = response.json()
+                details += f", User Results Count: {len(results)}"
+                details += f", User: {test_user.get('name', 'Unknown')}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Get User Quiz Results", success, details)
+        except Exception as e:
+            return self.log_test("Admin Get User Quiz Results", False, f"Error: {str(e)}")
+
+    def test_admin_get_quiz_specific_results(self):
+        """Test admin getting results for specific quiz"""
+        if not self.admin_token or not self.created_quiz_id:
+            return self.log_test("Admin Get Quiz Specific Results", False, "No admin token or quiz ID available")
+            
+        try:
+            response = requests.get(
+                f"{self.api_url}/admin/quiz-results/quiz/{self.created_quiz_id}",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                results = response.json()
+                details += f", Quiz Results Count: {len(results)}"
+                details += f", Quiz ID: {self.created_quiz_id}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Get Quiz Specific Results", success, details)
+        except Exception as e:
+            return self.log_test("Admin Get Quiz Specific Results", False, f"Error: {str(e)}")
+
+    def test_user_access_quiz_results_forbidden(self):
+        """Test user trying to access quiz results (should fail)"""
+        if not self.user_token:
+            return self.log_test("User Access Quiz Results (Forbidden)", False, "No user token available")
+            
+        try:
+            response = requests.get(
+                f"{self.api_url}/admin/quiz-results",
+                headers=self.get_auth_headers(self.user_token),
+                timeout=10
+            )
+            success = response.status_code == 403  # Should be forbidden
+            details = f"Status: {response.status_code} (Expected 403)"
+            return self.log_test("User Access Quiz Results (Forbidden)", success, details)
+        except Exception as e:
+            return self.log_test("User Access Quiz Results (Forbidden)", False, f"Error: {str(e)}")
+
     def test_unauthorized_access(self):
         """Test accessing protected endpoints without token"""
         try:
