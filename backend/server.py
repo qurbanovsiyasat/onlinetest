@@ -246,7 +246,22 @@ async def create_quiz(quiz_data: QuizCreate, admin_user: User = Depends(get_admi
 async def get_all_quizzes_admin(admin_user: User = Depends(get_admin_user)):
     """Get all quizzes (admin only)"""
     quizzes = await db.quizzes.find().to_list(1000)
-    return [Quiz(**quiz) for quiz in quizzes]
+    valid_quizzes = []
+    for quiz in quizzes:
+        # Handle old quizzes without required fields
+        if 'category' not in quiz:
+            quiz['category'] = 'Uncategorized'
+        if 'created_by' not in quiz:
+            quiz['created_by'] = admin_user.id
+        if 'is_active' not in quiz:
+            quiz['is_active'] = True
+        try:
+            valid_quizzes.append(Quiz(**quiz))
+        except Exception as e:
+            # Skip invalid quiz records
+            print(f"Skipping invalid quiz: {quiz.get('id', 'unknown')} - {str(e)}")
+            continue
+    return valid_quizzes
 
 @api_router.delete("/admin/quiz/{quiz_id}")
 async def delete_quiz(quiz_id: str, admin_user: User = Depends(get_admin_user)):
