@@ -19,6 +19,7 @@ class OnlineTestMakerAPITester:
         self.admin_token = None
         self.user_token = None
         self.created_quiz_id = None
+        self.uploaded_image_id = None
         self.test_user_id = str(uuid.uuid4())[:8]
 
     def log_test(self, test_name, success, details=""):
