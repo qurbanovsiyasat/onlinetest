@@ -811,6 +811,13 @@ class OnlineTestMakerAPITester:
         self.test_admin_take_quiz_forbidden()
         self.test_user_get_attempts()
         
+        # NEW: Test admin quiz results viewing functionality
+        self.test_admin_get_quiz_results()
+        self.test_admin_get_analytics_summary()
+        self.test_admin_get_user_quiz_results()
+        self.test_admin_get_quiz_specific_results()
+        self.test_user_access_quiz_results_forbidden()
+        
         # Security tests
         self.test_unauthorized_access()
 
