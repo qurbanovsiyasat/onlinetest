@@ -249,11 +249,15 @@ function AdminDashboard({ currentView, setCurrentView }) {
   const [users, setUsers] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [quizResults, setQuizResults] = useState([]);
+  const [analytics, setAnalytics] = useState({});
 
   useEffect(() => {
     if (currentView === 'users') fetchUsers();
     if (currentView === 'quizzes') fetchQuizzes();
     if (currentView === 'categories') fetchCategories();
+    if (currentView === 'results') fetchQuizResults();
+    if (currentView === 'dashboard') fetchAnalytics();
   }, [currentView]);
 
   const fetchUsers = async () => {
@@ -280,6 +284,24 @@ function AdminDashboard({ currentView, setCurrentView }) {
       setCategories(response.data);
     } catch (error) {
       console.error('Error fetching categories:', error);
+    }
+  };
+
+  const fetchQuizResults = async () => {
+    try {
+      const response = await apiCall('/admin/quiz-results');
+      setQuizResults(response.data);
+    } catch (error) {
+      console.error('Error fetching quiz results:', error);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      const response = await apiCall('/admin/analytics/summary');
+      setAnalytics(response.data);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
     }
   };
 
@@ -328,6 +350,14 @@ function AdminDashboard({ currentView, setCurrentView }) {
             📝 Quizzes
           </button>
           <button
+            onClick={() => setCurrentView('results')}
+            className={`px-6 py-3 rounded-lg font-semibold transition duration-200 ${
+              currentView === 'results' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            📈 Test Results
+          </button>
+          <button
             onClick={() => setCurrentView('categories')}
             className={`px-6 py-3 rounded-lg font-semibold transition duration-200 ${
               currentView === 'categories' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
@@ -346,9 +376,10 @@ function AdminDashboard({ currentView, setCurrentView }) {
         </div>
 
         {/* Content */}
-        {currentView === 'dashboard' && <AdminDashboardHome />}
+        {currentView === 'dashboard' && <AdminDashboardHome analytics={analytics} />}
         {currentView === 'users' && <AdminUsersView users={users} />}
         {currentView === 'quizzes' && <AdminQuizzesView quizzes={quizzes} fetchQuizzes={fetchQuizzes} />}
+        {currentView === 'results' && <AdminResultsView results={quizResults} />}
         {currentView === 'categories' && <AdminCategoriesView categories={categories} fetchCategories={fetchCategories} />}
         {currentView === 'create-quiz' && <AdminCreateQuiz setCurrentView={setCurrentView} />}
       </div>
