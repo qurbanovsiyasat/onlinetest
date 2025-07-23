@@ -448,6 +448,169 @@ class OnlineTestMakerAPITester:
         except Exception as e:
             return self.log_test("User Get Attempts", False, f"Error: {str(e)}")
 
+    def test_admin_get_quizzes(self):
+        """Test admin getting all quizzes (recently fixed endpoint)"""
+        if not self.admin_token:
+            return self.log_test("Admin Get Quizzes", False, "No admin token available")
+            
+        try:
+            response = requests.get(
+                f"{self.api_url}/admin/quizzes",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                quizzes = response.json()
+                details += f", Quizzes Count: {len(quizzes)}"
+                if len(quizzes) > 0:
+                    details += f", First Quiz: {quizzes[0].get('title', 'No title')}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Get Quizzes", success, details)
+        except Exception as e:
+            return self.log_test("Admin Get Quizzes", False, f"Error: {str(e)}")
+
+    def test_admin_upload_image(self):
+        """Test admin image upload functionality"""
+        if not self.admin_token:
+            return self.log_test("Admin Upload Image", False, "No admin token available")
+            
+        # Create a simple test image (1x1 PNG)
+        import base64
+        # Minimal PNG image data (1x1 transparent pixel)
+        png_data = base64.b64decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9jU77zgAAAABJRU5ErkJggg=='
+        )
+        
+        try:
+            files = {'file': ('test.png', png_data, 'image/png')}
+            headers = {'Authorization': f'Bearer {self.admin_token}'}
+            
+            response = requests.post(
+                f"{self.api_url}/admin/upload-image",
+                files=files,
+                headers=headers,
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                data = response.json()
+                image_id = data.get('id')
+                details += f", Image ID: {image_id}, Size: {data.get('size', 0)} bytes"
+                # Store image ID for later test
+                self.uploaded_image_id = image_id
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Upload Image", success, details)
+        except Exception as e:
+            return self.log_test("Admin Upload Image", False, f"Error: {str(e)}")
+
+    def test_get_image(self):
+        """Test getting uploaded image"""
+        if not hasattr(self, 'uploaded_image_id') or not self.uploaded_image_id:
+            return self.log_test("Get Image", False, "No uploaded image ID available")
+            
+        try:
+            response = requests.get(
+                f"{self.api_url}/image/{self.uploaded_image_id}",
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                data = response.json()
+                url = data.get('url', '')
+                details += f", URL starts with: {url[:50]}..."
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Get Image", success, details)
+        except Exception as e:
+            return self.log_test("Get Image", False, f"Error: {str(e)}")
+
+    def test_user_upload_image_forbidden(self):
+        """Test user trying to upload image (should fail)"""
+        if not self.user_token:
+            return self.log_test("User Upload Image (Forbidden)", False, "No user token available")
+            
+        # Create a simple test image
+        import base64
+        png_data = base64.b64decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9jU77zgAAAABJRU5ErkJggg=='
+        )
+        
+        try:
+            files = {'file': ('test.png', png_data, 'image/png')}
+            headers = {'Authorization': f'Bearer {self.user_token}'}
+            
+            response = requests.post(
+                f"{self.api_url}/admin/upload-image",
+                files=files,
+                headers=headers,
+                timeout=10
+            )
+            success = response.status_code == 403  # Should be forbidden
+            details = f"Status: {response.status_code} (Expected 403)"
+            return self.log_test("User Upload Image (Forbidden)", success, details)
+        except Exception as e:
+            return self.log_test("User Upload Image (Forbidden)", False, f"Error: {str(e)}")
+
+    def test_admin_create_quiz_with_image(self):
+        """Test admin creating a quiz with image"""
+        if not self.admin_token:
+            return self.log_test("Admin Create Quiz with Image", False, "No admin token available")
+            
+        # Use uploaded image if available
+        image_url = None
+        if hasattr(self, 'uploaded_image_id') and self.uploaded_image_id:
+            image_url = f"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAI9jU77zgAAAABJRU5ErkJggg=="
+            
+        quiz_data = {
+            "title": "Test Quiz with Image",
+            "description": "A test quiz with image questions",
+            "category": "Test Category",
+            "questions": [
+                {
+                    "question_text": "What do you see in this image?",
+                    "options": [
+                        {"text": "A circle", "is_correct": False},
+                        {"text": "A square", "is_correct": False},
+                        {"text": "A transparent pixel", "is_correct": True},
+                        {"text": "Nothing", "is_correct": False}
+                    ],
+                    "image_url": image_url
+                }
+            ]
+        }
+
+        try:
+            response = requests.post(
+                f"{self.api_url}/admin/quiz",
+                json=quiz_data,
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                quiz = response.json()
+                details += f", Quiz ID: {quiz.get('id')}, Has Image: {bool(image_url)}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Create Quiz with Image", success, details)
+        except Exception as e:
+            return self.log_test("Admin Create Quiz with Image", False, f"Error: {str(e)}")
+
     def test_unauthorized_access(self):
         """Test accessing protected endpoints without token"""
         try:
