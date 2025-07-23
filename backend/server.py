@@ -347,7 +347,66 @@ async def get_my_attempts(current_user: User = Depends(get_current_user)):
     attempts = await db.quiz_attempts.find({"user_id": current_user.id}).to_list(1000)
     return [QuizAttempt(**attempt) for attempt in attempts]
 
-# Initialize admin user
+# Image Upload Routes
+@api_router.post("/admin/upload-image")
+async def upload_image(file: UploadFile = File(...), admin_user: User = Depends(get_admin_user)):
+    """Upload image for quiz questions (admin only)"""
+    # Validate file type
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    
+    # Validate file size (max 5MB)
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:  # 5MB
+        raise HTTPException(status_code=400, detail="File size must be less than 5MB")
+    
+    # Validate image format
+    file_type = imghdr.what(None, h=content)
+    if file_type not in ['jpeg', 'jpg', 'png', 'gif', 'webp']:
+        raise HTTPException(status_code=400, detail="Unsupported image format")
+    
+    # Generate unique filename
+    file_id = str(uuid.uuid4())
+    file_extension = file.filename.split('.')[-1] if '.' in file.filename else file_type
+    filename = f"{file_id}.{file_extension}"
+    
+    # Convert to base64 for storage (in production, use cloud storage)
+    base64_content = base64.b64encode(content).decode('utf-8')
+    
+    # Store image metadata in database
+    image_data = {
+        "id": file_id,
+        "filename": filename,
+        "original_name": file.filename,
+        "content_type": file.content_type,
+        "size": len(content),
+        "base64_data": base64_content,
+        "uploaded_by": admin_user.id,
+        "uploaded_at": datetime.utcnow()
+    }
+    
+    await db.images.insert_one(image_data)
+    
+    # Return image URL (base64 data URL)
+    data_url = f"data:{file.content_type};base64,{base64_content}"
+    
+    return {
+        "id": file_id,
+        "filename": filename,
+        "url": data_url,
+        "size": len(content)
+    }
+
+@api_router.get("/image/{image_id}")
+async def get_image(image_id: str):
+    """Get image by ID"""
+    image = await db.images.find_one({"id": image_id})
+    if not image:
+        raise HTTPException(status_code=404, detail="Image not found")
+    
+    # Return base64 data URL
+    data_url = f"data:{image['content_type']};base64,{image['base64_data']}"
+    return {"url": data_url}
 @api_router.post("/init-admin")
 async def initialize_admin():
     """Initialize admin user (run once)"""
