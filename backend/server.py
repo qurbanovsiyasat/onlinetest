@@ -439,7 +439,145 @@ async def initialize_admin():
 async def root():
     return {"message": "OnlineTestMaker API - Admin Centered Version"}
 
-@api_router.get("/categories/public", response_model=List[Category])
+# Admin Results Viewing Routes
+@api_router.get("/admin/quiz-results")
+async def get_all_quiz_results(admin_user: User = Depends(get_admin_user)):
+    """Get all quiz attempts/results (admin only)"""
+    # Get all attempts with additional user and quiz information
+    attempts = await db.quiz_attempts.find().to_list(1000)
+    
+    # Enrich attempts with user and quiz information
+    enriched_results = []
+    for attempt in attempts:
+        # Get user info
+        user = await db.users.find_one({"id": attempt["user_id"]})
+        user_info = {
+            "name": user.get("name", "Unknown User") if user else "Unknown User",
+            "email": user.get("email", "Unknown Email") if user else "Unknown Email"
+        }
+        
+        # Get quiz info
+        quiz = await db.quizzes.find_one({"id": attempt["quiz_id"]})
+        quiz_info = {
+            "title": quiz.get("title", "Unknown Quiz") if quiz else "Unknown Quiz",
+            "category": quiz.get("category", "Unknown Category") if quiz else "Unknown Category"
+        }
+        
+        # Combine all information
+        result = {
+            "attempt_id": attempt["id"],
+            "user": user_info,
+            "quiz": quiz_info,
+            "score": attempt["score"],
+            "total_questions": attempt["total_questions"],
+            "percentage": attempt["percentage"],
+            "attempted_at": attempt["attempted_at"],
+            "answers": attempt.get("answers", [])
+        }
+        enriched_results.append(result)
+    
+    # Sort by attempt date (newest first)
+    enriched_results.sort(key=lambda x: x["attempted_at"], reverse=True)
+    
+    return enriched_results
+
+@api_router.get("/admin/quiz-results/user/{user_id}")
+async def get_user_quiz_results(user_id: str, admin_user: User = Depends(get_admin_user)):
+    """Get all quiz results for a specific user (admin only)"""
+    attempts = await db.quiz_attempts.find({"user_id": user_id}).to_list(1000)
+    
+    enriched_results = []
+    for attempt in attempts:
+        # Get quiz info
+        quiz = await db.quizzes.find_one({"id": attempt["quiz_id"]})
+        quiz_info = {
+            "title": quiz.get("title", "Unknown Quiz") if quiz else "Unknown Quiz",
+            "category": quiz.get("category", "Unknown Category") if quiz else "Unknown Category"
+        }
+        
+        result = {
+            "attempt_id": attempt["id"],
+            "quiz": quiz_info,
+            "score": attempt["score"],
+            "total_questions": attempt["total_questions"],
+            "percentage": attempt["percentage"],
+            "attempted_at": attempt["attempted_at"]
+        }
+        enriched_results.append(result)
+    
+    # Sort by attempt date (newest first)
+    enriched_results.sort(key=lambda x: x["attempted_at"], reverse=True)
+    
+    return enriched_results
+
+@api_router.get("/admin/quiz-results/quiz/{quiz_id}")
+async def get_quiz_results(quiz_id: str, admin_user: User = Depends(get_admin_user)):
+    """Get all results for a specific quiz (admin only)"""
+    attempts = await db.quiz_attempts.find({"quiz_id": quiz_id}).to_list(1000)
+    
+    enriched_results = []
+    for attempt in attempts:
+        # Get user info
+        user = await db.users.find_one({"id": attempt["user_id"]})
+        user_info = {
+            "name": user.get("name", "Unknown User") if user else "Unknown User",
+            "email": user.get("email", "Unknown Email") if user else "Unknown Email"
+        }
+        
+        result = {
+            "attempt_id": attempt["id"],
+            "user": user_info,
+            "score": attempt["score"],
+            "total_questions": attempt["total_questions"],
+            "percentage": attempt["percentage"],
+            "attempted_at": attempt["attempted_at"]
+        }
+        enriched_results.append(result)
+    
+    # Sort by attempt date (newest first)
+    enriched_results.sort(key=lambda x: x["attempted_at"], reverse=True)
+    
+    return enriched_results
+
+@api_router.get("/admin/analytics/summary")
+async def get_analytics_summary(admin_user: User = Depends(get_admin_user)):
+    """Get analytics summary for admin dashboard"""
+    # Count total users
+    total_users = await db.users.count_documents({"role": "user"})
+    
+    # Count total quizzes
+    total_quizzes = await db.quizzes.count_documents({"is_active": True})
+    
+    # Count total attempts
+    total_attempts = await db.quiz_attempts.count_documents({})
+    
+    # Calculate average score
+    attempts = await db.quiz_attempts.find().to_list(1000)
+    avg_score = 0
+    if attempts:
+        total_percentage = sum(attempt["percentage"] for attempt in attempts)
+        avg_score = total_percentage / len(attempts)
+    
+    # Get most popular quiz
+    quiz_attempt_counts = {}
+    for attempt in attempts:
+        quiz_id = attempt["quiz_id"]
+        quiz_attempt_counts[quiz_id] = quiz_attempt_counts.get(quiz_id, 0) + 1
+    
+    most_popular_quiz = "None"
+    if quiz_attempt_counts:
+        most_popular_quiz_id = max(quiz_attempt_counts, key=quiz_attempt_counts.get)
+        quiz = await db.quizzes.find_one({"id": most_popular_quiz_id})
+        if quiz:
+            most_popular_quiz = quiz.get("title", "Unknown Quiz")
+    
+    return {
+        "total_users": total_users,
+        "total_quizzes": total_quizzes,
+        "total_attempts": total_attempts,
+        "average_score": round(avg_score, 1),
+        "most_popular_quiz": most_popular_quiz
+    }
 async def get_public_categories():
     """Get all categories for public viewing"""
     categories = await db.categories.find().to_list(1000)
