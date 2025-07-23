@@ -13,6 +13,8 @@ from datetime import datetime, timedelta
 import jwt
 import bcrypt
 from enum import Enum
+import base64
+import imghdr
 
 
 ROOT_DIR = Path(__file__).parent
