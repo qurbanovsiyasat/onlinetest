@@ -236,6 +236,8 @@ class OnlineTestMakerAPITester:
             "title": "Test Quiz - Admin Created",
             "description": "A test quiz created by admin for testing",
             "category": "Test Category",
+            "subject": "Mathematics",  # Required field
+            "subcategory": "General",
             "questions": [
                 {
                     "question_text": "What is 2 + 2?",
