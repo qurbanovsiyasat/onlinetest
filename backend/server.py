@@ -267,9 +267,84 @@ async def create_quiz(quiz_data: QuizCreate, admin_user: User = Depends(get_admi
     """Create quiz (admin only)"""
     quiz = Quiz(**quiz_data.dict(), created_by=admin_user.id)
     quiz.total_questions = len(quiz.questions)
+    quiz.updated_at = datetime.utcnow()
     
     await db.quizzes.insert_one(quiz.dict())
     return quiz
+
+@api_router.put("/admin/quiz/{quiz_id}", response_model=Quiz)
+async def update_quiz(quiz_id: str, quiz_data: QuizUpdate, admin_user: User = Depends(get_admin_user)):
+    """Update quiz (admin only - only creator can edit)"""
+    # Check if quiz exists and user is the creator
+    existing_quiz = await db.quizzes.find_one({"id": quiz_id})
+    if not existing_quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    if existing_quiz["created_by"] != admin_user.id:
+        raise HTTPException(status_code=403, detail="You can only edit quizzes you created")
+    
+    # Update fields
+    update_data = {k: v for k, v in quiz_data.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.utcnow()
+    
+    # Recalculate total questions if questions are updated
+    if "questions" in update_data:
+        update_data["total_questions"] = len(update_data["questions"])
+    
+    await db.quizzes.update_one({"id": quiz_id}, {"$set": update_data})
+    
+    # Return updated quiz
+    updated_quiz = await db.quizzes.find_one({"id": quiz_id})
+    return Quiz(**updated_quiz)
+
+@api_router.post("/admin/quiz/{quiz_id}/access")
+async def set_quiz_access(quiz_id: str, access_data: UserQuizAccess, admin_user: User = Depends(get_admin_user)):
+    """Set which users can access a public quiz (admin only)"""
+    quiz = await db.quizzes.find_one({"id": quiz_id})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    if quiz["created_by"] != admin_user.id:
+        raise HTTPException(status_code=403, detail="You can only modify access for quizzes you created")
+    
+    await db.quizzes.update_one(
+        {"id": quiz_id}, 
+        {"$set": {"allowed_users": access_data.user_ids, "updated_at": datetime.utcnow()}}
+    )
+    
+    return {"message": "Quiz access updated successfully"}
+
+@api_router.get("/admin/quiz/{quiz_id}/leaderboard")
+async def get_quiz_leaderboard(quiz_id: str, admin_user: User = Depends(get_admin_user)):
+    """Get top 3 performers for a quiz (admin only)"""
+    # Get all attempts for this quiz
+    attempts = await db.quiz_attempts.find({"quiz_id": quiz_id}).to_list(1000)
+    
+    # Group by user and get best attempt for each user
+    user_best_attempts = {}
+    for attempt in attempts:
+        user_id = attempt["user_id"]
+        if user_id not in user_best_attempts or attempt["percentage"] > user_best_attempts[user_id]["percentage"]:
+            user_best_attempts[user_id] = attempt
+    
+    # Sort by percentage and get top 3
+    top_attempts = sorted(user_best_attempts.values(), key=lambda x: x["percentage"], reverse=True)[:3]
+    
+    # Enrich with user information
+    leaderboard = []
+    for i, attempt in enumerate(top_attempts):
+        user = await db.users.find_one({"id": attempt["user_id"]})
+        leaderboard.append({
+            "rank": i + 1,
+            "user_name": user.get("name", "Unknown User") if user else "Unknown User",
+            "user_email": user.get("email", "Unknown Email") if user else "Unknown Email",
+            "score": attempt["score"],
+            "total_questions": attempt["total_questions"],
+            "percentage": attempt["percentage"],
+            "attempted_at": attempt["attempted_at"]
+        })
+    
+    return leaderboard
 
 @api_router.get("/admin/quizzes", response_model=List[Quiz])
 async def get_all_quizzes_admin(admin_user: User = Depends(get_admin_user)):
