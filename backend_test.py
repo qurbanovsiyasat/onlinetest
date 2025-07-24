@@ -756,10 +756,10 @@ class OnlineTestMakerAPITester:
         except Exception as e:
             return self.log_test("User Access Quiz Results (Forbidden)", False, f"Error: {str(e)}")
 
-    def test_admin_create_enhanced_quiz(self):
-        """Test admin creating quiz with new enhancements (public/private, subject folder, user access)"""
+    def test_admin_create_enhanced_quiz_with_nested_structure(self):
+        """Test admin creating quiz with nested subject structure (Mathematics → Triangles → Geometry)"""
         if not self.admin_token:
-            return self.log_test("Admin Create Enhanced Quiz", False, "No admin token available")
+            return self.log_test("Admin Create Enhanced Quiz with Nested Structure", False, "No admin token available")
         
         # First get a user ID for allowed_users
         try:
@@ -769,7 +769,7 @@ class OnlineTestMakerAPITester:
                 timeout=10
             )
             if users_response.status_code != 200:
-                return self.log_test("Admin Create Enhanced Quiz", False, "Could not get users list")
+                return self.log_test("Admin Create Enhanced Quiz with Nested Structure", False, "Could not get users list")
             
             users = users_response.json()
             test_user_id = None
@@ -779,23 +779,33 @@ class OnlineTestMakerAPITester:
                     break
             
             if not test_user_id:
-                return self.log_test("Admin Create Enhanced Quiz", False, "No test user found for allowed_users")
+                return self.log_test("Admin Create Enhanced Quiz with Nested Structure", False, "No test user found for allowed_users")
             
             quiz_data = {
-                "title": "Enhanced Test Quiz - Public",
-                "description": "A test quiz with new enhancements",
-                "category": "Mathematics",
-                "subject_folder": "Mathematics",
+                "title": "Triangle Properties Quiz",
+                "description": "A quiz about triangle properties and geometry",
+                "category": "Geometry",
+                "subject": "Mathematics",
+                "subcategory": "Triangles",
                 "is_public": True,
                 "allowed_users": [test_user_id],
                 "questions": [
                     {
-                        "question_text": "What is 5 + 3?",
+                        "question_text": "What is the sum of angles in a triangle?",
                         "options": [
-                            {"text": "7", "is_correct": False},
-                            {"text": "8", "is_correct": True},
-                            {"text": "9", "is_correct": False},
-                            {"text": "10", "is_correct": False}
+                            {"text": "90 degrees", "is_correct": False},
+                            {"text": "180 degrees", "is_correct": True},
+                            {"text": "270 degrees", "is_correct": False},
+                            {"text": "360 degrees", "is_correct": False}
+                        ]
+                    },
+                    {
+                        "question_text": "What type of triangle has all sides equal?",
+                        "options": [
+                            {"text": "Scalene", "is_correct": False},
+                            {"text": "Isosceles", "is_correct": False},
+                            {"text": "Equilateral", "is_correct": True},
+                            {"text": "Right", "is_correct": False}
                         ]
                     }
                 ]
@@ -812,17 +822,161 @@ class OnlineTestMakerAPITester:
             
             if success:
                 quiz = response.json()
-                self.enhanced_quiz_id = quiz.get('id')
-                details += f", Quiz ID: {self.enhanced_quiz_id}"
+                self.nested_quiz_id = quiz.get('id')
+                details += f", Quiz ID: {self.nested_quiz_id}"
+                details += f", Subject: {quiz.get('subject', 'Unknown')}"
+                details += f", Subcategory: {quiz.get('subcategory', 'Unknown')}"
+                details += f", Category: {quiz.get('category', 'Unknown')}"
                 details += f", Public: {quiz.get('is_public', False)}"
-                details += f", Subject: {quiz.get('subject_folder', 'Unknown')}"
-                details += f", Allowed Users: {len(quiz.get('allowed_users', []))}"
+                details += f", Total Questions: {quiz.get('total_questions', 0)}"
             else:
                 details += f", Response: {response.text[:200]}"
                 
-            return self.log_test("Admin Create Enhanced Quiz", success, details)
+            return self.log_test("Admin Create Enhanced Quiz with Nested Structure", success, details)
         except Exception as e:
-            return self.log_test("Admin Create Enhanced Quiz", False, f"Error: {str(e)}")
+            return self.log_test("Admin Create Enhanced Quiz with Nested Structure", False, f"Error: {str(e)}")
+
+    def test_admin_quiz_edit_details(self):
+        """Test admin getting quiz edit details"""
+        if not self.admin_token or not hasattr(self, 'nested_quiz_id'):
+            return self.log_test("Admin Quiz Edit Details", False, "No admin token or nested quiz ID available")
+            
+        try:
+            response = requests.get(
+                f"{self.api_url}/admin/quiz/{self.nested_quiz_id}/edit-details",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                data = response.json()
+                quiz = data.get('quiz', {})
+                details += f", Quiz Title: {quiz.get('title', 'Unknown')}"
+                details += f", Questions Count: {len(quiz.get('questions', []))}"
+                details += f", Total Attempts: {data.get('total_attempts', 0)}"
+                details += f", Average Score: {data.get('average_score', 0)}"
+                
+                # Check if questions have all required fields for editing
+                questions = quiz.get('questions', [])
+                if questions:
+                    first_question = questions[0]
+                    details += f", First Q Options: {len(first_question.get('options', []))}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Quiz Edit Details", success, details)
+        except Exception as e:
+            return self.log_test("Admin Quiz Edit Details", False, f"Error: {str(e)}")
+
+    def test_admin_enhanced_quiz_update(self):
+        """Test admin updating quiz with enhanced question editing"""
+        if not self.admin_token or not hasattr(self, 'nested_quiz_id'):
+            return self.log_test("Admin Enhanced Quiz Update", False, "No admin token or nested quiz ID available")
+            
+        # Update quiz with modified questions
+        update_data = {
+            "title": "Updated Triangle Properties Quiz",
+            "description": "Updated description with enhanced features",
+            "subject": "Mathematics",
+            "subcategory": "Geometry",  # Changed subcategory
+            "category": "Advanced Geometry",
+            "questions": [
+                {
+                    "id": "q1",
+                    "question_text": "What is the sum of interior angles in any triangle?",
+                    "options": [
+                        {"text": "90 degrees", "is_correct": False},
+                        {"text": "180 degrees", "is_correct": True},
+                        {"text": "270 degrees", "is_correct": False},
+                        {"text": "360 degrees", "is_correct": False}
+                    ],
+                    "image_url": None
+                },
+                {
+                    "id": "q2",
+                    "question_text": "In a right triangle, what is the longest side called?",
+                    "options": [
+                        {"text": "Adjacent", "is_correct": False},
+                        {"text": "Opposite", "is_correct": False},
+                        {"text": "Hypotenuse", "is_correct": True},
+                        {"text": "Base", "is_correct": False}
+                    ],
+                    "image_url": None
+                },
+                {
+                    "id": "q3",
+                    "question_text": "What is the area formula for a triangle?",
+                    "options": [
+                        {"text": "base × height", "is_correct": False},
+                        {"text": "½ × base × height", "is_correct": True},
+                        {"text": "2 × base × height", "is_correct": False},
+                        {"text": "base + height", "is_correct": False}
+                    ],
+                    "image_url": None
+                }
+            ]
+        }
+
+        try:
+            response = requests.put(
+                f"{self.api_url}/admin/quiz/{self.nested_quiz_id}",
+                json=update_data,
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                quiz = response.json()
+                details += f", Updated Title: {quiz.get('title', 'Unknown')}"
+                details += f", Updated Subcategory: {quiz.get('subcategory', 'Unknown')}"
+                details += f", Updated Questions: {quiz.get('total_questions', 0)}"
+                details += f", Updated At: {quiz.get('updated_at', 'Unknown')[:19]}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Enhanced Quiz Update", success, details)
+        except Exception as e:
+            return self.log_test("Admin Enhanced Quiz Update", False, f"Error: {str(e)}")
+
+    def test_quiz_results_ranking(self):
+        """Test quiz results ranking with leaderboard"""
+        if not self.user_token or not hasattr(self, 'nested_quiz_id'):
+            return self.log_test("Quiz Results Ranking", False, "No user token or nested quiz ID available")
+            
+        try:
+            response = requests.get(
+                f"{self.api_url}/quiz/{self.nested_quiz_id}/results-ranking",
+                headers=self.get_auth_headers(self.user_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                data = response.json()
+                details += f", Quiz Title: {data.get('quiz_title', 'Unknown')}"
+                details += f", Total Participants: {data.get('total_participants', 0)}"
+                
+                top_3 = data.get('top_3', [])
+                details += f", Top 3 Count: {len(top_3)}"
+                
+                user_position = data.get('user_position', {})
+                if user_position:
+                    details += f", User Rank: {user_position.get('rank', 'N/A')}"
+                
+                quiz_stats = data.get('quiz_stats', {})
+                details += f", Total Attempts: {quiz_stats.get('total_attempts', 0)}"
+                details += f", Average Score: {quiz_stats.get('average_score', 0)}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Quiz Results Ranking", success, details)
+        except Exception as e:
+            return self.log_test("Quiz Results Ranking", False, f"Error: {str(e)}")
 
     def test_admin_edit_quiz(self):
         """Test admin editing quiz (only creator can edit)"""
