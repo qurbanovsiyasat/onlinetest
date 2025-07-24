@@ -2138,6 +2138,26 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
 }
 
 function UserResult({ result, quiz, setCurrentView, startQuiz }) {
+  const [detailedResults, setDetailedResults] = useState(null);
+  const [leaderboard, setLeaderboard] = useState(null);
+  const [showMistakes, setShowMistakes] = useState(false);
+
+  useEffect(() => {
+    if (result && result.question_results) {
+      setDetailedResults(result.question_results);
+    }
+    fetchLeaderboard();
+  }, [result, quiz]);
+
+  const fetchLeaderboard = async () => {
+    try {
+      const response = await apiCall(`/quiz/${quiz.id}/results-ranking`);
+      setLeaderboard(response.data);
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+    }
+  };
+
   if (!result) return null;
 
   const getScoreColor = (percentage) => {
@@ -2146,49 +2166,233 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
     return 'text-red-600';
   };
 
+  const getPerformanceBadge = (percentage) => {
+    if (percentage >= 80) return { text: 'Excellent!', color: 'bg-green-500' };
+    if (percentage >= 60) return { text: 'Good Job!', color: 'bg-yellow-500' };
+    return { text: 'Keep Trying!', color: 'bg-red-500' };
+  };
+
+  const badge = getPerformanceBadge(result.percentage);
+  const mistakes = detailedResults ? detailedResults.filter(q => !q.is_correct) : [];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-100">
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8 text-center">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-gray-800 mb-4">🎉 Quiz Complete!</h1>
-            <h2 className="text-2xl font-semibold text-gray-700 mb-6">{quiz.title}</h2>
+        <div className="max-w-4xl mx-auto">
+          {/* Main Result Card */}
+          <div className="bg-white rounded-lg shadow-lg p-8 text-center mb-6">
+            <div className="mb-8">
+              <div className={`inline-block px-4 py-2 rounded-full text-white text-sm font-semibold mb-4 ${badge.color}`}>
+                {badge.text}
+              </div>
+              <h1 className="text-4xl font-bold text-gray-800 mb-2">Quiz Complete!</h1>
+              <h2 className="text-2xl font-semibold text-gray-700 mb-6">{quiz.title}</h2>
+            </div>
+
+            {/* Score Display */}
+            <div className="mb-8">
+              <div className="text-6xl font-bold mb-4">
+                <span className={getScoreColor(result.percentage)}>
+                  {result.percentage.toFixed(1)}%
+                </span>
+              </div>
+              <p className="text-xl text-gray-600 mb-2">
+                You scored {result.score} out of {result.total_questions} questions correctly
+              </p>
+              <div className="w-full bg-gray-200 rounded-full h-4 mb-4 max-w-md mx-auto">
+                <div
+                  className={`h-4 rounded-full transition-all duration-1000 ${
+                    result.percentage >= 80 ? 'bg-green-500' :
+                    result.percentage >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                  }`}
+                  style={{ width: `${result.percentage}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <button
+                onClick={() => setCurrentView('home')}
+                className="bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition duration-200 font-semibold"
+              >
+                🏠 Back to Home
+              </button>
+              <button
+                onClick={() => startQuiz(quiz)}
+                className="bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition duration-200 font-semibold"
+              >
+                🔄 Retake Quiz
+              </button>
+              <button
+                onClick={() => setShowMistakes(!showMistakes)}
+                className="bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 transition duration-200 font-semibold"
+              >
+                {showMistakes ? '👁️ Hide Review' : '📝 Review Mistakes'}
+              </button>
+            </div>
           </div>
 
-          <div className="mb-8">
-            <div className="text-6xl font-bold mb-4">
-              <span className={getScoreColor(result.percentage)}>
-                {result.percentage.toFixed(1)}%
-              </span>
-            </div>
-            <p className="text-xl text-gray-600 mb-2">
-              You scored {result.score} out of {result.total_questions} questions correctly
-            </p>
-            <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
-              <div
-                className={`h-4 rounded-full transition-all duration-1000 ${
-                  result.percentage >= 80 ? 'bg-green-500' :
-                  result.percentage >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                }`}
-                style={{ width: `${result.percentage}%` }}
-              ></div>
-            </div>
-          </div>
+          {/* Mistakes Review */}
+          {showMistakes && detailedResults && (
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+              <h3 className="text-2xl font-semibold text-gray-800 mb-6">📝 Detailed Review</h3>
+              
+              <div className="space-y-4">
+                {detailedResults.map((questionResult, index) => (
+                  <div
+                    key={index}
+                    className={`border rounded-lg p-4 ${
+                      questionResult.is_correct ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <h4 className="font-semibold text-gray-800">
+                        Question {questionResult.question_number}: {questionResult.question_text}
+                      </h4>
+                      <span className={`px-2 py-1 rounded text-sm font-semibold ${
+                        questionResult.is_correct 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {questionResult.is_correct ? '✅ Correct' : '❌ Wrong'}
+                      </span>
+                    </div>
 
-          <div className="space-y-4">
-            <button
-              onClick={() => setCurrentView('home')}
-              className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition duration-200 font-semibold"
-            >
-              🏠 Back to Home
-            </button>
-            <button
-              onClick={() => startQuiz(quiz)}
-              className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition duration-200 font-semibold"
-            >
-              🔄 Retake Quiz
-            </button>
-          </div>
+                    {questionResult.question_image && (
+                      <img
+                        src={questionResult.question_image}
+                        alt="Question"
+                        className="max-w-xs h-auto rounded-lg shadow mb-3"
+                      />
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-600 mb-2">Your Answer:</p>
+                        <p className={`p-2 rounded ${
+                          questionResult.is_correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {questionResult.user_answer}
+                        </p>
+                      </div>
+                      
+                      {!questionResult.is_correct && (
+                        <div>
+                          <p className="text-sm font-semibold text-gray-600 mb-2">Correct Answer:</p>
+                          <p className="p-2 rounded bg-green-100 text-green-800">
+                            {questionResult.correct_answer}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {!questionResult.is_correct && (
+                      <div className="mt-3">
+                        <p className="text-sm font-semibold text-gray-600 mb-2">All Options:</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {questionResult.all_options.map((option, optIndex) => (
+                            <div
+                              key={optIndex}
+                              className={`p-2 rounded text-sm ${
+                                option === questionResult.correct_answer
+                                  ? 'bg-green-100 text-green-800 border-2 border-green-300'
+                                  : option === questionResult.user_answer
+                                  ? 'bg-red-100 text-red-800 border-2 border-red-300'
+                                  : 'bg-gray-100 text-gray-700'
+                              }`}
+                            >
+                              {String.fromCharCode(65 + optIndex)}. {option}
+                              {option === questionResult.correct_answer && ' ✓'}
+                              {option === questionResult.user_answer && option !== questionResult.correct_answer && ' ✗'}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                <h4 className="font-semibold text-blue-800 mb-2">Summary:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-green-600 font-semibold">Correct: </span>
+                    {detailedResults.filter(q => q.is_correct).length} questions
+                  </div>
+                  <div>
+                    <span className="text-red-600 font-semibold">Incorrect: </span>
+                    {mistakes.length} questions
+                  </div>
+                  <div>
+                    <span className="text-blue-600 font-semibold">Accuracy: </span>
+                    {result.percentage.toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Leaderboard */}
+          {leaderboard && (
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <h3 className="text-2xl font-semibold text-gray-800 mb-6">🏆 Quiz Leaderboard</h3>
+              
+              {/* Top 3 */}
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-gray-700 mb-4">Top 3 Performers</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {leaderboard.top_3.map((entry, index) => (
+                    <div
+                      key={index}
+                      className={`p-4 rounded-lg text-center ${
+                        index === 0 ? 'bg-yellow-100 border-2 border-yellow-300' :
+                        index === 1 ? 'bg-gray-100 border-2 border-gray-300' :
+                        'bg-orange-100 border-2 border-orange-300'
+                      }`}
+                    >
+                      <div className="text-2xl mb-2">
+                        {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                      </div>
+                      <p className="font-semibold text-gray-800">{entry.user_name}</p>
+                      <p className="text-lg font-bold text-gray-900">{entry.percentage.toFixed(1)}%</p>
+                      <p className="text-sm text-gray-600">
+                        {entry.score}/{entry.total_questions} correct
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* User's Position */}
+              {leaderboard.user_position && (
+                <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
+                  <h4 className="text-lg font-semibold text-indigo-800 mb-2">Your Position</h4>
+                  <p className="text-indigo-700">
+                    You ranked <span className="font-bold">#{leaderboard.user_position.rank}</span> out of{' '}
+                    <span className="font-bold">{leaderboard.total_participants}</span> participants!
+                  </p>
+                </div>
+              )}
+
+              {/* Quiz Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-2xl font-bold text-gray-800">{leaderboard.total_participants}</p>
+                  <p className="text-sm text-gray-600">Total Participants</p>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-2xl font-bold text-gray-800">{leaderboard.quiz_stats.total_attempts}</p>
+                  <p className="text-sm text-gray-600">Total Attempts</p>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-2xl font-bold text-gray-800">{leaderboard.quiz_stats.average_score.toFixed(1)}%</p>
+                  <p className="text-sm text-gray-600">Average Score</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
