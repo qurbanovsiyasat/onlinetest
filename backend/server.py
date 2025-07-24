@@ -241,7 +241,168 @@ class Category(BaseModel):
     description: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-# Utility Functions
+# Comprehensive Quiz Validation
+def validate_quiz_data(quiz_data: QuizCreate) -> List[QuizValidationError]:
+    """Validate quiz data and return list of errors"""
+    errors = []
+    
+    # Basic quiz validation
+    if not quiz_data.title or len(quiz_data.title.strip()) < 3:
+        errors.append(QuizValidationError(
+            field="title", 
+            message="Title must be at least 3 characters long"
+        ))
+    
+    if not quiz_data.description or len(quiz_data.description.strip()) < 10:
+        errors.append(QuizValidationError(
+            field="description", 
+            message="Description must be at least 10 characters long"
+        ))
+    
+    if not quiz_data.category or len(quiz_data.category.strip()) < 2:
+        errors.append(QuizValidationError(
+            field="category", 
+            message="Category is required and must be at least 2 characters"
+        ))
+    
+    if not quiz_data.subject or len(quiz_data.subject.strip()) < 2:
+        errors.append(QuizValidationError(
+            field="subject", 
+            message="Subject folder is required"
+        ))
+    
+    # Questions validation
+    if not quiz_data.questions or len(quiz_data.questions) == 0:
+        errors.append(QuizValidationError(
+            field="questions", 
+            message="At least one question is required"
+        ))
+    
+    # Individual question validation
+    for i, question in enumerate(quiz_data.questions):
+        question_errors = validate_question(question, i)
+        errors.extend(question_errors)
+    
+    # Pass percentage validation
+    if quiz_data.min_pass_percentage < 0 or quiz_data.min_pass_percentage > 100:
+        errors.append(QuizValidationError(
+            field="min_pass_percentage", 
+            message="Pass percentage must be between 0 and 100"
+        ))
+    
+    # Time limit validation
+    if quiz_data.time_limit_minutes is not None and quiz_data.time_limit_minutes <= 0:
+        errors.append(QuizValidationError(
+            field="time_limit_minutes", 
+            message="Time limit must be positive if specified"
+        ))
+    
+    return errors
+
+def validate_question(question: QuizQuestion, question_index: int) -> List[QuizValidationError]:
+    """Validate individual question"""
+    errors = []
+    
+    # Basic question validation
+    if not question.question_text or len(question.question_text.strip()) < 5:
+        errors.append(QuizValidationError(
+            field="question_text", 
+            message="Question text must be at least 5 characters long",
+            question_index=question_index
+        ))
+    
+    # Points validation
+    if question.points <= 0:
+        errors.append(QuizValidationError(
+            field="points", 
+            message="Question points must be positive",
+            question_index=question_index
+        ))
+    
+    # Type-specific validation
+    if question.question_type == QuestionType.MULTIPLE_CHOICE:
+        errors.extend(validate_multiple_choice_question(question, question_index))
+    elif question.question_type == QuestionType.OPEN_ENDED:
+        errors.extend(validate_open_ended_question(question, question_index))
+    
+    return errors
+
+def validate_multiple_choice_question(question: QuizQuestion, question_index: int) -> List[QuizValidationError]:
+    """Validate multiple choice question"""
+    errors = []
+    
+    # Options validation
+    if not question.options or len(question.options) < 2:
+        errors.append(QuizValidationError(
+            field="options", 
+            message="Multiple choice question must have at least 2 options",
+            question_index=question_index
+        ))
+        return errors
+    
+    if len(question.options) > 6:
+        errors.append(QuizValidationError(
+            field="options", 
+            message="Multiple choice question cannot have more than 6 options",
+            question_index=question_index
+        ))
+    
+    # Check if all options have text
+    for i, option in enumerate(question.options):
+        if not option.text or len(option.text.strip()) < 1:
+            errors.append(QuizValidationError(
+                field="options", 
+                message=f"Option {i+1} cannot be empty",
+                question_index=question_index
+            ))
+    
+    # Check correct answers
+    correct_count = sum(1 for option in question.options if option.is_correct)
+    if correct_count == 0:
+        errors.append(QuizValidationError(
+            field="options", 
+            message="At least one option must be marked as correct",
+            question_index=question_index
+        ))
+    
+    if not question.multiple_correct and correct_count > 1:
+        errors.append(QuizValidationError(
+            field="options", 
+            message="Only one option can be correct unless multiple correct answers are enabled",
+            question_index=question_index
+        ))
+    
+    return errors
+
+def validate_open_ended_question(question: QuizQuestion, question_index: int) -> List[QuizValidationError]:
+    """Validate open-ended question"""
+    errors = []
+    
+    if not question.open_ended_answer:
+        errors.append(QuizValidationError(
+            field="open_ended_answer", 
+            message="Open-ended question must have expected answer(s)",
+            question_index=question_index
+        ))
+        return errors
+    
+    if not question.open_ended_answer.expected_answers or len(question.open_ended_answer.expected_answers) == 0:
+        errors.append(QuizValidationError(
+            field="expected_answers", 
+            message="At least one expected answer is required",
+            question_index=question_index
+        ))
+    
+    # Check that expected answers are not empty
+    for i, answer in enumerate(question.open_ended_answer.expected_answers):
+        if not answer or len(answer.strip()) < 1:
+            errors.append(QuizValidationError(
+                field="expected_answers", 
+                message=f"Expected answer {i+1} cannot be empty",
+                question_index=question_index
+            ))
+    
+    return errors
 def hash_password(password: str) -> str:
     """Hash password using bcrypt"""
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
