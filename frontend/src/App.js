@@ -2729,14 +2729,63 @@ function QuestionCreationForm({
   validateCurrentQuestion,
   addQuestion
 }) {
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [tempImageSrc, setTempImageSrc] = useState(null);
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      return;
+    }
+
+    // Create temporary image URL for cropping
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setTempImageSrc(e.target.result);
+      setShowCropModal(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = (croppedImageData) => {
+    setCurrentQuestion({ ...currentQuestion, image_url: croppedImageData });
+    setShowCropModal(false);
+    setTempImageSrc(null);
+  };
+
+  const handleMathPreview = () => {
+    // Trigger MathJax to re-render
+    if (window.MathJax) {
+      window.MathJax.typesetPromise().catch((err) => console.log('MathJax error:', err));
+    }
+  };
+
+  useEffect(() => {
+    // Re-render MathJax when question text changes
+    const timer = setTimeout(() => {
+      if (window.MathJax) {
+        window.MathJax.typesetPromise().catch((err) => console.log('MathJax error:', err));
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [currentQuestion.question_text, currentQuestion.options]);
+
   return (
-    <div className="bg-gray-50 p-6 rounded-lg mb-6">
+    <div className="bg-gray-50 p-4 sm:p-6 rounded-lg mb-6">
       <h3 className="text-lg font-semibold mb-4">Add Question</h3>
       
       {/* Question Type Selection */}
       <div className="mb-4">
         <label className="block text-gray-700 font-semibold mb-2">Question Type</label>
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
           <label className="flex items-center">
             <input
               type="radio"
@@ -2762,20 +2811,38 @@ function QuestionCreationForm({
         </div>
       </div>
 
-      {/* Question Text */}
+      {/* Question Text with Math Support */}
       <div className="mb-4">
-        <label className="block text-gray-700 font-semibold mb-2">Question Text *</label>
+        <label className="block text-gray-700 font-semibold mb-2">
+          Question Text *
+          <span className="text-xs text-blue-600 ml-2">
+            (Math: Use $...$ for inline or $$...$$ for display math)
+          </span>
+        </label>
         <textarea
           value={currentQuestion.question_text}
-          onChange={(e) => setCurrentQuestion({ ...currentQuestion, question_text: e.target.value })}
-          className="w-full p-3 border border-gray-300 rounded-lg"
-          rows="2"
-          placeholder="Enter your question (min 5 characters)"
+          onChange={(e) => {
+            setCurrentQuestion({ ...currentQuestion, question_text: e.target.value });
+            handleMathPreview();
+          }}
+          className="w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base"
+          rows="3"
+          placeholder="Enter your question (min 5 characters). Example: What is $\\sqrt{16}$?"
         />
+        
+        {/* Math Preview */}
+        {currentQuestion.question_text && (
+          <div className="mt-2 p-3 bg-blue-50 rounded-lg">
+            <p className="text-xs text-gray-600 mb-1">Preview:</p>
+            <div className="tex2jax_process">
+              {renderMathContent(currentQuestion.question_text)}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Question Metadata */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
         <div>
           <label className="block text-gray-700 font-semibold mb-2">Points</label>
           <input
@@ -2784,7 +2851,7 @@ function QuestionCreationForm({
             max="10"
             value={currentQuestion.points}
             onChange={(e) => setCurrentQuestion({ ...currentQuestion, points: parseInt(e.target.value) || 1 })}
-            className="w-full p-3 border border-gray-300 rounded-lg"
+            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg text-sm"
           />
         </div>
         
@@ -2793,7 +2860,7 @@ function QuestionCreationForm({
           <select
             value={currentQuestion.difficulty}
             onChange={(e) => setCurrentQuestion({ ...currentQuestion, difficulty: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded-lg"
+            className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg text-sm"
           >
             <option value="easy">🟢 Easy</option>
             <option value="medium">🟡 Medium</option>
@@ -2801,8 +2868,8 @@ function QuestionCreationForm({
           </select>
         </div>
         
-        <div className="flex items-center pt-8">
-          <label className="flex items-center">
+        <div className="flex items-center pt-4 sm:pt-8">
+          <label className="flex items-center text-sm">
             <input
               type="checkbox"
               checked={currentQuestion.is_mandatory}
@@ -2814,8 +2881,8 @@ function QuestionCreationForm({
         </div>
 
         {currentQuestion.question_type === 'multiple_choice' && (
-          <div className="flex items-center pt-8">
-            <label className="flex items-center">
+          <div className="flex items-center pt-4 sm:pt-8">
+            <label className="flex items-center text-sm">
               <input
                 type="checkbox"
                 checked={currentQuestion.multiple_correct}
@@ -2829,8 +2896,8 @@ function QuestionCreationForm({
       </div>
 
       {/* File Uploads */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        {/* Image Upload */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* Image Upload with Cropping */}
         <div>
           <label className="block text-gray-700 font-semibold mb-2">Question Image</label>
           {!currentQuestion.image_url ? (
@@ -2838,7 +2905,7 @@ function QuestionCreationForm({
               <input
                 type="file"
                 accept="image/*"
-                onChange={(e) => handleFileUpload(e, 'image')}
+                onChange={handleImageUpload}
                 className="hidden"
                 id="imageUpload"
                 disabled={uploadingFile}
@@ -2849,7 +2916,7 @@ function QuestionCreationForm({
                   uploadingFile ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >
-                {uploadingFile ? 'Uploading...' : '📷 Upload Image'}
+                {uploadingFile ? 'Uploading...' : '📷 Upload & Crop Image'}
               </label>
               <p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF, WEBP (max 5MB)</p>
             </div>
@@ -2930,11 +2997,14 @@ function QuestionCreationForm({
 
       {/* Explanation */}
       <div className="mb-4">
-        <label className="block text-gray-700 font-semibold mb-2">Explanation (Optional)</label>
+        <label className="block text-gray-700 font-semibold mb-2">
+          Explanation (Optional)
+          <span className="text-xs text-blue-600 ml-2">(Math supported)</span>
+        </label>
         <textarea
           value={currentQuestion.explanation}
           onChange={(e) => setCurrentQuestion({ ...currentQuestion, explanation: e.target.value })}
-          className="w-full p-3 border border-gray-300 rounded-lg"
+          className="w-full p-3 border border-gray-300 rounded-lg text-sm"
           rows="2"
           placeholder="Explain the answer or provide additional context"
         />
@@ -2942,10 +3012,22 @@ function QuestionCreationForm({
 
       <button
         onClick={addQuestion}
-        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
+        className="w-full sm:w-auto bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
       >
         ➕ Add Question
       </button>
+
+      {/* Image Crop Modal */}
+      {showCropModal && tempImageSrc && (
+        <ImageCropModal
+          imageSrc={tempImageSrc}
+          onCropComplete={handleCropComplete}
+          onClose={() => {
+            setShowCropModal(false);
+            setTempImageSrc(null);
+          }}
+        />
+      )}
     </div>
   );
 }
