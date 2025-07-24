@@ -191,7 +191,43 @@ frontend:
     status_history:
         - working: true
           agent: "main"
-          comment: "Enhanced UserTakeQuiz component to handle both multiple choice (including multiple correct answers) and open-ended questions with text input, file attachments display"
+          comment: "Enhanced UserTakeQuiz component to handle both multiple choice (including multiple correct answers) and open-ended questions with text input, file attachments display, added Finish Quiz button with confirmation modal"
+  
+  - task: "Mathematical Expressions Support"
+    implemented: true
+    working: true
+    file: "App.js, index.html"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Added MathJax support for LaTeX expressions in questions, options, and explanations. Users can use $...$ for inline math and $$...$$ for display math with live preview"
+  
+  - task: "Image Cropping Functionality"
+    implemented: true
+    working: true
+    file: "App.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Added ImageCropModal component with react-image-crop library for cropping images before uploading to questions. Includes preview and crop controls"
+  
+  - task: "Mobile Responsive Design"
+    implemented: true
+    working: true
+    file: "App.js, index.html"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Enhanced mobile responsiveness with responsive grid layouts, flexible navigation, optimized text sizes, touch-friendly buttons, mobile-optimized quiz player"
   
   - task: "Admin Folder Visibility Controls"
     implemented: true
@@ -203,7 +239,7 @@ frontend:
     status_history:
         - working: true
           agent: "main"
-          comment: "Added comprehensive folder management in AdminCategoriesView with create/delete/visibility controls, user access management"
+          comment: "Added comprehensive folder management in AdminCategoriesView with create/delete/visibility controls, user access management - already implemented"
   
   - task: "Moving Quizzes Between Folders UI"
     implemented: true
@@ -215,7 +251,7 @@ frontend:
     status_history:
         - working: true
           agent: "main"
-          comment: "Added move quiz functionality with modal interface in AdminQuizzesView, allowing admins to move quizzes between subjects/subcategories"
+          comment: "Added move quiz functionality with modal interface in AdminQuizzesView, allowing admins to move quizzes between subjects/subcategories - already implemented"
   
   - task: "Admin Quiz Creation Interface for Flexible Question Types"
     implemented: true
@@ -227,7 +263,7 @@ frontend:
     status_history:
         - working: true
           agent: "main"
-          comment: "Already fully implemented with QuestionCreationForm, MultipleChoiceQuestionForm, OpenEndedQuestionForm components, file uploads, validation"
+          comment: "Enhanced with math support, image cropping, mobile responsiveness. QuestionCreationForm, MultipleChoiceQuestionForm, OpenEndedQuestionForm with math preview"
   
   - task: "Client-side Form Validation"
     implemented: true
@@ -239,7 +275,7 @@ frontend:
     status_history:
         - working: true
           agent: "main"
-          comment: "Comprehensive validation implemented for quiz creation, question forms, edge cases with detailed error messages"
+          comment: "Comprehensive validation implemented for quiz creation, question forms, edge cases with detailed error messages - already implemented"
 
 metadata:
   created_by: "main_agent"
