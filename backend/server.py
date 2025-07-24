@@ -815,33 +815,92 @@ async def get_analytics_summary(admin_user: User = Depends(get_admin_user)):
         "average_score": round(avg_score, 1),
         "most_popular_quiz": most_popular_quiz
     }
-@api_router.get("/admin/subject-folders")
-async def get_subject_folders(admin_user: User = Depends(get_admin_user)):
-    """Get all subject folders with quiz counts"""
+@api_router.get("/admin/subjects-structure")
+async def get_subjects_structure(admin_user: User = Depends(get_admin_user)):
+    """Get nested subject structure (Subject -> Subcategories -> Quizzes)"""
     quizzes = await db.quizzes.find({"is_active": True}).to_list(1000)
     
-    folders = {}
+    subjects = {}
     for quiz in quizzes:
-        folder = quiz.get("subject_folder", "General")
-        if folder not in folders:
-            folders[folder] = {
-                "name": folder,
-                "quiz_count": 0,
-                "quizzes": []
+        subject = quiz.get("subject", "General")
+        subcategory = quiz.get("subcategory", "General")
+        
+        if subject not in subjects:
+            subjects[subject] = {
+                "name": subject,
+                "subcategories": {},
+                "total_quizzes": 0
             }
-        folders[folder]["quiz_count"] += 1
-        folders[folder]["quizzes"].append({
+        
+        if subcategory not in subjects[subject]["subcategories"]:
+            subjects[subject]["subcategories"][subcategory] = {
+                "name": subcategory,
+                "quizzes": [],
+                "quiz_count": 0
+            }
+        
+        # Add quiz info
+        quiz_info = {
             "id": quiz["id"],
             "title": quiz["title"],
+            "category": quiz.get("category", ""),
             "created_at": quiz["created_at"],
-            "is_public": quiz.get("is_public", False)
-        })
+            "is_public": quiz.get("is_public", False),
+            "total_questions": quiz.get("total_questions", 0),
+            "total_attempts": quiz.get("total_attempts", 0),
+            "average_score": quiz.get("average_score", 0.0)
+        }
+        
+        subjects[subject]["subcategories"][subcategory]["quizzes"].append(quiz_info)
+        subjects[subject]["subcategories"][subcategory]["quiz_count"] += 1
+        subjects[subject]["total_quizzes"] += 1
     
-    # Sort quizzes in each folder by creation date
-    for folder in folders.values():
-        folder["quizzes"].sort(key=lambda x: x["created_at"], reverse=True)
+    # Sort quizzes by creation date within each subcategory
+    for subject in subjects.values():
+        for subcategory in subject["subcategories"].values():
+            subcategory["quizzes"].sort(key=lambda x: x["created_at"], reverse=True)
     
-    return list(folders.values())
+    return subjects
+
+@api_router.post("/admin/subject-category")
+async def create_subject_category(subject: str, subcategories: List[str], admin_user: User = Depends(get_admin_user)):
+    """Create or update subject with subcategories"""
+    # Check if subject already exists
+    existing = await db.subject_categories.find_one({"subject": subject})
+    
+    if existing:
+        # Update existing subject
+        await db.subject_categories.update_one(
+            {"subject": subject},
+            {"$set": {"subcategories": subcategories}}
+        )
+    else:
+        # Create new subject
+        subject_category = SubjectCategory(subject=subject, subcategories=subcategories)
+        await db.subject_categories.insert_one(subject_category.dict())
+    
+    return {"message": f"Subject '{subject}' updated with {len(subcategories)} subcategories"}
+
+@api_router.get("/admin/predefined-subjects")
+async def get_predefined_subjects(admin_user: User = Depends(get_admin_user)):
+    """Get predefined subjects with their subcategories"""
+    predefined = {
+        "Mathematics": ["Algebra", "Geometry", "Triangles", "Calculus", "Statistics", "Probability"],
+        "Science": ["Physics", "Chemistry", "Biology", "Forces", "Atoms", "Genetics"],
+        "History": ["Ancient History", "Modern History", "World Wars", "Civilizations"],
+        "Language": ["Grammar", "Literature", "Vocabulary", "Reading Comprehension"],
+        "Geography": ["World Geography", "Physical Geography", "Countries", "Capitals"],
+        "Technology": ["Programming", "Computer Science", "Web Development", "Databases"],
+        "Art": ["Painting", "Sculpture", "Music Theory", "Art History"],
+        "General": ["Mixed Topics", "General Knowledge", "Trivia"]
+    }
+    
+    # Also get custom subjects from database
+    custom_subjects = await db.subject_categories.find().to_list(1000)
+    for custom in custom_subjects:
+        predefined[custom["subject"]] = custom["subcategories"]
+    
+    return predefined
 
 @api_router.get("/admin/user/{user_id}/details")
 async def get_user_details(user_id: str, admin_user: User = Depends(get_admin_user)):
