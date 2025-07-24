@@ -1080,14 +1080,23 @@ class OnlineTestMakerAPITester:
         except Exception as e:
             return self.log_test("Admin Subjects Structure", False, f"Error: {str(e)}")
 
-    def test_admin_predefined_subjects(self):
-        """Test admin getting predefined subjects"""
+    def test_admin_create_subject_folder(self):
+        """Test admin creating subject folder"""
         if not self.admin_token:
-            return self.log_test("Admin Predefined Subjects", False, "No admin token available")
+            return self.log_test("Admin Create Subject Folder", False, "No admin token available")
             
+        folder_data = {
+            "name": "Advanced Physics",
+            "description": "Advanced physics topics and concepts",
+            "subcategories": ["Quantum Mechanics", "Thermodynamics", "Electromagnetism"],
+            "is_public": True,
+            "allowed_users": []
+        }
+        
         try:
-            response = requests.get(
-                f"{self.api_url}/admin/predefined-subjects",
+            response = requests.post(
+                f"{self.api_url}/admin/subject-folder",
+                json=folder_data,
                 headers=self.get_auth_headers(self.admin_token),
                 timeout=10
             )
@@ -1095,19 +1104,307 @@ class OnlineTestMakerAPITester:
             details = f"Status: {response.status_code}"
             
             if success:
-                subjects = response.json()
-                details += f", Predefined Subjects Count: {len(subjects)}"
-                if 'Mathematics' in subjects:
-                    math_subcategories = subjects['Mathematics']
-                    details += f", Math Subcategories: {len(math_subcategories)}"
-                    if 'Triangles' in math_subcategories:
-                        details += ", Has Triangles subcategory"
+                folder = response.json()
+                self.created_folder_id = folder.get('id')
+                details += f", Folder ID: {self.created_folder_id}"
+                details += f", Name: {folder.get('name', 'Unknown')}"
+                details += f", Subcategories: {len(folder.get('subcategories', []))}"
             else:
                 details += f", Response: {response.text[:200]}"
                 
-            return self.log_test("Admin Predefined Subjects", success, details)
+            return self.log_test("Admin Create Subject Folder", success, details)
         except Exception as e:
-            return self.log_test("Admin Predefined Subjects", False, f"Error: {str(e)}")
+            return self.log_test("Admin Create Subject Folder", False, f"Error: {str(e)}")
+
+    def test_admin_get_subject_folders(self):
+        """Test admin getting all subject folders"""
+        if not self.admin_token:
+            return self.log_test("Admin Get Subject Folders", False, "No admin token available")
+            
+        try:
+            response = requests.get(
+                f"{self.api_url}/admin/subject-folders",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                folders = response.json()
+                details += f", Folders Count: {len(folders)}"
+                if len(folders) > 0:
+                    details += f", First Folder: {folders[0].get('name', 'Unknown')}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Get Subject Folders", success, details)
+        except Exception as e:
+            return self.log_test("Admin Get Subject Folders", False, f"Error: {str(e)}")
+
+    def test_admin_update_subject_folder(self):
+        """Test admin updating subject folder"""
+        if not self.admin_token or not hasattr(self, 'created_folder_id'):
+            return self.log_test("Admin Update Subject Folder", False, "No admin token or folder ID available")
+            
+        update_data = {
+            "description": "Updated description for advanced physics",
+            "subcategories": ["Quantum Mechanics", "Thermodynamics", "Electromagnetism", "Relativity"],
+            "is_public": False
+        }
+        
+        try:
+            response = requests.put(
+                f"{self.api_url}/admin/subject-folder/{self.created_folder_id}",
+                json=update_data,
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                folder = response.json()
+                details += f", Updated Subcategories: {len(folder.get('subcategories', []))}"
+                details += f", Is Public: {folder.get('is_public', True)}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Update Subject Folder", success, details)
+        except Exception as e:
+            return self.log_test("Admin Update Subject Folder", False, f"Error: {str(e)}")
+
+    def test_admin_upload_pdf_file(self):
+        """Test admin PDF file upload functionality"""
+        if not self.admin_token:
+            return self.log_test("Admin Upload PDF File", False, "No admin token available")
+            
+        # Create a minimal PDF file (just header)
+        pdf_content = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n>>\nendobj\nxref\n0 4\n0000000000 65535 f \n0000000010 00000 n \n0000000079 00000 n \n0000000173 00000 n \ntrailer\n<<\n/Size 4\n/Root 1 0 R\n>>\nstartxref\n253\n%%EOF"
+        
+        try:
+            files = {'file': ('test.pdf', pdf_content, 'application/pdf')}
+            headers = {'Authorization': f'Bearer {self.admin_token}'}
+            
+            response = requests.post(
+                f"{self.api_url}/admin/upload-file",
+                files=files,
+                headers=headers,
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                data = response.json()
+                pdf_id = data.get('id')
+                details += f", PDF ID: {pdf_id}, Size: {data.get('size', 0)} bytes"
+                details += f", Category: {data.get('category', 'unknown')}"
+                self.uploaded_pdf_id = pdf_id
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Upload PDF File", success, details)
+        except Exception as e:
+            return self.log_test("Admin Upload PDF File", False, f"Error: {str(e)}")
+
+    def test_admin_create_flexible_quiz(self):
+        """Test admin creating quiz with flexible question types (multiple choice + open-ended)"""
+        if not self.admin_token:
+            return self.log_test("Admin Create Flexible Quiz", False, "No admin token available")
+            
+        quiz_data = {
+            "title": "Flexible Question Types Quiz",
+            "description": "A quiz testing both multiple choice and open-ended questions",
+            "category": "Mixed Assessment",
+            "subject": "Computer Science",
+            "subcategory": "Programming",
+            "questions": [
+                {
+                    "question_text": "Which programming languages are object-oriented? (Select all that apply)",
+                    "question_type": "multiple_choice",
+                    "multiple_correct": True,
+                    "options": [
+                        {"text": "Java", "is_correct": True},
+                        {"text": "Python", "is_correct": True},
+                        {"text": "C", "is_correct": False},
+                        {"text": "JavaScript", "is_correct": True}
+                    ],
+                    "points": 3,
+                    "difficulty": "medium"
+                },
+                {
+                    "question_text": "What is the capital of France?",
+                    "question_type": "multiple_choice",
+                    "multiple_correct": False,
+                    "options": [
+                        {"text": "London", "is_correct": False},
+                        {"text": "Paris", "is_correct": True},
+                        {"text": "Berlin", "is_correct": False},
+                        {"text": "Madrid", "is_correct": False}
+                    ],
+                    "points": 1,
+                    "difficulty": "easy"
+                },
+                {
+                    "question_text": "Explain the concept of inheritance in object-oriented programming.",
+                    "question_type": "open_ended",
+                    "open_ended_answer": {
+                        "expected_answers": [
+                            "Inheritance allows a class to inherit properties and methods from another class",
+                            "A mechanism where one class acquires the properties of another class",
+                            "Child class inherits from parent class"
+                        ],
+                        "keywords": ["inherit", "class", "parent", "child", "properties", "methods"],
+                        "case_sensitive": False,
+                        "partial_credit": True
+                    },
+                    "points": 5,
+                    "difficulty": "hard"
+                }
+            ],
+            "min_pass_percentage": 70.0,
+            "shuffle_questions": True,
+            "shuffle_options": True
+        }
+
+        try:
+            response = requests.post(
+                f"{self.api_url}/admin/quiz",
+                json=quiz_data,
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                quiz = response.json()
+                self.flexible_quiz_id = quiz.get('id')
+                details += f", Quiz ID: {self.flexible_quiz_id}"
+                details += f", Total Points: {quiz.get('total_points', 0)}"
+                details += f", Questions: {quiz.get('total_questions', 0)}"
+                
+                # Check question types
+                questions = quiz.get('questions', [])
+                mc_count = sum(1 for q in questions if q.get('question_type') == 'multiple_choice')
+                oe_count = sum(1 for q in questions if q.get('question_type') == 'open_ended')
+                details += f", MC Questions: {mc_count}, Open-ended: {oe_count}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Create Flexible Quiz", success, details)
+        except Exception as e:
+            return self.log_test("Admin Create Flexible Quiz", False, f"Error: {str(e)}")
+
+    def test_user_take_flexible_quiz(self):
+        """Test user taking quiz with mixed question types"""
+        if not self.user_token or not hasattr(self, 'flexible_quiz_id'):
+            return self.log_test("User Take Flexible Quiz", False, "No user token or flexible quiz ID available")
+
+        # Answers: partial correct for multiple choice, correct single choice, partial open-ended
+        attempt_data = {
+            "quiz_id": self.flexible_quiz_id,
+            "answers": [
+                "Java,Python",  # Partial correct (missing JavaScript)
+                "Paris",        # Correct
+                "Inheritance allows a class to inherit properties from parent class"  # Partial (has keywords)
+            ]
+        }
+
+        try:
+            response = requests.post(
+                f"{self.api_url}/quiz/{self.flexible_quiz_id}/attempt",
+                json=attempt_data,
+                headers=self.get_auth_headers(self.user_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                result = response.json()
+                details += f", Score: {result.get('score', 0)}/{result.get('total_questions', 0)}"
+                details += f", Points: {result.get('earned_points', 0)}/{result.get('total_possible_points', 0)}"
+                details += f", Percentage: {result.get('percentage', 0):.1f}%"
+                details += f", Points %: {result.get('points_percentage', 0):.1f}%"
+                details += f", Passed: {result.get('passed', False)}"
+                
+                # Check question results for grading details
+                question_results = result.get('question_results', [])
+                if len(question_results) > 0:
+                    details += f", Q1 Points: {question_results[0].get('points_earned', 0)}"
+                    if len(question_results) > 2:
+                        details += f", Q3 Points: {question_results[2].get('points_earned', 0)}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("User Take Flexible Quiz", success, details)
+        except Exception as e:
+            return self.log_test("User Take Flexible Quiz", False, f"Error: {str(e)}")
+
+    def test_admin_move_quiz_to_folder(self):
+        """Test admin moving quiz to different folder"""
+        if not self.admin_token or not hasattr(self, 'flexible_quiz_id'):
+            return self.log_test("Admin Move Quiz to Folder", False, "No admin token or quiz ID available")
+            
+        try:
+            # Move quiz to Mathematics -> Algebra
+            response = requests.post(
+                f"{self.api_url}/admin/quiz/{self.flexible_quiz_id}/move-folder?new_subject=Mathematics&new_subcategory=Algebra",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                data = response.json()
+                details += f", Message: {data.get('message', 'No message')}"
+                
+                # Verify the move by getting quiz details
+                quiz_response = requests.get(
+                    f"{self.api_url}/quiz/{self.flexible_quiz_id}",
+                    headers=self.get_auth_headers(self.user_token),
+                    timeout=10
+                )
+                if quiz_response.status_code == 200:
+                    quiz = quiz_response.json()
+                    details += f", New Subject: {quiz.get('subject', 'Unknown')}"
+                    details += f", New Subcategory: {quiz.get('subcategory', 'Unknown')}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Move Quiz to Folder", success, details)
+        except Exception as e:
+            return self.log_test("Admin Move Quiz to Folder", False, f"Error: {str(e)}")
+
+    def test_admin_delete_subject_folder(self):
+        """Test admin deleting subject folder (should fail if has quizzes)"""
+        if not self.admin_token or not hasattr(self, 'created_folder_id'):
+            return self.log_test("Admin Delete Subject Folder", False, "No admin token or folder ID available")
+            
+        try:
+            response = requests.delete(
+                f"{self.api_url}/admin/subject-folder/{self.created_folder_id}",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            # Should succeed (200) if no quizzes, or fail (400) if has quizzes
+            success = response.status_code in [200, 400]
+            details = f"Status: {response.status_code}"
+            
+            if response.status_code == 200:
+                data = response.json()
+                details += f", Message: {data.get('message', 'No message')}"
+            elif response.status_code == 400:
+                details += ", Cannot delete folder with quizzes (expected)"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Delete Subject Folder", success, details)
+        except Exception as e:
+            return self.log_test("Admin Delete Subject Folder", False, f"Error: {str(e)}")
 
     def test_admin_user_details(self):
         """Test admin getting individual user details with quiz history and mistakes"""
