@@ -1344,16 +1344,23 @@ class OnlineTestMakerAPITester:
         # NEW ENHANCED FEATURES TESTING
         print("\n🆕 Testing Enhanced Features...")
         
-        # Enhanced quiz creation and management
-        self.test_admin_create_enhanced_quiz()
-        self.test_admin_edit_quiz()
+        # Enhanced nested folder organization
+        self.test_admin_subjects_structure()
+        self.test_admin_predefined_subjects()
+        
+        # Enhanced quiz creation and management with nested structure
+        self.test_admin_create_enhanced_quiz_with_nested_structure()
+        self.test_admin_quiz_edit_details()
+        self.test_admin_enhanced_quiz_update()
         self.test_admin_quiz_access_control()
         self.test_admin_quiz_leaderboard()
-        self.test_admin_subject_folders()
         self.test_admin_user_details()
         
         # Enhanced quiz submission with mistake review
         self.test_user_enhanced_quiz_submission()
+        
+        # Enhanced quiz results and ranking
+        self.test_quiz_results_ranking()
         
         # Password change functionality
         self.test_password_change()
