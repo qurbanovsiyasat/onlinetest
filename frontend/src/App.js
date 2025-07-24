@@ -4097,6 +4097,39 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
           )}
         </div>
       </div>
+
+      {/* Question Deletion Confirmation Modal for Quiz Creation */}
+      {deleteQuestionFromQuizConfirm.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-4">🗑️</div>
+              <h3 className="text-lg font-semibold mb-2">Remove Question?</h3>
+              <p className="text-gray-600 text-sm">
+                Are you sure you want to remove Question {deleteQuestionFromQuizConfirm.questionIndex + 1}?
+              </p>
+              <p className="text-red-600 text-sm mt-2">
+                ⚠️ This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={confirmRemoveQuestionFromQuiz}
+                className="flex-1 bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition duration-200 font-semibold"
+              >
+                Yes, Remove
+              </button>
+              <button
+                onClick={() => setDeleteQuestionFromQuizConfirm({ show: false, questionIndex: null })}
+                className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
