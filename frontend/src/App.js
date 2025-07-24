@@ -1365,6 +1365,40 @@ function QuizEditModal({ quiz, onClose, onUpdate }) {
 
 function AdminCategoriesView({ categories, fetchCategories }) {
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
+  const [subjectFolders, setSubjectFolders] = useState([]);
+  const [newFolder, setNewFolder] = useState({ 
+    name: '', 
+    description: '', 
+    is_visible: true, 
+    allowed_users: [] 
+  });
+  const [allUsers, setAllUsers] = useState([]);
+  const [activeTab, setActiveTab] = useState('categories'); // 'categories' or 'folders'
+
+  useEffect(() => {
+    if (activeTab === 'folders') {
+      fetchSubjectFolders();
+      fetchAllUsers();
+    }
+  }, [activeTab]);
+
+  const fetchSubjectFolders = async () => {
+    try {
+      const response = await apiCall('/admin/subject-folders');
+      setSubjectFolders(response.data);
+    } catch (error) {
+      console.error('Error fetching subject folders:', error);
+    }
+  };
+
+  const fetchAllUsers = async () => {
+    try {
+      const response = await apiCall('/admin/users');
+      setAllUsers(response.data.filter(user => user.role === 'user'));
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
 
   const createCategory = async () => {
     if (!newCategory.name) return;
@@ -1381,44 +1415,236 @@ function AdminCategoriesView({ categories, fetchCategories }) {
     }
   };
 
+  const createSubjectFolder = async () => {
+    if (!newFolder.name) {
+      alert('Folder name is required');
+      return;
+    }
+    
+    try {
+      await apiCall('/admin/subject-folder', {
+        method: 'POST',
+        data: newFolder
+      });
+      setNewFolder({ name: '', description: '', is_visible: true, allowed_users: [] });
+      fetchSubjectFolders();
+      alert('Subject folder created successfully!');
+    } catch (error) {
+      alert('Error creating subject folder: ' + (error.response?.data?.detail || 'Unknown error'));
+    }
+  };
+
+  const toggleFolderVisibility = async (folderId, currentVisibility) => {
+    try {
+      await apiCall(`/admin/subject-folder/${folderId}`, {
+        method: 'PUT',
+        data: { is_visible: !currentVisibility }
+      });
+      fetchSubjectFolders();
+    } catch (error) {
+      alert('Error updating folder visibility');
+    }
+  };
+
+  const deleteFolder = async (folderId, folderName) => {
+    if (window.confirm(`Are you sure you want to delete the folder "${folderName}"? This action cannot be undone.`)) {
+      try {
+        await apiCall(`/admin/subject-folder/${folderId}`, {
+          method: 'DELETE'
+        });
+        fetchSubjectFolders();
+        alert('Folder deleted successfully!');
+      } catch (error) {
+        alert('Error deleting folder: ' + (error.response?.data?.detail || 'Unknown error'));
+      }
+    }
+  };
+
+  const toggleUserAccessForFolder = (userId) => {
+    setNewFolder({
+      ...newFolder,
+      allowed_users: newFolder.allowed_users.includes(userId)
+        ? newFolder.allowed_users.filter(id => id !== userId)
+        : [...newFolder.allowed_users, userId]
+    });
+  };
+
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">Quiz Categories</h2>
-      
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-        <h3 className="font-semibold mb-3">Create New Category</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
-            type="text"
-            placeholder="Category name"
-            value={newCategory.name}
-            onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-            className="p-2 border border-gray-300 rounded"
-          />
-          <input
-            type="text"
-            placeholder="Description (optional)"
-            value={newCategory.description}
-            onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-            className="p-2 border border-gray-300 rounded"
-          />
-        </div>
+      {/* Tabs */}
+      <div className="flex mb-6">
         <button
-          onClick={createCategory}
-          className="mt-3 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-200"
+          onClick={() => setActiveTab('categories')}
+          className={`px-4 py-2 rounded-l-lg transition duration-200 ${
+            activeTab === 'categories' 
+              ? 'bg-indigo-600 text-white' 
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
         >
-          Create Category
+          📝 Quiz Categories
+        </button>
+        <button
+          onClick={() => setActiveTab('folders')}
+          className={`px-4 py-2 rounded-r-lg transition duration-200 ${
+            activeTab === 'folders' 
+              ? 'bg-indigo-600 text-white' 
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          📁 Subject Folders
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {categories.map((category) => (
-          <div key={category.id} className="border rounded-lg p-4">
-            <h3 className="font-semibold text-gray-800">{category.name}</h3>
-            <p className="text-gray-600 text-sm">{category.description || 'No description'}</p>
+      {activeTab === 'categories' ? (
+        <div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Quiz Categories</h2>
+          
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h3 className="font-semibold mb-3">Create New Category</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                type="text"
+                placeholder="Category name"
+                value={newCategory.name}
+                onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                className="p-2 border border-gray-300 rounded"
+              />
+              <input
+                type="text"
+                placeholder="Description (optional)"
+                value={newCategory.description}
+                onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                className="p-2 border border-gray-300 rounded"
+              />
+            </div>
+            <button
+              onClick={createCategory}
+              className="mt-3 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-200"
+            >
+              Create Category
+            </button>
           </div>
-        ))}
-      </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {categories.map((category) => (
+              <div key={category.id} className="border rounded-lg p-4">
+                <h3 className="font-semibold text-gray-800">{category.name}</h3>
+                <p className="text-gray-600 text-sm">{category.description || 'No description'}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Subject Folder Management</h2>
+          
+          {/* Create New Folder */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h3 className="font-semibold mb-3">Create New Subject Folder</h3>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="Folder name (e.g., Mathematics)"
+                  value={newFolder.name}
+                  onChange={(e) => setNewFolder({ ...newFolder, name: e.target.value })}
+                  className="p-2 border border-gray-300 rounded"
+                />
+                <input
+                  type="text"
+                  placeholder="Description (optional)"
+                  value={newFolder.description}
+                  onChange={(e) => setNewFolder({ ...newFolder, description: e.target.value })}
+                  className="p-2 border border-gray-300 rounded"
+                />
+              </div>
+              
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={newFolder.is_visible}
+                  onChange={(e) => setNewFolder({ ...newFolder, is_visible: e.target.checked })}
+                  className="mr-2"
+                />
+                <label>Visible to Users</label>
+              </div>
+
+              {newFolder.is_visible && (
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-2">
+                    Select Users with Access ({newFolder.allowed_users.length} selected)
+                  </label>
+                  <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-3">
+                    {allUsers.map((user) => (
+                      <div key={user.id} className="flex items-center mb-2">
+                        <input
+                          type="checkbox"
+                          checked={newFolder.allowed_users.includes(user.id)}
+                          onChange={() => toggleUserAccessForFolder(user.id)}
+                          className="mr-3"
+                        />
+                        <span className="text-sm">{user.name} ({user.email})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <button
+              onClick={createSubjectFolder}
+              className="mt-3 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-200"
+            >
+              ➕ Create Subject Folder
+            </button>
+          </div>
+
+          {/* Existing Folders */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {subjectFolders.map((folder) => (
+              <div key={folder.id} className="border rounded-lg p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-semibold text-gray-800">{folder.name}</h3>
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    folder.is_visible ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {folder.is_visible ? 'Visible' : 'Hidden'}
+                  </span>
+                </div>
+                
+                <p className="text-gray-600 text-sm mb-3">
+                  {folder.description || 'No description'}
+                </p>
+                
+                {folder.allowed_users && folder.allowed_users.length > 0 && (
+                  <p className="text-xs text-blue-600 mb-3">
+                    {folder.allowed_users.length} users have access
+                  </p>
+                )}
+                
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => toggleFolderVisibility(folder.id, folder.is_visible)}
+                    className={`flex-1 py-1 px-2 rounded text-xs transition duration-200 ${
+                      folder.is_visible 
+                        ? 'bg-yellow-600 text-white hover:bg-yellow-700' 
+                        : 'bg-green-600 text-white hover:bg-green-700'
+                    }`}
+                  >
+                    {folder.is_visible ? '👁️ Hide' : '👀 Show'}
+                  </button>
+                  <button
+                    onClick={() => deleteFolder(folder.id, folder.name)}
+                    className="flex-1 py-1 px-2 rounded text-xs bg-red-600 text-white hover:bg-red-700 transition duration-200"
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
