@@ -1480,18 +1480,18 @@ class OnlineTestMakerAPITester:
 
     def test_user_enhanced_quiz_submission(self):
         """Test user taking quiz with enhanced submission (mistake review)"""
-        if not self.user_token or not self.created_quiz_id:
-            return self.log_test("User Enhanced Quiz Submission", False, "No user token or quiz ID available")
+        if not self.user_token or not hasattr(self, 'flexible_quiz_id'):
+            return self.log_test("User Enhanced Quiz Submission", False, "No user token or flexible quiz ID available")
 
         # Submit with some wrong answers to test mistake review
         attempt_data = {
-            "quiz_id": self.created_quiz_id,
-            "answers": ["3", "London"]  # Wrong answers to test mistake review
+            "quiz_id": self.flexible_quiz_id,
+            "answers": ["Java", "London", "Inheritance is about classes"]  # Mixed correct/wrong answers
         }
 
         try:
             response = requests.post(
-                f"{self.api_url}/quiz/{self.created_quiz_id}/attempt",
+                f"{self.api_url}/quiz/{self.flexible_quiz_id}/attempt",
                 json=attempt_data,
                 headers=self.get_auth_headers(self.user_token),
                 timeout=10
@@ -1502,7 +1502,10 @@ class OnlineTestMakerAPITester:
             if success:
                 result = response.json()
                 details += f", Score: {result.get('score', 0)}/{result.get('total_questions', 0)}"
+                details += f", Points: {result.get('earned_points', 0)}/{result.get('total_possible_points', 0)}"
                 details += f", Percentage: {result.get('percentage', 0):.1f}%"
+                details += f", Points %: {result.get('points_percentage', 0):.1f}%"
+                details += f", Passed: {result.get('passed', False)}"
                 
                 # Check for enhanced features
                 correct_answers = result.get('correct_answers', [])
@@ -1514,6 +1517,7 @@ class OnlineTestMakerAPITester:
                 if len(question_results) > 0:
                     first_result = question_results[0]
                     details += f", First Q Correct: {first_result.get('is_correct', False)}"
+                    details += f", First Q Points: {first_result.get('points_earned', 0)}"
             else:
                 details += f", Response: {response.text[:200]}"
                 
