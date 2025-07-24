@@ -369,7 +369,7 @@ async def get_quiz_leaderboard(quiz_id: str, admin_user: User = Depends(get_admi
 
 @api_router.get("/admin/quizzes", response_model=List[Quiz])
 async def get_all_quizzes_admin(admin_user: User = Depends(get_admin_user)):
-    """Get all quizzes (admin only)"""
+    """Get all quizzes (admin only) - sorted by creation date"""
     quizzes = await db.quizzes.find().to_list(1000)
     valid_quizzes = []
     for quiz in quizzes:
@@ -380,12 +380,24 @@ async def get_all_quizzes_admin(admin_user: User = Depends(get_admin_user)):
             quiz['created_by'] = admin_user.id
         if 'is_active' not in quiz:
             quiz['is_active'] = True
+        if 'is_public' not in quiz:
+            quiz['is_public'] = False
+        if 'allowed_users' not in quiz:
+            quiz['allowed_users'] = []
+        if 'subject_folder' not in quiz:
+            quiz['subject_folder'] = 'General'
+        if 'updated_at' not in quiz:
+            quiz['updated_at'] = quiz.get('created_at', datetime.utcnow())
         try:
             valid_quizzes.append(Quiz(**quiz))
         except Exception as e:
             # Skip invalid quiz records
             print(f"Skipping invalid quiz: {quiz.get('id', 'unknown')} - {str(e)}")
             continue
+    
+    # Sort by creation date (newest first)
+    valid_quizzes.sort(key=lambda x: x.created_at, reverse=True)
+    
     return valid_quizzes
 
 @api_router.delete("/admin/quiz/{quiz_id}")
