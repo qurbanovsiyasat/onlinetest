@@ -769,6 +769,46 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
     }
   };
 
+  const moveQuiz = (quiz) => {
+    setMovingQuiz(quiz);
+    setMoveDestination({ 
+      subject: quiz.subject || 'Mathematics', 
+      subcategory: quiz.subcategory || 'General' 
+    });
+    setShowMoveModal(true);
+  };
+
+  const handleMoveQuiz = async () => {
+    if (!movingQuiz || !moveDestination.subject) {
+      alert('Please select a destination folder');
+      return;
+    }
+
+    try {
+      await apiCall(`/admin/quiz/${movingQuiz.id}/move-folder`, {
+        method: 'POST',
+        data: {
+          new_subject: moveDestination.subject,
+          new_subcategory: moveDestination.subcategory
+        }
+      });
+
+      setShowMoveModal(false);
+      setMovingQuiz(null);
+      fetchQuizzes();
+      if (viewMode === 'folders') {
+        fetchSubjectsStructure();
+      }
+      alert('Quiz moved successfully!');
+    } catch (error) {
+      alert('Error moving quiz: ' + (error.response?.data?.detail || 'Unknown error'));
+    }
+  };
+
+  const getSubcategoriesForMove = () => {
+    return predefinedSubjects[moveDestination.subject] || ['General'];
+  };
+
   const QuizCard = ({ quiz, showSubject = true }) => (
     <div className="border rounded-lg p-4 relative">
       <div className="mb-2 flex flex-wrap gap-1">
