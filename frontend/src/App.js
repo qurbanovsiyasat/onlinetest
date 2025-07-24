@@ -3237,7 +3237,7 @@ function OpenEndedQuestionForm({
   );
 }
 
-function QuestionPreview({ question, index }) {
+function QuestionPreview({ question, index, onDelete }) {
   const getDifficultyColor = (difficulty) => {
     switch (difficulty) {
       case 'easy': return 'bg-green-100 text-green-800';
@@ -3251,9 +3251,9 @@ function QuestionPreview({ question, index }) {
     <div className="bg-white border rounded-lg p-4">
       <div className="flex justify-between items-start mb-3">
         <h4 className="font-semibold text-gray-800">
-          Question {index + 1}: {question.question_text}
+          Question {index + 1}: {renderMathContent(question.question_text)}
         </h4>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <span className={`px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(question.difficulty)}`}>
             {question.difficulty}
           </span>
@@ -3264,6 +3264,15 @@ function QuestionPreview({ question, index }) {
             <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">
               Optional
             </span>
+          )}
+          {onDelete && (
+            <button
+              onClick={() => onDelete(index)}
+              className="px-2 py-1 rounded text-xs bg-red-600 text-white hover:bg-red-700 transition duration-200"
+              title="Remove Question"
+            >
+              🗑️ Remove
+            </button>
           )}
         </div>
       </div>
