@@ -244,14 +244,14 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Admin Quiz Creation Interface for Flexible Question Types"
     - "Enhanced Quiz Player for New Question Types"
-    - "Client-side Form Validation"
+    - "Admin Folder Visibility Controls"
+    - "Moving Quizzes Between Folders UI"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -259,3 +259,5 @@ test_plan:
 agent_communication:
     - agent: "main"
       message: "Phase 1 implementation complete! Successfully implemented enhanced quiz player for flexible question types, admin folder visibility controls, and moving quizzes between folders functionality. All major frontend components now support the advanced backend features. Ready for backend testing."
+    - agent: "testing"
+      message: "✅ BACKEND TESTING COMPLETE: All core backend functionality verified and working perfectly. Fixed critical issues with quiz access (missing subject field validation) and points calculation (float to int conversion). Admin authentication, quiz creation, user quiz taking, and analytics all functioning correctly. Backend is production-ready. Fixed 2 critical bugs during testing that were preventing user quiz access."
