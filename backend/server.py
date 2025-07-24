@@ -122,11 +122,32 @@ class QuizUpdate(BaseModel):
     allowed_users: Optional[List[str]] = None
     is_active: Optional[bool] = None
 
-class SubjectCategory(BaseModel):
+class SubjectFolder(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    subject: str  # Main subject name
-    subcategories: List[str] = []  # List of subcategories
+    name: str
+    description: Optional[str] = None
+    subcategories: List[str] = []
+    is_active: bool = True
+    allowed_users: List[str] = []  # Users who can access this folder
+    is_public: bool = True  # If false, only allowed_users can see it
+    created_by: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class SubjectFolderCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    subcategories: List[str] = []
+    is_public: bool = True
+    allowed_users: List[str] = []
+
+class SubjectFolderUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    subcategories: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+    is_public: Optional[bool] = None
+    allowed_users: Optional[List[str]] = None
 
 class QuizAttempt(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -999,8 +1020,12 @@ async def create_subject_category(subject: str, subcategories: List[str], admin_
         )
     else:
         # Create new subject
-        subject_category = SubjectCategory(subject=subject, subcategories=subcategories)
-        await db.subject_categories.insert_one(subject_category.dict())
+        subject_folder = SubjectFolder(
+            name=subject, 
+            subcategories=subcategories, 
+            created_by=admin_user.id
+        )
+        await db.subject_categories.insert_one(subject_folder.dict())
     
     return {"message": f"Subject '{subject}' updated with {len(subcategories)} subcategories"}
 
