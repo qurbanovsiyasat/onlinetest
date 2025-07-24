@@ -306,7 +306,7 @@ async def create_quiz(quiz_data: QuizCreate, admin_user: User = Depends(get_admi
 
 @api_router.put("/admin/quiz/{quiz_id}", response_model=Quiz)
 async def update_quiz(quiz_id: str, quiz_data: QuizUpdate, admin_user: User = Depends(get_admin_user)):
-    """Update quiz (admin only - only creator can edit)"""
+    """Update quiz with enhanced question editing (admin only - only creator can edit)"""
     # Check if quiz exists and user is the creator
     existing_quiz = await db.quizzes.find_one({"id": quiz_id})
     if not existing_quiz:
@@ -322,12 +322,34 @@ async def update_quiz(quiz_id: str, quiz_data: QuizUpdate, admin_user: User = De
     # Recalculate total questions if questions are updated
     if "questions" in update_data:
         update_data["total_questions"] = len(update_data["questions"])
+        
+        # If questions are updated, reset statistics
+        update_data["total_attempts"] = 0
+        update_data["average_score"] = 0.0
     
     await db.quizzes.update_one({"id": quiz_id}, {"$set": update_data})
     
     # Return updated quiz
     updated_quiz = await db.quizzes.find_one({"id": quiz_id})
     return Quiz(**updated_quiz)
+
+@api_router.get("/admin/quiz/{quiz_id}/edit-details")
+async def get_quiz_edit_details(quiz_id: str, admin_user: User = Depends(get_admin_user)):
+    """Get detailed quiz information for editing including all questions"""
+    quiz = await db.quizzes.find_one({"id": quiz_id})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    if quiz["created_by"] != admin_user.id:
+        raise HTTPException(status_code=403, detail="You can only edit quizzes you created")
+    
+    # Return full quiz details with all questions for editing
+    return {
+        "quiz": Quiz(**quiz),
+        "total_attempts": quiz.get("total_attempts", 0),
+        "average_score": quiz.get("average_score", 0.0),
+        "last_updated": quiz.get("updated_at", quiz.get("created_at"))
+    }
 
 @api_router.post("/admin/quiz/{quiz_id}/access")
 async def set_quiz_access(quiz_id: str, access_data: UserQuizAccess, admin_user: User = Depends(get_admin_user)):
