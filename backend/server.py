@@ -826,12 +826,39 @@ async def get_public_quizzes(current_user: User = Depends(get_current_user)):
     
     accessible_quizzes = []
     for quiz in all_quizzes:
-        # Include quiz if it's public and user is in allowed_users list, or if it's private but created by admin
-        if quiz.get("is_public", False) and current_user.id in quiz.get("allowed_users", []):
-            accessible_quizzes.append(Quiz(**quiz))
-        elif not quiz.get("is_public", False):
-            # For backward compatibility, include non-public quizzes (legacy behavior)
-            accessible_quizzes.append(Quiz(**quiz))
+        # Handle old quizzes without required fields (same as admin function)
+        if 'category' not in quiz:
+            quiz['category'] = 'Uncategorized'
+        if 'created_by' not in quiz:
+            quiz['created_by'] = 'system'
+        if 'is_active' not in quiz:
+            quiz['is_active'] = True
+        if 'is_public' not in quiz:
+            quiz['is_public'] = False
+        if 'allowed_users' not in quiz:
+            quiz['allowed_users'] = []
+        if 'subject' not in quiz:
+            quiz['subject'] = quiz.get('subject_folder', 'General')
+        if 'subcategory' not in quiz:
+            quiz['subcategory'] = 'General'
+        if 'updated_at' not in quiz:
+            quiz['updated_at'] = quiz.get('created_at', datetime.utcnow())
+        if 'total_attempts' not in quiz:
+            quiz['total_attempts'] = 0
+        if 'average_score' not in quiz:
+            quiz['average_score'] = 0.0
+        
+        try:
+            # Include quiz if it's public and user is in allowed_users list, or if it's private but created by admin
+            if quiz.get("is_public", False) and current_user.id in quiz.get("allowed_users", []):
+                accessible_quizzes.append(Quiz(**quiz))
+            elif not quiz.get("is_public", False):
+                # For backward compatibility, include non-public quizzes (legacy behavior)
+                accessible_quizzes.append(Quiz(**quiz))
+        except Exception as e:
+            # Skip invalid quiz records
+            print(f"Skipping invalid quiz: {quiz.get('id', 'unknown')} - {str(e)}")
+            continue
     
     # Sort by creation date (newest first)
     accessible_quizzes.sort(key=lambda x: x.created_at, reverse=True)
