@@ -975,6 +975,9 @@ function AdminCreateQuiz({ setCurrentView }) {
     title: '',
     description: '',
     category: '',
+    subject_folder: 'General',
+    is_public: false,
+    allowed_users: [],
     questions: []
   });
 
@@ -990,6 +993,23 @@ function AdminCreateQuiz({ setCurrentView }) {
   });
 
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [allUsers, setAllUsers] = useState([]);
+  const [showUserSelection, setShowUserSelection] = useState(false);
+
+  useEffect(() => {
+    if (quiz.is_public) {
+      fetchAllUsers();
+    }
+  }, [quiz.is_public]);
+
+  const fetchAllUsers = async () => {
+    try {
+      const response = await apiCall('/admin/users');
+      setAllUsers(response.data.filter(user => user.role === 'user'));
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
 
   const uploadImage = async (file) => {
     const formData = new FormData();
@@ -1017,13 +1037,11 @@ function AdminCreateQuiz({ setCurrentView }) {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       alert('Please select an image file');
       return;
     }
 
-    // Validate file size (5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert('File size must be less than 5MB');
       return;
@@ -1068,6 +1086,11 @@ function AdminCreateQuiz({ setCurrentView }) {
       return;
     }
 
+    if (quiz.is_public && quiz.allowed_users.length === 0) {
+      alert('Please select at least one user for public quiz access');
+      return;
+    }
+
     try {
       await apiCall('/admin/quiz', {
         method: 'POST',
@@ -1078,6 +1101,15 @@ function AdminCreateQuiz({ setCurrentView }) {
     } catch (error) {
       alert('Error creating quiz: ' + (error.response?.data?.detail || 'Unknown error'));
     }
+  };
+
+  const toggleUserAccess = (userId) => {
+    setQuiz({
+      ...quiz,
+      allowed_users: quiz.allowed_users.includes(userId)
+        ? quiz.allowed_users.filter(id => id !== userId)
+        : [...quiz.allowed_users, userId]
+    });
   };
 
   return (
@@ -1103,19 +1135,75 @@ function AdminCreateQuiz({ setCurrentView }) {
             onChange={(e) => setQuiz({ ...quiz, description: e.target.value })}
             className="w-full p-3 border border-gray-300 rounded-lg"
             rows="3"
-            placeholder="Enter quiz description"
+            placeholder="Describe your quiz"
           />
         </div>
 
-        <div>
-          <label className="block text-gray-700 font-semibold mb-2">Category</label>
-          <input
-            type="text"
-            value={quiz.category}
-            onChange={(e) => setQuiz({ ...quiz, category: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded-lg"
-            placeholder="Enter category (e.g., Math, Science)"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Category</label>
+            <input
+              type="text"
+              value={quiz.category}
+              onChange={(e) => setQuiz({ ...quiz, category: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+              placeholder="Enter category (e.g., Math, Science)"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Subject Folder</label>
+            <select
+              value={quiz.subject_folder}
+              onChange={(e) => setQuiz({ ...quiz, subject_folder: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+            >
+              <option value="General">General</option>
+              <option value="Mathematics">Mathematics</option>
+              <option value="Science">Science</option>
+              <option value="History">History</option>
+              <option value="Language">Language</option>
+              <option value="Geography">Geography</option>
+              <option value="Art">Art</option>
+              <option value="Technology">Technology</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="flex items-center mb-4">
+            <input
+              type="checkbox"
+              id="isPublic"
+              checked={quiz.is_public}
+              onChange={(e) => setQuiz({ ...quiz, is_public: e.target.checked, allowed_users: [] })}
+              className="mr-3"
+            />
+            <label htmlFor="isPublic" className="font-semibold text-gray-700">
+              Make this quiz public (accessible to selected users)
+            </label>
+          </div>
+
+          {quiz.is_public && (
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
+                Select Users Who Can Access This Quiz ({quiz.allowed_users.length} selected)
+              </label>
+              <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-3">
+                {allUsers.map((user) => (
+                  <div key={user.id} className="flex items-center mb-2">
+                    <input
+                      type="checkbox"
+                      checked={quiz.allowed_users.includes(user.id)}
+                      onChange={() => toggleUserAccess(user.id)}
+                      className="mr-3"
+                    />
+                    <span className="text-sm">{user.name} ({user.email})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
