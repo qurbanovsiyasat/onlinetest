@@ -449,25 +449,25 @@ function AdminDashboard({ currentView, setCurrentView }) {
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">👑 Admin Dashboard</h1>
-            <p className="text-gray-600">Welcome back, {user.name}</p>
+        <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+          <div className="mb-4 sm:mb-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">👑 Admin Dashboard</h1>
+            <p className="text-gray-600 text-sm sm:text-base">Welcome back, {user.name}</p>
           </div>
           <button
             onClick={logout}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200"
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200 text-sm sm:text-base"
           >
             Logout
           </button>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-wrap gap-4 mb-8">
+      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+        <div className="flex flex-wrap gap-2 sm:gap-4 mb-6 sm:mb-8 overflow-x-auto pb-2">
           <button
             onClick={() => setCurrentView('dashboard')}
-            className={`px-6 py-3 rounded-lg font-semibold transition duration-200 ${
+            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition duration-200 text-xs sm:text-sm whitespace-nowrap ${
               currentView === 'dashboard' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
             }`}
           >
@@ -475,7 +475,7 @@ function AdminDashboard({ currentView, setCurrentView }) {
           </button>
           <button
             onClick={() => setCurrentView('users')}
-            className={`px-6 py-3 rounded-lg font-semibold transition duration-200 ${
+            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition duration-200 text-xs sm:text-sm whitespace-nowrap ${
               currentView === 'users' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
             }`}
           >
@@ -483,7 +483,7 @@ function AdminDashboard({ currentView, setCurrentView }) {
           </button>
           <button
             onClick={() => setCurrentView('quizzes')}
-            className={`px-6 py-3 rounded-lg font-semibold transition duration-200 ${
+            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition duration-200 text-xs sm:text-sm whitespace-nowrap ${
               currentView === 'quizzes' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
             }`}
           >
@@ -491,15 +491,15 @@ function AdminDashboard({ currentView, setCurrentView }) {
           </button>
           <button
             onClick={() => setCurrentView('results')}
-            className={`px-6 py-3 rounded-lg font-semibold transition duration-200 ${
+            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition duration-200 text-xs sm:text-sm whitespace-nowrap ${
               currentView === 'results' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
             }`}
           >
-            📈 Test Results
+            📈 Results
           </button>
           <button
             onClick={() => setCurrentView('categories')}
-            className={`px-6 py-3 rounded-lg font-semibold transition duration-200 ${
+            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition duration-200 text-xs sm:text-sm whitespace-nowrap ${
               currentView === 'categories' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
             }`}
           >
@@ -507,7 +507,7 @@ function AdminDashboard({ currentView, setCurrentView }) {
           </button>
           <button
             onClick={() => setCurrentView('create-quiz')}
-            className={`px-6 py-3 rounded-lg font-semibold transition duration-200 ${
+            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition duration-200 text-xs sm:text-sm whitespace-nowrap ${
               currentView === 'create-quiz' ? 'bg-green-600 text-white' : 'bg-green-600 text-white hover:bg-green-700'
             }`}
           >
