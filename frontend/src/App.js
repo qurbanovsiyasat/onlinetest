@@ -2274,6 +2274,23 @@ function AdminCreateQuiz({ setCurrentView }) {
     return quiz.questions.reduce((total, q) => total + q.points, 0);
   };
 
+  const removeQuestionFromQuiz = (questionIndex) => {
+    console.log('Attempting to remove question at index:', questionIndex);
+    if (confirm('Are you sure you want to remove this question?')) {
+      try {
+        const updatedQuestions = quiz.questions.filter((_, index) => index !== questionIndex);
+        console.log('Updated questions after removal:', updatedQuestions);
+        
+        setQuiz({ ...quiz, questions: updatedQuestions });
+        console.log('Question removed successfully from quiz creation');
+        alert('Question removed successfully!');
+      } catch (error) {
+        console.error('Error removing question:', error);
+        alert('Error removing question: ' + error.message);
+      }
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-xl font-semibold text-gray-800 mb-4">Create Advanced Quiz</h2>
