@@ -1607,7 +1607,21 @@ class OnlineTestMakerAPITester:
         
         # Enhanced nested folder organization
         self.test_admin_subjects_structure()
-        self.test_admin_predefined_subjects()
+        
+        # Subject folder management tests
+        self.test_admin_create_subject_folder()
+        self.test_admin_get_subject_folders()
+        self.test_admin_update_subject_folder()
+        
+        # File upload tests (PDF)
+        self.test_admin_upload_pdf_file()
+        
+        # Flexible question types tests
+        self.test_admin_create_flexible_quiz()
+        self.test_user_take_flexible_quiz()
+        
+        # Quiz folder management
+        self.test_admin_move_quiz_to_folder()
         
         # Enhanced quiz creation and management with nested structure
         self.test_admin_create_enhanced_quiz_with_nested_structure()
@@ -1616,6 +1630,9 @@ class OnlineTestMakerAPITester:
         self.test_admin_quiz_access_control()
         self.test_admin_quiz_leaderboard()
         self.test_admin_user_details()
+        
+        # Subject folder deletion (should test after moving quizzes)
+        self.test_admin_delete_subject_folder()
         
         # Enhanced quiz submission with mistake review
         self.test_user_enhanced_quiz_submission()
