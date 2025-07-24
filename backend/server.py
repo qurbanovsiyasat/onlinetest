@@ -103,6 +103,19 @@ class QuizCreate(BaseModel):
     description: str
     category: str
     questions: List[QuizQuestion]
+    is_public: bool = False
+    allowed_users: List[str] = []
+    subject_folder: str = "General"
+
+class QuizUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    questions: Optional[List[QuizQuestion]] = None
+    is_public: Optional[bool] = None
+    allowed_users: Optional[List[str]] = None
+    subject_folder: Optional[str] = None
+    is_active: Optional[bool] = None
 
 class QuizAttempt(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
