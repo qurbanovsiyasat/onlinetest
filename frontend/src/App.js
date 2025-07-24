@@ -2577,15 +2577,15 @@ function UserDashboard({ currentView, setCurrentView }) {
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">📝 OnlineTestMaker</h1>
-            <p className="text-gray-600">Welcome, {user.name}</p>
+        <div className="container mx-auto px-4 py-4 flex flex-col lg:flex-row justify-between items-start lg:items-center">
+          <div className="mb-4 lg:mb-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">📝 OnlineTestMaker</h1>
+            <p className="text-gray-600 text-sm sm:text-base">Welcome, {user.name}</p>
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-2 sm:gap-4">
             <button
               onClick={() => setCurrentView('home')}
-              className={`px-4 py-2 rounded-lg transition duration-200 ${
+              className={`px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm ${
                 currentView === 'home' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -2593,7 +2593,7 @@ function UserDashboard({ currentView, setCurrentView }) {
             </button>
             <button
               onClick={() => setCurrentView('my-attempts')}
-              className={`px-4 py-2 rounded-lg transition duration-200 ${
+              className={`px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm ${
                 currentView === 'my-attempts' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -2601,13 +2601,13 @@ function UserDashboard({ currentView, setCurrentView }) {
             </button>
             <button
               onClick={() => setShowPasswordChange(true)}
-              className="text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-lg transition duration-200"
+              className="text-gray-700 hover:bg-gray-100 px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm"
             >
-              🔑 Change Password
+              🔑 Password
             </button>
             <button
               onClick={logout}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200"
+              className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200 text-xs sm:text-sm"
             >
               Logout
             </button>
@@ -2615,7 +2615,7 @@ function UserDashboard({ currentView, setCurrentView }) {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
         {currentView === 'home' && (
           <div>
             <h2 className="text-3xl font-bold text-gray-800 mb-6">Available Quizzes</h2>
