@@ -1119,7 +1119,7 @@ class OnlineTestMakerAPITester:
 
     def run_all_tests(self):
         """Run all API tests"""
-        print("🚀 Starting OnlineTestMaker API Tests - Admin-Centered Authentication")
+        print("🚀 Starting OnlineTestMaker API Tests - Enhanced Features Testing")
         print(f"🌐 Testing against: {self.api_url}")
         print("=" * 80)
 
@@ -1147,14 +1147,32 @@ class OnlineTestMakerAPITester:
         self.test_admin_create_quiz()
         self.test_user_create_quiz_forbidden()
         
-        # NEW: Test recently fixed admin quizzes endpoint
+        # Test recently fixed admin quizzes endpoint
         self.test_admin_get_quizzes()
         
-        # NEW: Test image upload functionality
+        # Test image upload functionality
         self.test_admin_upload_image()
         self.test_get_image()
         self.test_user_upload_image_forbidden()
         self.test_admin_create_quiz_with_image()
+        
+        # NEW ENHANCED FEATURES TESTING
+        print("\n🆕 Testing Enhanced Features...")
+        
+        # Enhanced quiz creation and management
+        self.test_admin_create_enhanced_quiz()
+        self.test_admin_edit_quiz()
+        self.test_admin_quiz_access_control()
+        self.test_admin_quiz_leaderboard()
+        self.test_admin_subject_folders()
+        self.test_admin_user_details()
+        
+        # Enhanced quiz submission with mistake review
+        self.test_user_enhanced_quiz_submission()
+        
+        # Password change functionality
+        self.test_password_change()
+        self.test_password_change_wrong_current()
         
         # User operations
         self.test_user_get_quizzes()
@@ -1162,7 +1180,7 @@ class OnlineTestMakerAPITester:
         self.test_admin_take_quiz_forbidden()
         self.test_user_get_attempts()
         
-        # NEW: Test admin quiz results viewing functionality
+        # Test admin quiz results viewing functionality
         self.test_admin_get_quiz_results()
         self.test_admin_get_analytics_summary()
         self.test_admin_get_user_quiz_results()
@@ -1177,7 +1195,7 @@ class OnlineTestMakerAPITester:
         print(f"📊 Test Results: {self.tests_passed}/{self.tests_run} tests passed")
         
         if self.tests_passed == self.tests_run:
-            print("🎉 All tests passed! Backend API with authentication is working correctly.")
+            print("🎉 All tests passed! Backend API with enhanced features is working correctly.")
             return 0
         else:
             print(f"⚠️  {self.tests_run - self.tests_passed} tests failed. Check the issues above.")
