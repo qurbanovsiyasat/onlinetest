@@ -1380,24 +1380,31 @@ function QuizEditModal({ quiz, onClose, onUpdate }) {
     setEditingQuestionIndex(editData.questions.length);
   };
 
+  const [deleteQuestionConfirm, setDeleteQuestionConfirm] = useState({ show: false, questionIndex: null });
+
   const removeQuestion = (questionIndex) => {
     console.log('Attempting to remove question at index:', questionIndex);
     console.log('Current questions:', editData.questions);
     
-    if (confirm('Are you sure you want to remove this question?')) {
-      try {
-        const updatedQuestions = editData.questions.filter((_, index) => index !== questionIndex);
-        console.log('Updated questions after removal:', updatedQuestions);
-        
-        setEditData({ ...editData, questions: updatedQuestions });
-        setEditingQuestionIndex(null);
-        
-        console.log('Question removed successfully');
-        alert('Question removed successfully!');
-      } catch (error) {
-        console.error('Error removing question:', error);
-        alert('Error removing question: ' + error.message);
-      }
+    setDeleteQuestionConfirm({ show: true, questionIndex });
+  };
+
+  const confirmRemoveQuestion = () => {
+    const { questionIndex } = deleteQuestionConfirm;
+    try {
+      const updatedQuestions = editData.questions.filter((_, index) => index !== questionIndex);
+      console.log('Updated questions after removal:', updatedQuestions);
+      
+      setEditData({ ...editData, questions: updatedQuestions });
+      setEditingQuestionIndex(null);
+      setDeleteQuestionConfirm({ show: false, questionIndex: null });
+      
+      console.log('Question removed successfully');
+      alert('Question removed successfully!');
+    } catch (error) {
+      console.error('Error removing question:', error);
+      alert('Error removing question: ' + error.message);
+      setDeleteQuestionConfirm({ show: false, questionIndex: null });
     }
   };
 
