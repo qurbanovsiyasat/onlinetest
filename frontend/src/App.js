@@ -679,21 +679,47 @@ function AdminUsersView({ users }) {
 function AdminQuizzesView({ quizzes, fetchQuizzes }) {
   const [editingQuiz, setEditingQuiz] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [subjectsStructure, setSubjectsStructure] = useState({});
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'folders'
+
+  useEffect(() => {
+    if (viewMode === 'folders') {
+      fetchSubjectsStructure();
+    }
+  }, [viewMode]);
+
+  const fetchSubjectsStructure = async () => {
+    try {
+      const response = await apiCall('/admin/subjects-structure');
+      setSubjectsStructure(response.data);
+    } catch (error) {
+      console.error('Error fetching subjects structure:', error);
+    }
+  };
 
   const deleteQuiz = async (quizId) => {
     if (window.confirm('Are you sure you want to delete this quiz?')) {
       try {
         await apiCall(`/admin/quiz/${quizId}`, { method: 'DELETE' });
         fetchQuizzes();
+        if (viewMode === 'folders') {
+          fetchSubjectsStructure();
+        }
       } catch (error) {
         alert('Error deleting quiz');
       }
     }
   };
 
-  const editQuiz = (quiz) => {
-    setEditingQuiz(quiz);
-    setShowEditModal(true);
+  const editQuiz = async (quiz) => {
+    try {
+      // Get detailed quiz information for editing
+      const response = await apiCall(`/admin/quiz/${quiz.id}/edit-details`);
+      setEditingQuiz(response.data.quiz);
+      setShowEditModal(true);
+    } catch (error) {
+      alert('Error loading quiz details: ' + (error.response?.data?.detail || 'Unknown error'));
+    }
   };
 
   const updateQuiz = async (quizId, updateData) => {
@@ -705,6 +731,9 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
       setShowEditModal(false);
       setEditingQuiz(null);
       fetchQuizzes();
+      if (viewMode === 'folders') {
+        fetchSubjectsStructure();
+      }
       alert('Quiz updated successfully!');
     } catch (error) {
       alert('Error updating quiz: ' + (error.response?.data?.detail || 'Unknown error'));
@@ -718,76 +747,169 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
         data: { is_public: !quiz.is_public }
       });
       fetchQuizzes();
+      if (viewMode === 'folders') {
+        fetchSubjectsStructure();
+      }
     } catch (error) {
       alert('Error updating quiz visibility');
     }
   };
 
+  const QuizCard = ({ quiz, showSubject = true }) => (
+    <div className="border rounded-lg p-4 relative">
+      <div className="mb-2 flex flex-wrap gap-1">
+        <span className={`inline-block px-2 py-1 rounded text-xs ${
+          quiz.is_public ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+        }`}>
+          {quiz.is_public ? 'Public' : 'Private'}
+        </span>
+        {showSubject && (
+          <>
+            <span className="inline-block px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+              {quiz.subject || 'General'}
+            </span>
+            <span className="inline-block px-2 py-1 rounded text-xs bg-purple-100 text-purple-800">
+              {quiz.subcategory || 'General'}
+            </span>
+          </>
+        )}
+      </div>
+      
+      <h3 className="font-semibold text-gray-800 mb-2">{quiz.title}</h3>
+      <p className="text-gray-600 text-sm mb-2 line-clamp-2">{quiz.description}</p>
+      
+      <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
+        <span>{quiz.category}</span>
+        <span>{quiz.total_questions} questions</span>
+      </div>
+
+      <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
+        <span>{quiz.total_attempts || 0} attempts</span>
+        <span className="font-medium">
+          Avg: {quiz.average_score || 0}%
+        </span>
+      </div>
+      
+      <div className="text-xs text-gray-400 mb-3">
+        Created: {new Date(quiz.created_at).toLocaleDateString()}
+        {quiz.updated_at !== quiz.created_at && (
+          <div>Updated: {new Date(quiz.updated_at).toLocaleDateString()}</div>
+        )}
+      </div>
+      
+      <div className="flex gap-1 text-xs">
+        <button
+          onClick={() => editQuiz(quiz)}
+          className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition duration-200"
+        >
+          ✏️ Edit
+        </button>
+        <button
+          onClick={() => toggleQuizVisibility(quiz)}
+          className={`flex-1 py-2 rounded transition duration-200 ${
+            quiz.is_public 
+              ? 'bg-yellow-600 text-white hover:bg-yellow-700' 
+              : 'bg-green-600 text-white hover:bg-green-700'
+          }`}
+        >
+          {quiz.is_public ? '🔒 Private' : '🔓 Public'}
+        </button>
+        <button
+          onClick={() => deleteQuiz(quiz.id)}
+          className="flex-1 bg-red-600 text-white py-2 rounded hover:bg-red-700 transition duration-200"
+        >
+          🗑️ Delete
+        </button>
+      </div>
+    </div>
+  );
+
+  const ListView = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {quizzes.map((quiz) => (
+        <QuizCard key={quiz.id} quiz={quiz} />
+      ))}
+    </div>
+  );
+
+  const FoldersView = () => (
+    <div className="space-y-6">
+      {Object.entries(subjectsStructure).map(([subjectName, subjectData]) => (
+        <div key={subjectName} className="bg-gray-50 rounded-lg p-6">
+          <div className="flex items-center mb-4">
+            <h3 className="text-xl font-semibold text-gray-800">
+              📁 {subjectName}
+            </h3>
+            <span className="ml-3 px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
+              {subjectData.total_quizzes} quizzes
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            {Object.entries(subjectData.subcategories).map(([subcategoryName, subcategoryData]) => (
+              <div key={subcategoryName} className="bg-white rounded-lg p-4">
+                <div className="flex items-center mb-3">
+                  <h4 className="text-lg font-medium text-gray-700">
+                    📂 {subcategoryName}
+                  </h4>
+                  <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">
+                    {subcategoryData.quiz_count} quizzes
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {subcategoryData.quizzes.map((quiz) => (
+                    <QuizCard key={quiz.id} quiz={quiz} showSubject={false} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">All Quizzes (Sorted by Date)</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {quizzes.map((quiz) => (
-          <div key={quiz.id} className="border rounded-lg p-4 relative">
-            <div className="mb-2">
-              <span className={`inline-block px-2 py-1 rounded text-xs ${
-                quiz.is_public ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-              }`}>
-                {quiz.is_public ? 'Public' : 'Private'}
-              </span>
-              <span className="inline-block px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 ml-1">
-                {quiz.subject_folder}
-              </span>
-            </div>
-            
-            <h3 className="font-semibold text-gray-800 mb-2">{quiz.title}</h3>
-            <p className="text-gray-600 text-sm mb-2">{quiz.description}</p>
-            
-            <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
-              <span>{quiz.category}</span>
-              <span>{quiz.total_questions} questions</span>
-            </div>
-            
-            <div className="text-xs text-gray-400 mb-3">
-              Created: {new Date(quiz.created_at).toLocaleDateString()}
-              {quiz.updated_at !== quiz.created_at && (
-                <div>Updated: {new Date(quiz.updated_at).toLocaleDateString()}</div>
-              )}
-            </div>
-            
-            <div className="flex gap-2">
-              <button
-                onClick={() => editQuiz(quiz)}
-                className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition duration-200 text-sm"
-              >
-                ✏️ Edit
-              </button>
-              <button
-                onClick={() => toggleQuizVisibility(quiz)}
-                className={`flex-1 py-2 rounded transition duration-200 text-sm ${
-                  quiz.is_public 
-                    ? 'bg-yellow-600 text-white hover:bg-yellow-700' 
-                    : 'bg-green-600 text-white hover:bg-green-700'
-                }`}
-              >
-                {quiz.is_public ? '🔒 Make Private' : '🔓 Make Public'}
-              </button>
-              <button
-                onClick={() => deleteQuiz(quiz.id)}
-                className="flex-1 bg-red-600 text-white py-2 rounded hover:bg-red-700 transition duration-200 text-sm"
-              >
-                🗑️ Delete
-              </button>
-            </div>
-          </div>
-        ))}
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-gray-800">
+          Quiz Management (Sorted by Date)
+        </h2>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-4 py-2 rounded-lg transition duration-200 ${
+              viewMode === 'list' 
+                ? 'bg-indigo-600 text-white' 
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            📋 List View
+          </button>
+          <button
+            onClick={() => setViewMode('folders')}
+            className={`px-4 py-2 rounded-lg transition duration-200 ${
+              viewMode === 'folders' 
+                ? 'bg-indigo-600 text-white' 
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            📁 Folder View
+          </button>
+        </div>
       </div>
+
+      {viewMode === 'list' ? <ListView /> : <FoldersView />}
 
       {/* Edit Quiz Modal */}
       {showEditModal && editingQuiz && (
         <QuizEditModal
           quiz={editingQuiz}
-          onClose={() => setShowEditModal(false)}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingQuiz(null);
+          }}
           onUpdate={updateQuiz}
         />
       )}
