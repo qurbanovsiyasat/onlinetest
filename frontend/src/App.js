@@ -681,11 +681,16 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [subjectsStructure, setSubjectsStructure] = useState({});
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'folders'
+  const [movingQuiz, setMovingQuiz] = useState(null);
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [moveDestination, setMoveDestination] = useState({ subject: '', subcategory: 'General' });
+  const [predefinedSubjects, setPredefinedSubjects] = useState({});
 
   useEffect(() => {
     if (viewMode === 'folders') {
       fetchSubjectsStructure();
     }
+    fetchPredefinedSubjects();
   }, [viewMode]);
 
   const fetchSubjectsStructure = async () => {
@@ -694,6 +699,15 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
       setSubjectsStructure(response.data);
     } catch (error) {
       console.error('Error fetching subjects structure:', error);
+    }
+  };
+
+  const fetchPredefinedSubjects = async () => {
+    try {
+      const response = await apiCall('/admin/predefined-subjects');
+      setPredefinedSubjects(response.data);
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
     }
   };
 
