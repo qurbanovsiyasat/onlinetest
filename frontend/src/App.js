@@ -851,16 +851,16 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
         )}
       </div>
       
-      <div className="flex gap-1 text-xs">
+      <div className="grid grid-cols-2 gap-1 text-xs mb-2">
         <button
           onClick={() => editQuiz(quiz)}
-          className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition duration-200"
+          className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition duration-200"
         >
           ✏️ Edit
         </button>
         <button
           onClick={() => toggleQuizVisibility(quiz)}
-          className={`flex-1 py-2 rounded transition duration-200 ${
+          className={`py-2 rounded transition duration-200 ${
             quiz.is_public 
               ? 'bg-yellow-600 text-white hover:bg-yellow-700' 
               : 'bg-green-600 text-white hover:bg-green-700'
@@ -868,9 +868,18 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
         >
           {quiz.is_public ? '🔒 Private' : '🔓 Public'}
         </button>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-1 text-xs">
+        <button
+          onClick={() => moveQuiz(quiz)}
+          className="bg-purple-600 text-white py-2 rounded hover:bg-purple-700 transition duration-200"
+        >
+          📁 Move
+        </button>
         <button
           onClick={() => deleteQuiz(quiz.id)}
-          className="flex-1 bg-red-600 text-white py-2 rounded hover:bg-red-700 transition duration-200"
+          className="bg-red-600 text-white py-2 rounded hover:bg-red-700 transition duration-200"
         >
           🗑️ Delete
         </button>
