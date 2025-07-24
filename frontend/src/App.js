@@ -3033,10 +3033,23 @@ function QuestionCreationForm({
 }
 
 function MultipleChoiceQuestionForm({ currentQuestion, addOption, removeOption, updateOption }) {
+  const handleOptionChange = (index, value) => {
+    updateOption(index, 'text', value);
+    // Trigger MathJax re-render after a short delay
+    setTimeout(() => {
+      if (window.MathJax) {
+        window.MathJax.typesetPromise().catch((err) => console.log('MathJax error:', err));
+      }
+    }, 300);
+  };
+
   return (
     <div className="mb-4">
-      <div className="flex justify-between items-center mb-2">
-        <label className="block text-gray-700 font-semibold">Options *</label>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-2">
+        <label className="block text-gray-700 font-semibold mb-2 sm:mb-0">
+          Options *
+          <span className="text-xs text-blue-600 ml-2">(Math supported)</span>
+        </label>
         <div className="flex gap-2">
           <button
             type="button"
@@ -3049,31 +3062,41 @@ function MultipleChoiceQuestionForm({ currentQuestion, addOption, removeOption, 
         </div>
       </div>
       
-      <div className="space-y-2">
+      <div className="space-y-3">
         {currentQuestion.options.map((option, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <input
-              type={currentQuestion.multiple_correct ? 'checkbox' : 'radio'}
-              name="correct-answer"
-              checked={option.is_correct}
-              onChange={(e) => updateOption(index, 'is_correct', e.target.checked)}
-            />
-            <span className="text-sm font-medium w-6">{String.fromCharCode(65 + index)}.</span>
-            <input
-              type="text"
-              value={option.text}
-              onChange={(e) => updateOption(index, 'text', e.target.value)}
-              className="flex-1 p-2 border border-gray-300 rounded-lg"
-              placeholder={`Option ${String.fromCharCode(65 + index)}`}
-            />
-            {currentQuestion.options.length > 2 && (
-              <button
-                type="button"
-                onClick={() => removeOption(index)}
-                className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
-              >
-                ✕
-              </button>
+          <div key={index} className="border rounded-lg p-3 bg-white">
+            <div className="flex items-center gap-2 mb-2">
+              <input
+                type={currentQuestion.multiple_correct ? 'checkbox' : 'radio'}
+                name="correct-answer"
+                checked={option.is_correct}
+                onChange={(e) => updateOption(index, 'is_correct', e.target.checked)}
+              />
+              <span className="text-sm font-medium w-6">{String.fromCharCode(65 + index)}.</span>
+              <input
+                type="text"
+                value={option.text}
+                onChange={(e) => handleOptionChange(index, e.target.value)}
+                className="flex-1 p-2 border border-gray-300 rounded-lg text-sm"
+                placeholder={`Option ${String.fromCharCode(65 + index)} (e.g., $x^2$ or regular text)`}
+              />
+              {currentQuestion.options.length > 2 && (
+                <button
+                  type="button"
+                  onClick={() => removeOption(index)}
+                  className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            
+            {/* Math Preview for Options */}
+            {option.text && (
+              <div className="ml-8 text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                <span className="text-xs text-gray-500">Preview: </span>
+                <span className="tex2jax_process">{renderMathContent(option.text)}</span>
+              </div>
             )}
           </div>
         ))}
