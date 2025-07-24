@@ -1035,7 +1035,7 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
           📁 Move
         </button>
         <button
-          onClick={() => deleteQuiz(quiz.id)}
+          onClick={() => deleteQuiz(quiz.id, quiz.title)}
           className="bg-red-600 text-white py-2 rounded hover:bg-red-700 transition duration-200"
         >
           🗑️ Delete
