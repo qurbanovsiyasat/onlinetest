@@ -507,7 +507,7 @@ async def get_quiz(quiz_id: str, current_user: User = Depends(get_current_user))
 
 @api_router.post("/quiz/{quiz_id}/attempt", response_model=QuizAttempt)
 async def submit_quiz_attempt(quiz_id: str, attempt_data: QuizAttemptCreate, current_user: User = Depends(get_current_user)):
-    """Submit quiz attempt (users only) - Enhanced with mistake review"""
+    """Submit quiz attempt (users only) - Enhanced with mistake review and statistics update"""
     if current_user.role == UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Admins cannot take quizzes")
     
@@ -554,7 +554,8 @@ async def submit_quiz_attempt(quiz_id: str, attempt_data: QuizAttemptCreate, cur
                 "user_answer": user_answer,
                 "correct_answer": correct_answer,
                 "is_correct": is_correct,
-                "all_options": [opt.text for opt in question.options]
+                "all_options": [opt.text for opt in question.options],
+                "question_image": question.image_url if hasattr(question, 'image_url') else None
             })
     
     percentage = (score / total_questions * 100) if total_questions > 0 else 0
@@ -572,7 +573,101 @@ async def submit_quiz_attempt(quiz_id: str, attempt_data: QuizAttemptCreate, cur
     )
     
     await db.quiz_attempts.insert_one(attempt.dict())
+    
+    # Update quiz statistics
+    await update_quiz_statistics(quiz_id)
+    
     return attempt
+
+async def update_quiz_statistics(quiz_id: str):
+    """Update quiz statistics after a new attempt"""
+    # Get all attempts for this quiz
+    attempts = await db.quiz_attempts.find({"quiz_id": quiz_id}).to_list(1000)
+    
+    if attempts:
+        total_attempts = len(attempts)
+        total_percentage = sum(attempt["percentage"] for attempt in attempts)
+        average_score = total_percentage / total_attempts
+        
+        # Update quiz document
+        await db.quizzes.update_one(
+            {"id": quiz_id},
+            {
+                "$set": {
+                    "total_attempts": total_attempts,
+                    "average_score": round(average_score, 1),
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+
+@api_router.get("/quiz/{quiz_id}/results-ranking")
+async def get_quiz_results_ranking(quiz_id: str, current_user: User = Depends(get_current_user)):
+    """Get ranked results for a quiz with top performers and user's position"""
+    # Check if user can access this quiz
+    quiz = await db.quizzes.find_one({"id": quiz_id, "is_active": True})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Check access permissions
+    if quiz.get("is_public", False) and current_user.id not in quiz.get("allowed_users", []):
+        raise HTTPException(status_code=403, detail="You don't have access to this quiz")
+    
+    # Get all attempts for this quiz
+    attempts = await db.quiz_attempts.find({"quiz_id": quiz_id}).to_list(1000)
+    
+    # Group by user and get best attempt for each user
+    user_best_attempts = {}
+    for attempt in attempts:
+        user_id = attempt["user_id"]
+        if user_id not in user_best_attempts or attempt["percentage"] > user_best_attempts[user_id]["percentage"]:
+            user_best_attempts[user_id] = attempt
+    
+    # Create ranking list
+    ranking = []
+    for attempt in user_best_attempts.values():
+        user = await db.users.find_one({"id": attempt["user_id"]})
+        if user:
+            ranking.append({
+                "user_id": attempt["user_id"],
+                "user_name": user["name"],
+                "user_email": user["email"],
+                "score": attempt["score"],
+                "total_questions": attempt["total_questions"],
+                "percentage": attempt["percentage"],
+                "attempted_at": attempt["attempted_at"]
+            })
+    
+    # Sort by percentage (highest first), then by date (earliest first for same percentage)
+    ranking.sort(key=lambda x: (-x["percentage"], x["attempted_at"]))
+    
+    # Add rank numbers
+    for i, entry in enumerate(ranking):
+        entry["rank"] = i + 1
+    
+    # Find current user's position
+    user_rank = None
+    user_entry = None
+    for entry in ranking:
+        if entry["user_id"] == current_user.id:
+            user_rank = entry["rank"]
+            user_entry = entry
+            break
+    
+    return {
+        "quiz_title": quiz["title"],
+        "total_participants": len(ranking),
+        "top_3": ranking[:3],
+        "full_ranking": ranking,
+        "user_position": {
+            "rank": user_rank,
+            "entry": user_entry
+        } if user_rank else None,
+        "quiz_stats": {
+            "total_attempts": quiz.get("total_attempts", 0),
+            "average_score": quiz.get("average_score", 0.0)
+        }
+    }
 
 @api_router.get("/my-attempts", response_model=List[QuizAttempt])
 async def get_my_attempts(current_user: User = Depends(get_current_user)):
