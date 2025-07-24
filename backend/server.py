@@ -412,9 +412,67 @@ async def get_categories(admin_user: User = Depends(get_admin_user)):
 # User Routes (Quiz Taking)
 @api_router.get("/quizzes", response_model=List[Quiz])
 async def get_public_quizzes(current_user: User = Depends(get_current_user)):
-    """Get all active quizzes for users"""
-    quizzes = await db.quizzes.find({"is_active": True}).to_list(1000)
-    return [Quiz(**quiz) for quiz in quizzes]
+    """Get all accessible quizzes for users (sorted by creation date)"""
+    # Get all active quizzes
+    all_quizzes = await db.quizzes.find({"is_active": True}).to_list(1000)
+    
+    accessible_quizzes = []
+    for quiz in all_quizzes:
+        # Include quiz if it's public and user is in allowed_users list, or if it's private but created by admin
+        if quiz.get("is_public", False) and current_user.id in quiz.get("allowed_users", []):
+            accessible_quizzes.append(Quiz(**quiz))
+        elif not quiz.get("is_public", False):
+            # For backward compatibility, include non-public quizzes (legacy behavior)
+            accessible_quizzes.append(Quiz(**quiz))
+    
+    # Sort by creation date (newest first)
+    accessible_quizzes.sort(key=lambda x: x.created_at, reverse=True)
+    
+    return accessible_quizzes
+
+@api_router.get("/quiz/{quiz_id}/leaderboard")
+async def get_public_quiz_leaderboard(quiz_id: str, current_user: User = Depends(get_current_user)):
+    """Get top 3 performers for a quiz (public view)"""
+    # Check if user can access this quiz
+    quiz = await db.quizzes.find_one({"id": quiz_id, "is_active": True})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Check access permissions
+    if quiz.get("is_public", False) and current_user.id not in quiz.get("allowed_users", []):
+        raise HTTPException(status_code=403, detail="You don't have access to this quiz")
+    
+    # Get all attempts for this quiz
+    attempts = await db.quiz_attempts.find({"quiz_id": quiz_id}).to_list(1000)
+    
+    # Group by user and get best attempt for each user
+    user_best_attempts = {}
+    for attempt in attempts:
+        user_id = attempt["user_id"]
+        if user_id not in user_best_attempts or attempt["percentage"] > user_best_attempts[user_id]["percentage"]:
+            user_best_attempts[user_id] = attempt
+    
+    # Sort by percentage and get top 3
+    top_attempts = sorted(user_best_attempts.values(), key=lambda x: x["percentage"], reverse=True)[:3]
+    
+    # Enrich with user information (anonymized for privacy)
+    leaderboard = []
+    for i, attempt in enumerate(top_attempts):
+        user = await db.users.find_one({"id": attempt["user_id"]})
+        # Only show first name + last initial for privacy
+        full_name = user.get("name", "Anonymous") if user else "Anonymous"
+        display_name = full_name.split()[0] + " " + full_name.split()[-1][0] + "." if len(full_name.split()) > 1 else full_name
+        
+        leaderboard.append({
+            "rank": i + 1,
+            "user_name": display_name,
+            "score": attempt["score"],
+            "total_questions": attempt["total_questions"],
+            "percentage": attempt["percentage"],
+            "attempted_at": attempt["attempted_at"]
+        })
+    
+    return leaderboard
 
 @api_router.get("/quiz/{quiz_id}", response_model=Quiz)
 async def get_quiz(quiz_id: str, current_user: User = Depends(get_current_user)):
