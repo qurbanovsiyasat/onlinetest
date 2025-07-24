@@ -976,6 +976,88 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
           onUpdate={updateQuiz}
         />
       )}
+
+      {/* Move Quiz Modal */}
+      {showMoveModal && movingQuiz && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold">Move Quiz to Different Folder</h3>
+              <button
+                onClick={() => {
+                  setShowMoveModal(false);
+                  setMovingQuiz(null);
+                }}
+                className="text-gray-500 hover:text-gray-700 text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-3">
+                Moving quiz: <strong>"{movingQuiz.title}"</strong>
+              </p>
+              <p className="text-xs text-gray-500 mb-4">
+                Current location: {movingQuiz.subject || 'General'} → {movingQuiz.subcategory || 'General'}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Destination Subject *</label>
+                <select
+                  value={moveDestination.subject}
+                  onChange={(e) => setMoveDestination({ 
+                    ...moveDestination, 
+                    subject: e.target.value, 
+                    subcategory: 'General' 
+                  })}
+                  className="w-full p-3 border border-gray-300 rounded-lg"
+                >
+                  {Object.keys(predefinedSubjects).map(subject => (
+                    <option key={subject} value={subject}>{subject}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Destination Subcategory</label>
+                <select
+                  value={moveDestination.subcategory}
+                  onChange={(e) => setMoveDestination({ 
+                    ...moveDestination, 
+                    subcategory: e.target.value 
+                  })}
+                  className="w-full p-3 border border-gray-300 rounded-lg"
+                >
+                  {getSubcategoriesForMove().map(subcategory => (
+                    <option key={subcategory} value={subcategory}>{subcategory}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-4 pt-6">
+              <button
+                onClick={handleMoveQuiz}
+                className="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 transition duration-200 font-semibold"
+              >
+                📁 Move Quiz
+              </button>
+              <button
+                onClick={() => {
+                  setShowMoveModal(false);
+                  setMovingQuiz(null);
+                }}
+                className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
