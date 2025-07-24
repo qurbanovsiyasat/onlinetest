@@ -1006,35 +1006,117 @@ async def get_subjects_structure(admin_user: User = Depends(get_admin_user)):
     
     return subjects
 
-@api_router.post("/admin/subject-category")
-async def create_subject_category(subject: str, subcategories: List[str], admin_user: User = Depends(get_admin_user)):
-    """Create or update subject with subcategories"""
-    # Check if subject already exists (check both old and new field names)
-    existing = await db.subject_categories.find_one({
-        "$or": [{"subject": subject}, {"name": subject}]
-    })
-    
+# Enhanced Folder Management for Admin
+@api_router.post("/admin/subject-folder", response_model=SubjectFolder)
+async def create_subject_folder(folder_data: SubjectFolderCreate, admin_user: User = Depends(get_admin_user)):
+    """Create new subject folder with access control"""
+    # Check if folder already exists
+    existing = await db.subject_folders.find_one({"name": folder_data.name, "is_active": True})
     if existing:
-        # Update existing subject (update both field structures for compatibility)
-        await db.subject_categories.update_one(
-            {"_id": existing["_id"]},
-            {"$set": {
-                "name": subject,
-                "subject": subject,  # Keep old field for backward compatibility
-                "subcategories": subcategories,
-                "updated_at": datetime.utcnow()
-            }}
-        )
-    else:
-        # Create new subject
-        subject_folder = SubjectFolder(
-            name=subject, 
-            subcategories=subcategories, 
-            created_by=admin_user.id
-        )
-        await db.subject_categories.insert_one(subject_folder.dict())
+        raise HTTPException(status_code=400, detail="Subject folder already exists")
     
-    return {"message": f"Subject '{subject}' updated with {len(subcategories)} subcategories"}
+    # Create new subject folder
+    folder = SubjectFolder(
+        **folder_data.dict(),
+        created_by=admin_user.id
+    )
+    
+    await db.subject_folders.insert_one(folder.dict())
+    return folder
+
+@api_router.get("/admin/subject-folders", response_model=List[SubjectFolder])
+async def get_all_subject_folders(admin_user: User = Depends(get_admin_user)):
+    """Get all subject folders for admin management"""
+    folders = await db.subject_folders.find({"is_active": True}).to_list(1000)
+    return [SubjectFolder(**folder) for folder in folders]
+
+@api_router.put("/admin/subject-folder/{folder_id}", response_model=SubjectFolder)
+async def update_subject_folder(folder_id: str, folder_data: SubjectFolderUpdate, admin_user: User = Depends(get_admin_user)):
+    """Update subject folder"""
+    existing = await db.subject_folders.find_one({"id": folder_id, "is_active": True})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Subject folder not found")
+    
+    # Update data
+    update_data = {k: v for k, v in folder_data.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.subject_folders.update_one({"id": folder_id}, {"$set": update_data})
+    
+    # Return updated folder
+    updated_folder = await db.subject_folders.find_one({"id": folder_id})
+    return SubjectFolder(**updated_folder)
+
+@api_router.delete("/admin/subject-folder/{folder_id}")
+async def delete_subject_folder(folder_id: str, admin_user: User = Depends(get_admin_user)):
+    """Delete subject folder (soft delete)"""
+    existing = await db.subject_folders.find_one({"id": folder_id, "is_active": True})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Subject folder not found")
+    
+    # Check if there are quizzes in this folder
+    quizzes_in_folder = await db.quizzes.find({"subject": existing["name"], "is_active": True}).to_list(10)
+    if quizzes_in_folder:
+        raise HTTPException(status_code=400, detail=f"Cannot delete folder with {len(quizzes_in_folder)} quizzes. Move quizzes first.")
+    
+    # Soft delete
+    await db.subject_folders.update_one(
+        {"id": folder_id}, 
+        {"$set": {"is_active": False, "updated_at": datetime.utcnow()}}
+    )
+    
+    return {"message": "Subject folder deleted successfully"}
+
+@api_router.post("/admin/quiz/{quiz_id}/move-folder")
+async def move_quiz_to_folder(quiz_id: str, new_subject: str, new_subcategory: str = "General", admin_user: User = Depends(get_admin_user)):
+    """Move quiz to different folder/subject"""
+    # Check if quiz exists
+    quiz = await db.quizzes.find_one({"id": quiz_id})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Check if admin is the creator
+    if quiz["created_by"] != admin_user.id:
+        raise HTTPException(status_code=403, detail="You can only move quizzes you created")
+    
+    # Check if target folder exists
+    target_folder = await db.subject_folders.find_one({"name": new_subject, "is_active": True})
+    if not target_folder:
+        raise HTTPException(status_code=404, detail="Target subject folder not found")
+    
+    # Update quiz location
+    await db.quizzes.update_one(
+        {"id": quiz_id},
+        {"$set": {
+            "subject": new_subject,
+            "subcategory": new_subcategory,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    return {"message": f"Quiz moved to {new_subject} → {new_subcategory}"}
+
+@api_router.get("/admin/folder-quiz-count")
+async def get_folder_quiz_counts(admin_user: User = Depends(get_admin_user)):
+    """Get quiz counts for each folder"""
+    folders = await db.subject_folders.find({"is_active": True}).to_list(1000)
+    folder_counts = {}
+    
+    for folder in folders:
+        quiz_count = await db.quizzes.count_documents({
+            "subject": folder["name"],
+            "is_active": True
+        })
+        folder_counts[folder["name"]] = {
+            "id": folder["id"],
+            "name": folder["name"],
+            "description": folder.get("description", ""),
+            "quiz_count": quiz_count,
+            "is_public": folder.get("is_public", True),
+            "subcategories": folder.get("subcategories", [])
+        }
+    
+    return folder_counts
 
 @api_router.get("/admin/predefined-subjects")
 async def get_predefined_subjects(admin_user: User = Depends(get_admin_user)):
