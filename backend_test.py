@@ -978,8 +978,8 @@ class OnlineTestMakerAPITester:
 
     def test_admin_quiz_access_control(self):
         """Test admin setting quiz access control"""
-        if not self.admin_token or not hasattr(self, 'enhanced_quiz_id'):
-            return self.log_test("Admin Quiz Access Control", False, "No admin token or enhanced quiz ID available")
+        if not self.admin_token or not hasattr(self, 'nested_quiz_id'):
+            return self.log_test("Admin Quiz Access Control", False, "No admin token or nested quiz ID available")
         
         # Get user IDs for access control
         try:
@@ -998,12 +998,12 @@ class OnlineTestMakerAPITester:
                 return self.log_test("Admin Quiz Access Control", False, "No test users found")
             
             access_data = {
-                "quiz_id": self.enhanced_quiz_id,
+                "quiz_id": self.nested_quiz_id,
                 "user_ids": user_ids
             }
 
             response = requests.post(
-                f"{self.api_url}/admin/quiz/{self.enhanced_quiz_id}/access",
+                f"{self.api_url}/admin/quiz/{self.nested_quiz_id}/access",
                 json=access_data,
                 headers=self.get_auth_headers(self.admin_token),
                 timeout=10
