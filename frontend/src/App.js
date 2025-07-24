@@ -1762,6 +1762,7 @@ function AdminCategoriesView({ categories, fetchCategories }) {
   });
   const [allUsers, setAllUsers] = useState([]);
   const [activeTab, setActiveTab] = useState('categories'); // 'categories' or 'folders'
+  const [deleteFolderConfirm, setDeleteFolderConfirm] = useState({ show: false, folderId: null, folderName: '' });
 
   useEffect(() => {
     if (activeTab === 'folders') {
