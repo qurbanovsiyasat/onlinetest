@@ -540,13 +540,121 @@ async def get_all_users(admin_user: User = Depends(get_admin_user)):
 
 @api_router.post("/admin/quiz", response_model=Quiz)
 async def create_quiz(quiz_data: QuizCreate, admin_user: User = Depends(get_admin_user)):
-    """Create quiz (admin only)"""
+    """Create quiz with comprehensive validation (admin only)"""
+    # Validate quiz data
+    validation_errors = validate_quiz_data(quiz_data)
+    if validation_errors:
+        error_messages = []
+        for error in validation_errors:
+            if error.question_index is not None:
+                error_messages.append(f"Question {error.question_index + 1}: {error.message}")
+            else:
+                error_messages.append(f"{error.field}: {error.message}")
+        
+        raise HTTPException(
+            status_code=400, 
+            detail={
+                "message": "Quiz validation failed",
+                "errors": error_messages,
+                "validation_errors": [error.dict() for error in validation_errors]
+            }
+        )
+    
+    # Calculate total points
+    total_points = sum(question.points for question in quiz_data.questions)
+    
+    # Create quiz
     quiz = Quiz(**quiz_data.dict(), created_by=admin_user.id)
     quiz.total_questions = len(quiz.questions)
+    quiz.total_points = total_points
     quiz.updated_at = datetime.utcnow()
+    quiz.is_draft = True  # Start as draft
     
     await db.quizzes.insert_one(quiz.dict())
     return quiz
+
+@api_router.post("/admin/quiz/{quiz_id}/publish")
+async def publish_quiz(quiz_id: str, admin_user: User = Depends(get_admin_user)):
+    """Publish quiz (make it available to users)"""
+    quiz = await db.quizzes.find_one({"id": quiz_id})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    if quiz["created_by"] != admin_user.id:
+        raise HTTPException(status_code=403, detail="You can only publish quizzes you created")
+    
+    # Re-validate quiz before publishing
+    quiz_obj = Quiz(**quiz)
+    validation_errors = validate_quiz_data(QuizCreate(**quiz))
+    if validation_errors:
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot publish quiz with validation errors. Please fix the errors first."
+        )
+    
+    # Publish quiz
+    await db.quizzes.update_one(
+        {"id": quiz_id},
+        {"$set": {
+            "is_draft": False,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    return {"message": "Quiz published successfully"}
+
+@api_router.post("/admin/quiz/{quiz_id}/preview-token")
+async def generate_preview_token(quiz_id: str, admin_user: User = Depends(get_admin_user)):
+    """Generate preview token for quiz"""
+    quiz = await db.quizzes.find_one({"id": quiz_id})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    if quiz["created_by"] != admin_user.id:
+        raise HTTPException(status_code=403, detail="You can only preview quizzes you created")
+    
+    # Generate preview token
+    preview_token = str(uuid.uuid4())
+    
+    await db.quizzes.update_one(
+        {"id": quiz_id},
+        {"$set": {
+            "preview_token": preview_token,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    return {
+        "preview_token": preview_token,
+        "preview_url": f"/quiz/{quiz_id}/preview/{preview_token}"
+    }
+
+@api_router.get("/admin/quiz/{quiz_id}/validate")
+async def validate_quiz(quiz_id: str, admin_user: User = Depends(get_admin_user)):
+    """Validate quiz and return any errors"""
+    quiz = await db.quizzes.find_one({"id": quiz_id})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    if quiz["created_by"] != admin_user.id:
+        raise HTTPException(status_code=403, detail="You can only validate quizzes you created")
+    
+    # Validate quiz
+    try:
+        quiz_create_data = QuizCreate(**quiz)
+        validation_errors = validate_quiz_data(quiz_create_data)
+        
+        return {
+            "is_valid": len(validation_errors) == 0,
+            "errors": [error.dict() for error in validation_errors],
+            "total_questions": len(quiz.get("questions", [])),
+            "total_points": sum(q.get("points", 1) for q in quiz.get("questions", []))
+        }
+    except Exception as e:
+        return {
+            "is_valid": False,
+            "errors": [{"field": "general", "message": f"Quiz structure error: {str(e)}"}]
+        }
 
 @api_router.put("/admin/quiz/{quiz_id}", response_model=Quiz)
 async def update_quiz(quiz_id: str, quiz_data: QuizUpdate, admin_user: User = Depends(get_admin_user)):
