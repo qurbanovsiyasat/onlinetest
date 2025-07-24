@@ -677,6 +677,9 @@ function AdminUsersView({ users }) {
 }
 
 function AdminQuizzesView({ quizzes, fetchQuizzes }) {
+  const [editingQuiz, setEditingQuiz] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
   const deleteQuiz = async (quizId) => {
     if (window.confirm('Are you sure you want to delete this quiz?')) {
       try {
@@ -688,26 +691,220 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
     }
   };
 
+  const editQuiz = (quiz) => {
+    setEditingQuiz(quiz);
+    setShowEditModal(true);
+  };
+
+  const updateQuiz = async (quizId, updateData) => {
+    try {
+      await apiCall(`/admin/quiz/${quizId}`, {
+        method: 'PUT',
+        data: updateData
+      });
+      setShowEditModal(false);
+      setEditingQuiz(null);
+      fetchQuizzes();
+      alert('Quiz updated successfully!');
+    } catch (error) {
+      alert('Error updating quiz: ' + (error.response?.data?.detail || 'Unknown error'));
+    }
+  };
+
+  const toggleQuizVisibility = async (quiz) => {
+    try {
+      await apiCall(`/admin/quiz/${quiz.id}`, {
+        method: 'PUT',
+        data: { is_public: !quiz.is_public }
+      });
+      fetchQuizzes();
+    } catch (error) {
+      alert('Error updating quiz visibility');
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">All Quizzes</h2>
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">All Quizzes (Sorted by Date)</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {quizzes.map((quiz) => (
-          <div key={quiz.id} className="border rounded-lg p-4">
+          <div key={quiz.id} className="border rounded-lg p-4 relative">
+            <div className="mb-2">
+              <span className={`inline-block px-2 py-1 rounded text-xs ${
+                quiz.is_public ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+              }`}>
+                {quiz.is_public ? 'Public' : 'Private'}
+              </span>
+              <span className="inline-block px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 ml-1">
+                {quiz.subject_folder}
+              </span>
+            </div>
+            
             <h3 className="font-semibold text-gray-800 mb-2">{quiz.title}</h3>
             <p className="text-gray-600 text-sm mb-2">{quiz.description}</p>
+            
             <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
               <span>{quiz.category}</span>
               <span>{quiz.total_questions} questions</span>
             </div>
-            <button
-              onClick={() => deleteQuiz(quiz.id)}
-              className="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 transition duration-200"
-            >
-              Delete Quiz
-            </button>
+            
+            <div className="text-xs text-gray-400 mb-3">
+              Created: {new Date(quiz.created_at).toLocaleDateString()}
+              {quiz.updated_at !== quiz.created_at && (
+                <div>Updated: {new Date(quiz.updated_at).toLocaleDateString()}</div>
+              )}
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={() => editQuiz(quiz)}
+                className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition duration-200 text-sm"
+              >
+                ✏️ Edit
+              </button>
+              <button
+                onClick={() => toggleQuizVisibility(quiz)}
+                className={`flex-1 py-2 rounded transition duration-200 text-sm ${
+                  quiz.is_public 
+                    ? 'bg-yellow-600 text-white hover:bg-yellow-700' 
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+              >
+                {quiz.is_public ? '🔒 Make Private' : '🔓 Make Public'}
+              </button>
+              <button
+                onClick={() => deleteQuiz(quiz.id)}
+                className="flex-1 bg-red-600 text-white py-2 rounded hover:bg-red-700 transition duration-200 text-sm"
+              >
+                🗑️ Delete
+              </button>
+            </div>
           </div>
         ))}
+      </div>
+
+      {/* Edit Quiz Modal */}
+      {showEditModal && editingQuiz && (
+        <QuizEditModal
+          quiz={editingQuiz}
+          onClose={() => setShowEditModal(false)}
+          onUpdate={updateQuiz}
+        />
+      )}
+    </div>
+  );
+}
+
+function QuizEditModal({ quiz, onClose, onUpdate }) {
+  const [editData, setEditData] = useState({
+    title: quiz.title,
+    description: quiz.description,
+    category: quiz.category,
+    subject_folder: quiz.subject_folder,
+    is_public: quiz.is_public,
+    is_active: quiz.is_active
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onUpdate(quiz.id, editData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <h3 className="text-lg font-semibold mb-4">Edit Quiz: {quiz.title}</h3>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Title</label>
+            <input
+              type="text"
+              value={editData.title}
+              onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Description</label>
+            <textarea
+              value={editData.description}
+              onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+              rows="3"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Category</label>
+            <input
+              type="text"
+              value={editData.category}
+              onChange={(e) => setEditData({ ...editData, category: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Subject Folder</label>
+            <select
+              value={editData.subject_folder}
+              onChange={(e) => setEditData({ ...editData, subject_folder: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+            >
+              <option value="General">General</option>
+              <option value="Mathematics">Mathematics</option>
+              <option value="Science">Science</option>
+              <option value="History">History</option>
+              <option value="Language">Language</option>
+              <option value="Geography">Geography</option>
+              <option value="Art">Art</option>
+              <option value="Technology">Technology</option>
+            </select>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={editData.is_public}
+                onChange={(e) => setEditData({ ...editData, is_public: e.target.checked })}
+                className="mr-2"
+              />
+              Public Quiz
+            </label>
+
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={editData.is_active}
+                onChange={(e) => setEditData({ ...editData, is_active: e.target.checked })}
+                className="mr-2"
+              />
+              Active
+            </label>
+          </div>
+
+          <div className="flex gap-4 pt-4">
+            <button
+              type="submit"
+              className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-200"
+            >
+              Update Quiz
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition duration-200"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
