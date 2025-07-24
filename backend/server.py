@@ -132,11 +132,22 @@ class Quiz(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     total_questions: int = 0
+    total_points: int = 0  # Sum of all question points
     is_active: bool = True
     is_public: bool = False  # Public/Private toggle
     allowed_users: List[str] = []  # List of user IDs who can access public quiz
     total_attempts: int = 0  # Track how many times quiz was taken
     average_score: float = 0.0  # Average score across all attempts
+    
+    # Validation settings
+    min_pass_percentage: float = 60.0  # Minimum percentage to pass
+    time_limit_minutes: Optional[int] = None  # Optional time limit
+    shuffle_questions: bool = False  # Randomize question order
+    shuffle_options: bool = False  # Randomize option order
+    
+    # Preview and publishing
+    is_draft: bool = True  # Quiz starts as draft until published
+    preview_token: Optional[str] = None  # Token for preview access
 
 class QuizCreate(BaseModel):
     title: str
