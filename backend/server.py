@@ -73,15 +73,52 @@ class Token(BaseModel):
     token_type: str
     user: UserResponse
 
+from enum import Enum
+
+class QuestionType(str, Enum):
+    MULTIPLE_CHOICE = "multiple_choice"
+    OPEN_ENDED = "open_ended"
+
+class DifficultyLevel(str, Enum):
+    EASY = "easy"
+    MEDIUM = "medium"
+    HARD = "hard"
+
 class QuizOption(BaseModel):
     text: str
     is_correct: bool
 
+class OpenEndedAnswer(BaseModel):
+    expected_answers: List[str]  # List of acceptable answers
+    keywords: List[str] = []  # Keywords for auto-grading
+    case_sensitive: bool = False
+    partial_credit: bool = True
+
 class QuizQuestion(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     question_text: str
-    options: List[QuizOption]
+    question_type: QuestionType = QuestionType.MULTIPLE_CHOICE
+    
+    # Multiple Choice specific
+    options: List[QuizOption] = []
+    multiple_correct: bool = False  # Allow multiple correct answers
+    
+    # Open Ended specific
+    open_ended_answer: Optional[OpenEndedAnswer] = None
+    
+    # Media attachments
     image_url: Optional[str] = None
+    pdf_url: Optional[str] = None
+    
+    # Question metadata
+    difficulty: Optional[DifficultyLevel] = None
+    points: int = 1
+    is_mandatory: bool = True
+    explanation: Optional[str] = None  # Explanation shown after answer
+    
+    # Validation
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 class Quiz(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
