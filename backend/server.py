@@ -792,10 +792,92 @@ async def get_analytics_summary(admin_user: User = Depends(get_admin_user)):
         "average_score": round(avg_score, 1),
         "most_popular_quiz": most_popular_quiz
     }
-async def get_public_categories():
-    """Get all categories for public viewing"""
-    categories = await db.categories.find().to_list(1000)
-    return [Category(**cat) for cat in categories]
+@api_router.get("/admin/subject-folders")
+async def get_subject_folders(admin_user: User = Depends(get_admin_user)):
+    """Get all subject folders with quiz counts"""
+    quizzes = await db.quizzes.find({"is_active": True}).to_list(1000)
+    
+    folders = {}
+    for quiz in quizzes:
+        folder = quiz.get("subject_folder", "General")
+        if folder not in folders:
+            folders[folder] = {
+                "name": folder,
+                "quiz_count": 0,
+                "quizzes": []
+            }
+        folders[folder]["quiz_count"] += 1
+        folders[folder]["quizzes"].append({
+            "id": quiz["id"],
+            "title": quiz["title"],
+            "created_at": quiz["created_at"],
+            "is_public": quiz.get("is_public", False)
+        })
+    
+    # Sort quizzes in each folder by creation date
+    for folder in folders.values():
+        folder["quizzes"].sort(key=lambda x: x["created_at"], reverse=True)
+    
+    return list(folders.values())
+
+@api_router.get("/admin/user/{user_id}/details")
+async def get_user_details(user_id: str, admin_user: User = Depends(get_admin_user)):
+    """Get detailed user information including quiz history and mistakes"""
+    # Get user info
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get all attempts by this user
+    attempts = await db.quiz_attempts.find({"user_id": user_id}).to_list(1000)
+    
+    # Enrich attempts with quiz information
+    detailed_attempts = []
+    for attempt in attempts:
+        quiz = await db.quizzes.find_one({"id": attempt["quiz_id"]})
+        quiz_title = quiz.get("title", "Unknown Quiz") if quiz else "Unknown Quiz"
+        
+        detailed_attempts.append({
+            "attempt_id": attempt["id"],
+            "quiz_title": quiz_title,
+            "quiz_category": quiz.get("category", "Unknown") if quiz else "Unknown",
+            "score": attempt["score"],
+            "total_questions": attempt["total_questions"],
+            "percentage": attempt["percentage"],
+            "attempted_at": attempt["attempted_at"],
+            "question_results": attempt.get("question_results", []),
+            "mistakes": [
+                result for result in attempt.get("question_results", [])
+                if not result.get("is_correct", True)
+            ]
+        })
+    
+    # Sort by attempt date (newest first)
+    detailed_attempts.sort(key=lambda x: x["attempted_at"], reverse=True)
+    
+    # Calculate statistics
+    total_attempts = len(detailed_attempts)
+    total_score = sum(attempt["score"] for attempt in detailed_attempts)
+    total_questions = sum(attempt["total_questions"] for attempt in detailed_attempts)
+    average_percentage = sum(attempt["percentage"] for attempt in detailed_attempts) / total_attempts if total_attempts > 0 else 0
+    
+    return {
+        "user": {
+            "id": user["id"],
+            "name": user["name"],
+            "email": user["email"],
+            "role": user["role"],
+            "created_at": user.get("created_at")
+        },
+        "statistics": {
+            "total_attempts": total_attempts,
+            "total_score": total_score,
+            "total_questions": total_questions,
+            "average_percentage": round(average_percentage, 1),
+            "best_score": max([attempt["percentage"] for attempt in detailed_attempts]) if detailed_attempts else 0
+        },
+        "attempts": detailed_attempts
+    }
 
 # Include router
 app.include_router(api_router)
