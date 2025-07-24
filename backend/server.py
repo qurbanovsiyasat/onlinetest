@@ -402,7 +402,7 @@ async def get_quiz_leaderboard(quiz_id: str, admin_user: User = Depends(get_admi
 
 @api_router.get("/admin/quizzes", response_model=List[Quiz])
 async def get_all_quizzes_admin(admin_user: User = Depends(get_admin_user)):
-    """Get all quizzes (admin only) - sorted by creation date"""
+    """Get all quizzes (admin only) - sorted by creation date with enhanced fields"""
     quizzes = await db.quizzes.find().to_list(1000)
     valid_quizzes = []
     for quiz in quizzes:
@@ -417,10 +417,16 @@ async def get_all_quizzes_admin(admin_user: User = Depends(get_admin_user)):
             quiz['is_public'] = False
         if 'allowed_users' not in quiz:
             quiz['allowed_users'] = []
-        if 'subject_folder' not in quiz:
-            quiz['subject_folder'] = 'General'
+        if 'subject' not in quiz:
+            quiz['subject'] = quiz.get('subject_folder', 'General')
+        if 'subcategory' not in quiz:
+            quiz['subcategory'] = 'General'
         if 'updated_at' not in quiz:
             quiz['updated_at'] = quiz.get('created_at', datetime.utcnow())
+        if 'total_attempts' not in quiz:
+            quiz['total_attempts'] = 0
+        if 'average_score' not in quiz:
+            quiz['average_score'] = 0.0
         try:
             valid_quizzes.append(Quiz(**quiz))
         except Exception as e:
