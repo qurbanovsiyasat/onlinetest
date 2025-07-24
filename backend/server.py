@@ -250,7 +250,28 @@ async def login(login_data: UserLogin):
         "user": UserResponse(**user.dict())
     }
 
-@api_router.get("/auth/me", response_model=UserResponse)
+@api_router.post("/auth/change-password")
+async def change_password(password_data: PasswordChange, current_user: User = Depends(get_current_user)):
+    """Change user password"""
+    # Get current user with password
+    user_doc = await db.users.find_one({"id": current_user.id})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verify current password
+    if not verify_password(password_data.current_password, user_doc["password"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    
+    # Hash new password
+    new_hashed_password = hash_password(password_data.new_password)
+    
+    # Update password
+    await db.users.update_one(
+        {"id": current_user.id},
+        {"$set": {"password": new_hashed_password}}
+    )
+    
+    return {"message": "Password updated successfully"}
 async def get_me(current_user: User = Depends(get_current_user)):
     """Get current user info"""
     return UserResponse(**current_user.dict())
