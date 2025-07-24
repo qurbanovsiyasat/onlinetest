@@ -2355,20 +2355,28 @@ function AdminCreateQuiz({ setCurrentView }) {
     return quiz.questions.reduce((total, q) => total + q.points, 0);
   };
 
+  const [deleteQuestionFromQuizConfirm, setDeleteQuestionFromQuizConfirm] = useState({ show: false, questionIndex: null });
+
   const removeQuestionFromQuiz = (questionIndex) => {
     console.log('Attempting to remove question at index:', questionIndex);
-    if (confirm('Are you sure you want to remove this question?')) {
-      try {
-        const updatedQuestions = quiz.questions.filter((_, index) => index !== questionIndex);
-        console.log('Updated questions after removal:', updatedQuestions);
-        
-        setQuiz({ ...quiz, questions: updatedQuestions });
-        console.log('Question removed successfully from quiz creation');
-        alert('Question removed successfully!');
-      } catch (error) {
-        console.error('Error removing question:', error);
-        alert('Error removing question: ' + error.message);
-      }
+    setDeleteQuestionFromQuizConfirm({ show: true, questionIndex });
+  };
+
+  const confirmRemoveQuestionFromQuiz = () => {
+    const { questionIndex } = deleteQuestionFromQuizConfirm;
+    try {
+      const updatedQuestions = quiz.questions.filter((_, index) => index !== questionIndex);
+      console.log('Updated questions after removal:', updatedQuestions);
+      
+      setQuiz({ ...quiz, questions: updatedQuestions });
+      setDeleteQuestionFromQuizConfirm({ show: false, questionIndex: null });
+      
+      console.log('Question removed successfully from quiz creation');
+      alert('Question removed successfully!');
+    } catch (error) {
+      console.error('Error removing question:', error);
+      alert('Error removing question: ' + error.message);
+      setDeleteQuestionFromQuizConfirm({ show: false, questionIndex: null });
     }
   };
 
