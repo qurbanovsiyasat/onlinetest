@@ -68,6 +68,144 @@ const AuthProvider = ({ children }) => {
 
 const useAuth = () => useContext(AuthContext);
 
+// Math rendering helper
+const renderMathContent = (text) => {
+  if (typeof text !== 'string') return text;
+  
+  // Simple check for LaTeX expressions
+  if (text.includes('$') || text.includes('\\(') || text.includes('\\[')) {
+    return (
+      <span 
+        dangerouslySetInnerHTML={{ __html: text }}
+        className="tex2jax_process"
+      />
+    );
+  }
+  return text;
+};
+
+// Image cropping component
+function ImageCropModal({ imageSrc, onCropComplete, onClose }) {
+  const [crop, setCrop] = useState({
+    unit: '%',
+    width: 90,
+    height: 90,
+    x: 5,
+    y: 5
+  });
+  const [completedCrop, setCompletedCrop] = useState(null);
+  const imgRef = useRef(null);
+  const canvasRef = useRef(null);
+
+  const handleCropComplete = () => {
+    if (completedCrop && imgRef.current && canvasRef.current) {
+      const image = imgRef.current;
+      const canvas = canvasRef.current;
+      const crop = completedCrop;
+
+      const scaleX = image.naturalWidth / image.width;
+      const scaleY = image.naturalHeight / image.height;
+      const ctx = canvas.getContext('2d');
+      const pixelRatio = window.devicePixelRatio;
+
+      canvas.width = crop.width * pixelRatio * scaleX;
+      canvas.height = crop.height * pixelRatio * scaleY;
+
+      ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      ctx.imageSmoothingQuality = 'high';
+
+      ctx.drawImage(
+        image,
+        crop.x * scaleX,
+        crop.y * scaleY,
+        crop.width * scaleX,
+        crop.height * scaleY,
+        0,
+        0,
+        crop.width * scaleX,
+        crop.height * scaleY
+      );
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            onCropComplete(reader.result);
+          };
+          reader.readAsDataURL(blob);
+        }
+      }, 'image/jpeg', 0.95);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-screen overflow-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Crop Image</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-xl"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex-1">
+            <ReactCrop
+              crop={crop}
+              onChange={(c) => setCrop(c)}
+              onComplete={(c) => setCompletedCrop(c)}
+              aspect={undefined}
+              className="max-w-full"
+            >
+              <img
+                ref={imgRef}
+                src={imageSrc}
+                alt="Crop preview"
+                className="max-w-full h-auto"
+                style={{ maxHeight: '400px' }}
+              />
+            </ReactCrop>
+          </div>
+
+          <div className="lg:w-64">
+            <h4 className="font-semibold mb-2">Preview:</h4>
+            <canvas
+              ref={canvasRef}
+              className="border rounded max-w-full"
+              style={{ maxWidth: '200px', maxHeight: '200px' }}
+            />
+            
+            <div className="mt-4 space-y-2">
+              <div className="text-sm text-gray-600">
+                <p>Width: {Math.round(crop.width)}%</p>
+                <p>Height: {Math.round(crop.height)}%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-4 pt-4 mt-4 border-t">
+          <button
+            onClick={handleCropComplete}
+            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition duration-200"
+          >
+            ✂️ Apply Crop
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition duration-200"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // API helper with auth
 const apiCall = async (url, options = {}) => {
   const token = localStorage.getItem('token');
