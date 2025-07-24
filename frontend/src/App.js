@@ -2796,6 +2796,51 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
   const currentQuestion = quiz.questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
 
+  const handleMultipleChoiceSelect = (optionText) => {
+    if (currentQuestion.multiple_correct) {
+      // Handle multiple correct answers
+      const currentAnswers = userAnswers[currentQuestionIndex] ? 
+        userAnswers[currentQuestionIndex].split(', ').filter(a => a) : [];
+      
+      if (currentAnswers.includes(optionText)) {
+        // Remove if already selected
+        const newAnswers = currentAnswers.filter(a => a !== optionText);
+        selectAnswer(newAnswers.join(', '));
+      } else {
+        // Add to selected answers
+        selectAnswer([...currentAnswers, optionText].join(', '));
+      }
+    } else {
+      // Single correct answer
+      selectAnswer(optionText);
+    }
+  };
+
+  const handleOpenEndedInput = (value) => {
+    selectAnswer(value);
+  };
+
+  const isOptionSelected = (optionText) => {
+    const currentAnswer = userAnswers[currentQuestionIndex] || '';
+    if (currentQuestion.multiple_correct) {
+      return currentAnswer.split(', ').includes(optionText);
+    }
+    return currentAnswer === optionText;
+  };
+
+  const getQuestionTypeIcon = (type) => {
+    return type === 'multiple_choice' ? '📝' : '✏️';
+  };
+
+  const getDifficultyColor = (difficulty) => {
+    switch (difficulty) {
+      case 'easy': return 'bg-green-100 text-green-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'hard': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-100">
       <div className="container mx-auto px-4 py-8">
@@ -2821,37 +2866,124 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
         </header>
 
         <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-lg p-8">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-            {currentQuestion.question_text}
-          </h2>
-
-          {currentQuestion.image_url && (
-            <div className="mb-6">
-              <img
-                src={currentQuestion.image_url}
-                alt="Question"
-                className="max-w-full h-auto rounded-lg shadow"
-              />
+          {/* Question Header */}
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">{getQuestionTypeIcon(currentQuestion.question_type)}</span>
+                <span className={`px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(currentQuestion.difficulty)}`}>
+                  {currentQuestion.difficulty}
+                </span>
+                <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                  {currentQuestion.points} pts
+                </span>
+                {!currentQuestion.is_mandatory && (
+                  <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">
+                    Optional
+                  </span>
+                )}
+              </div>
+              <h2 className="text-2xl font-semibold text-gray-800">
+                {currentQuestion.question_text}
+              </h2>
             </div>
-          )}
-
-          <div className="space-y-4 mb-8">
-            {currentQuestion.options.map((option, index) => (
-              <button
-                key={index}
-                onClick={() => selectAnswer(option.text)}
-                className={`w-full p-4 text-left rounded-lg border-2 transition duration-200 ${
-                  userAnswers[currentQuestionIndex] === option.text
-                    ? 'border-teal-500 bg-teal-50 text-teal-800'
-                    : 'border-gray-200 hover:border-teal-300 hover:bg-teal-50'
-                }`}
-              >
-                <span className="font-semibold mr-3">{String.fromCharCode(65 + index)}.</span>
-                {option.text}
-              </button>
-            ))}
           </div>
 
+          {/* Media Display */}
+          <div className="flex gap-4 mb-6">
+            {currentQuestion.image_url && (
+              <div className="mb-6">
+                <img
+                  src={currentQuestion.image_url}
+                  alt="Question"
+                  className="max-w-full h-auto rounded-lg shadow"
+                />
+              </div>
+            )}
+            {currentQuestion.pdf_url && (
+              <div className="mb-6">
+                <div className="border-2 border-dashed border-red-300 rounded-lg p-6 text-center bg-red-50">
+                  <div className="text-4xl mb-2">📄</div>
+                  <p className="text-red-700 font-medium">PDF Attachment Available</p>
+                  <a
+                    href={currentQuestion.pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition duration-200"
+                  >
+                    View PDF
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Question Content Based on Type */}
+          <div className="mb-8">
+            {currentQuestion.question_type === 'multiple_choice' ? (
+              <div className="space-y-4">
+                {currentQuestion.multiple_correct && (
+                  <div className="p-3 bg-blue-50 rounded-lg mb-4">
+                    <p className="text-blue-800 text-sm font-medium">
+                      📌 Multiple answers may be correct. Select all that apply.
+                    </p>
+                  </div>
+                )}
+                
+                {currentQuestion.options.map((option, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleMultipleChoiceSelect(option.text)}
+                    className={`w-full p-4 text-left rounded-lg border-2 transition duration-200 ${
+                      isOptionSelected(option.text)
+                        ? 'border-teal-500 bg-teal-50 text-teal-800'
+                        : 'border-gray-200 hover:border-teal-300 hover:bg-teal-50'
+                    }`}
+                  >
+                    <div className="flex items-center">
+                      <div className={`w-4 h-4 mr-3 border-2 rounded ${
+                        currentQuestion.multiple_correct ? 'rounded-sm' : 'rounded-full'
+                      } ${
+                        isOptionSelected(option.text)
+                          ? 'bg-teal-500 border-teal-500'
+                          : 'border-gray-300'
+                      }`}>
+                        {isOptionSelected(option.text) && (
+                          <div className="text-white text-xs text-center leading-4">
+                            {currentQuestion.multiple_correct ? '✓' : '●'}
+                          </div>
+                        )}
+                      </div>
+                      <span className="font-semibold mr-3">{String.fromCharCode(65 + index)}.</span>
+                      <span className="flex-1">{option.text}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-3 bg-yellow-50 rounded-lg mb-4">
+                  <p className="text-yellow-800 text-sm font-medium">
+                    ✏️ Open-ended question. Type your answer in the text area below.
+                  </p>
+                </div>
+                
+                <textarea
+                  value={userAnswers[currentQuestionIndex] || ''}
+                  onChange={(e) => handleOpenEndedInput(e.target.value)}
+                  className="w-full p-4 border-2 border-gray-300 rounded-lg focus:border-teal-500 focus:outline-none resize-y min-h-32"
+                  placeholder="Type your answer here..."
+                  rows="4"
+                />
+                
+                <div className="text-sm text-gray-500">
+                  {userAnswers[currentQuestionIndex]?.length || 0} characters
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Navigation Buttons */}
           <div className="flex justify-between">
             <button
               onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
@@ -2863,7 +2995,8 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
             
             <button
               onClick={nextQuestion}
-              disabled={!userAnswers[currentQuestionIndex]}
+              disabled={!userAnswers[currentQuestionIndex] || 
+                       (userAnswers[currentQuestionIndex] && userAnswers[currentQuestionIndex].trim() === '')}
               className="px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
             >
               {currentQuestionIndex === quiz.questions.length - 1 ? 'Submit Quiz' : 'Next Question'}
