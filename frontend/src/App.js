@@ -854,13 +854,22 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
   const deleteQuiz = async (quizId) => {
     if (window.confirm('Are you sure you want to delete this quiz?')) {
       try {
-        await apiCall(`/admin/quiz/${quizId}`, { method: 'DELETE' });
+        console.log('Attempting to delete quiz with ID:', quizId);
+        const response = await apiCall(`/admin/quiz/${quizId}`, { method: 'DELETE' });
+        console.log('Delete response:', response);
+        
+        // Show success message
+        alert('Quiz deleted successfully!');
+        
+        // Refresh quiz list
         fetchQuizzes();
         if (viewMode === 'folders') {
           fetchSubjectsStructure();
         }
       } catch (error) {
-        alert('Error deleting quiz');
+        console.error('Error deleting quiz:', error);
+        const errorMessage = error.response?.data?.detail || error.message || 'Unknown error occurred';
+        alert(`Error deleting quiz: ${errorMessage}`);
       }
     }
   };
