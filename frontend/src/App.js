@@ -1432,23 +1432,40 @@ function AdminCreateQuiz({ setCurrentView }) {
     subcategory: 'General',
     is_public: false,
     allowed_users: [],
-    questions: []
+    questions: [],
+    min_pass_percentage: 60.0,
+    time_limit_minutes: null,
+    shuffle_questions: false,
+    shuffle_options: false
   });
 
   const [currentQuestion, setCurrentQuestion] = useState({
     question_text: '',
+    question_type: 'multiple_choice',
+    points: 1,
+    difficulty: 'medium',
+    is_mandatory: true,
+    explanation: '',
+    multiple_correct: false,
     options: [
-      { text: '', is_correct: false },
-      { text: '', is_correct: false },
       { text: '', is_correct: false },
       { text: '', is_correct: false }
     ],
-    image_url: null
+    open_ended_answer: {
+      expected_answers: [''],
+      keywords: [],
+      case_sensitive: false,
+      partial_credit: true
+    },
+    image_url: null,
+    pdf_url: null
   });
 
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [predefinedSubjects, setPredefinedSubjects] = useState({});
+  const [validationErrors, setValidationErrors] = useState([]);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     fetchPredefinedSubjects();
@@ -1475,55 +1492,149 @@ function AdminCreateQuiz({ setCurrentView }) {
     }
   };
 
-  const uploadImage = async (file) => {
+  const uploadFile = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
     
     try {
-      setUploadingImage(true);
-      const response = await apiCall('/admin/upload-image', {
+      setUploadingFile(true);
+      const response = await apiCall('/admin/upload-file', {
         method: 'POST',
         data: formData,
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      return response.data.url;
+      return response.data;
     } catch (error) {
-      alert('Error uploading image: ' + (error.response?.data?.detail || 'Unknown error'));
+      alert('Error uploading file: ' + (error.response?.data?.detail || 'Unknown error'));
       return null;
     } finally {
-      setUploadingImage(false);
+      setUploadingFile(false);
     }
   };
 
-  const handleImageUpload = async (event) => {
+  const handleFileUpload = async (event, fileType) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+    const allowedTypes = fileType === 'image' 
+      ? ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+      : ['application/pdf'];
+
+    if (!allowedTypes.includes(file.type)) {
+      alert(`Please select a valid ${fileType} file`);
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5MB');
+    const maxSize = fileType === 'image' ? 5 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert(`File size must be less than ${fileType === 'image' ? '5MB' : '10MB'}`);
       return;
     }
 
-    const imageUrl = await uploadImage(file);
-    if (imageUrl) {
-      setCurrentQuestion({ ...currentQuestion, image_url: imageUrl });
+    const fileData = await uploadFile(file);
+    if (fileData) {
+      const fieldName = fileType === 'image' ? 'image_url' : 'pdf_url';
+      setCurrentQuestion({ ...currentQuestion, [fieldName]: fileData.url });
     }
   };
 
-  const removeImage = () => {
-    setCurrentQuestion({ ...currentQuestion, image_url: null });
+  const removeFile = (fileType) => {
+    const fieldName = fileType === 'image' ? 'image_url' : 'pdf_url';
+    setCurrentQuestion({ ...currentQuestion, [fieldName]: null });
+  };
+
+  const addOption = () => {
+    if (currentQuestion.options.length < 6) {
+      setCurrentQuestion({
+        ...currentQuestion,
+        options: [...currentQuestion.options, { text: '', is_correct: false }]
+      });
+    }
+  };
+
+  const removeOption = (index) => {
+    if (currentQuestion.options.length > 2) {
+      const updatedOptions = currentQuestion.options.filter((_, i) => i !== index);
+      setCurrentQuestion({ ...currentQuestion, options: updatedOptions });
+    }
+  };
+
+  const updateOption = (index, field, value) => {
+    const updatedOptions = [...currentQuestion.options];
+    if (field === 'is_correct' && value && !currentQuestion.multiple_correct) {
+      // Single correct answer - uncheck all others
+      updatedOptions.forEach(opt => opt.is_correct = false);
+    }
+    updatedOptions[index][field] = value;
+    setCurrentQuestion({ ...currentQuestion, options: updatedOptions });
+  };
+
+  const updateOpenEndedAnswer = (field, value) => {
+    setCurrentQuestion({
+      ...currentQuestion,
+      open_ended_answer: {
+        ...currentQuestion.open_ended_answer,
+        [field]: value
+      }
+    });
+  };
+
+  const addExpectedAnswer = () => {
+    const updatedAnswers = [...currentQuestion.open_ended_answer.expected_answers, ''];
+    updateOpenEndedAnswer('expected_answers', updatedAnswers);
+  };
+
+  const updateExpectedAnswer = (index, value) => {
+    const updatedAnswers = [...currentQuestion.open_ended_answer.expected_answers];
+    updatedAnswers[index] = value;
+    updateOpenEndedAnswer('expected_answers', updatedAnswers);
+  };
+
+  const removeExpectedAnswer = (index) => {
+    if (currentQuestion.open_ended_answer.expected_answers.length > 1) {
+      const updatedAnswers = currentQuestion.open_ended_answer.expected_answers.filter((_, i) => i !== index);
+      updateOpenEndedAnswer('expected_answers', updatedAnswers);
+    }
+  };
+
+  const validateCurrentQuestion = () => {
+    const errors = [];
+    
+    if (!currentQuestion.question_text || currentQuestion.question_text.length < 5) {
+      errors.push('Question text must be at least 5 characters long');
+    }
+    
+    if (currentQuestion.points <= 0) {
+      errors.push('Points must be positive');
+    }
+    
+    if (currentQuestion.question_type === 'multiple_choice') {
+      if (currentQuestion.options.length < 2) {
+        errors.push('Multiple choice questions must have at least 2 options');
+      }
+      
+      if (!currentQuestion.options.every(opt => opt.text.trim())) {
+        errors.push('All options must have text');
+      }
+      
+      if (!currentQuestion.options.some(opt => opt.is_correct)) {
+        errors.push('At least one option must be correct');
+      }
+    } else if (currentQuestion.question_type === 'open_ended') {
+      if (!currentQuestion.open_ended_answer.expected_answers.some(ans => ans.trim())) {
+        errors.push('At least one expected answer is required');
+      }
+    }
+    
+    return errors;
   };
 
   const addQuestion = () => {
-    if (!currentQuestion.question_text || !currentQuestion.options.every(opt => opt.text) || !currentQuestion.options.some(opt => opt.is_correct)) {
-      alert('Please fill all fields and select correct answer');
+    const errors = validateCurrentQuestion();
+    if (errors.length > 0) {
+      alert('Please fix the following errors:\\n' + errors.join('\\n'));
       return;
     }
 
@@ -1532,38 +1643,84 @@ function AdminCreateQuiz({ setCurrentView }) {
       questions: [...quiz.questions, { ...currentQuestion, id: Date.now().toString() }]
     });
     
+    // Reset form
     setCurrentQuestion({
       question_text: '',
+      question_type: 'multiple_choice',
+      points: 1,
+      difficulty: 'medium',
+      is_mandatory: true,
+      explanation: '',
+      multiple_correct: false,
       options: [
-        { text: '', is_correct: false },
-        { text: '', is_correct: false },
         { text: '', is_correct: false },
         { text: '', is_correct: false }
       ],
-      image_url: null
+      open_ended_answer: {
+        expected_answers: [''],
+        keywords: [],
+        case_sensitive: false,
+        partial_credit: true
+      },
+      image_url: null,
+      pdf_url: null
     });
   };
 
-  const createQuiz = async () => {
-    if (!quiz.title || !quiz.description || !quiz.category || quiz.questions.length === 0) {
-      alert('Please fill all fields and add at least one question');
-      return;
+  const validateQuiz = () => {
+    const errors = [];
+    
+    if (!quiz.title || quiz.title.length < 3) {
+      errors.push('Title must be at least 3 characters long');
     }
-
+    
+    if (!quiz.description || quiz.description.length < 10) {
+      errors.push('Description must be at least 10 characters long');
+    }
+    
+    if (!quiz.category || quiz.category.length < 2) {
+      errors.push('Category is required');
+    }
+    
+    if (quiz.questions.length === 0) {
+      errors.push('At least one question is required');
+    }
+    
     if (quiz.is_public && quiz.allowed_users.length === 0) {
-      alert('Please select at least one user for public quiz access');
+      errors.push('Please select at least one user for public quiz access');
+    }
+    
+    return errors;
+  };
+
+  const createQuiz = async () => {
+    const errors = validateQuiz();
+    setValidationErrors(errors);
+    
+    if (errors.length > 0) {
+      alert('Please fix validation errors before creating quiz');
       return;
     }
 
     try {
-      await apiCall('/admin/quiz', {
+      const response = await apiCall('/admin/quiz', {
         method: 'POST',
         data: quiz
       });
-      alert('Quiz created successfully!');
+      alert('Quiz created successfully as draft!');
       setCurrentView('quizzes');
     } catch (error) {
-      alert('Error creating quiz: ' + (error.response?.data?.detail || 'Unknown error'));
+      if (error.response?.status === 400) {
+        const errorData = error.response.data;
+        if (errorData.detail && errorData.detail.errors) {
+          setValidationErrors(errorData.detail.errors);
+          alert('Quiz validation failed. Please check the errors.');
+        } else {
+          alert('Error creating quiz: ' + (errorData.detail || 'Unknown error'));
+        }
+      } else {
+        alert('Error creating quiz: ' + (error.response?.data?.detail || 'Unknown error'));
+      }
     }
   };
 
@@ -1580,36 +1737,57 @@ function AdminCreateQuiz({ setCurrentView }) {
     return predefinedSubjects[quiz.subject] || ['General'];
   };
 
+  const getTotalPoints = () => {
+    return quiz.questions.reduce((total, q) => total + q.points, 0);
+  };
+
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">Create New Quiz</h2>
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">Create Advanced Quiz</h2>
       
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <h4 className="text-red-800 font-semibold mb-2">⚠️ Validation Errors:</h4>
+          <ul className="list-disc list-inside text-red-700 text-sm">
+            {validationErrors.map((error, index) => (
+              <li key={index}>{error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Basic Quiz Info */}
       <div className="space-y-4 mb-6">
         <div>
-          <label className="block text-gray-700 font-semibold mb-2">Quiz Title</label>
+          <label className="block text-gray-700 font-semibold mb-2">
+            Quiz Title *
+          </label>
           <input
             type="text"
             value={quiz.title}
             onChange={(e) => setQuiz({ ...quiz, title: e.target.value })}
             className="w-full p-3 border border-gray-300 rounded-lg"
-            placeholder="Enter quiz title (e.g., Triangle Properties)"
+            placeholder="Enter quiz title (min 3 characters)"
           />
         </div>
 
         <div>
-          <label className="block text-gray-700 font-semibold mb-2">Description</label>
+          <label className="block text-gray-700 font-semibold mb-2">
+            Description *
+          </label>
           <textarea
             value={quiz.description}
             onChange={(e) => setQuiz({ ...quiz, description: e.target.value })}
             className="w-full p-3 border border-gray-300 rounded-lg"
             rows="3"
-            placeholder="Describe your quiz"
+            placeholder="Describe your quiz (min 10 characters)"
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">Subject</label>
+            <label className="block text-gray-700 font-semibold mb-2">Subject *</label>
             <select
               value={quiz.subject}
               onChange={(e) => setQuiz({ ...quiz, subject: e.target.value, subcategory: 'General' })}
@@ -1632,43 +1810,87 @@ function AdminCreateQuiz({ setCurrentView }) {
                 <option key={subcategory} value={subcategory}>{subcategory}</option>
               ))}
             </select>
-            <p className="text-xs text-gray-500 mt-1">
-              Example: Mathematics → Triangles
-            </p>
           </div>
 
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">Category</label>
+            <label className="block text-gray-700 font-semibold mb-2">Category *</label>
             <input
               type="text"
               value={quiz.category}
               onChange={(e) => setQuiz({ ...quiz, category: e.target.value })}
               className="w-full p-3 border border-gray-300 rounded-lg"
-              placeholder="Specific topic (e.g., Right Triangles)"
+              placeholder="Specific topic"
             />
           </div>
         </div>
 
+        {/* Quiz Settings */}
         <div className="bg-gray-50 p-4 rounded-lg">
-          <div className="flex items-center mb-4">
-            <input
-              type="checkbox"
-              id="isPublic"
-              checked={quiz.is_public}
-              onChange={(e) => setQuiz({ ...quiz, is_public: e.target.checked, allowed_users: [] })}
-              className="mr-3"
-            />
-            <label htmlFor="isPublic" className="font-semibold text-gray-700">
-              Make this quiz public (accessible to selected users)
+          <h4 className="font-semibold text-gray-800 mb-3">Quiz Settings</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Pass Percentage (%)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={quiz.min_pass_percentage}
+                onChange={(e) => setQuiz({ ...quiz, min_pass_percentage: parseFloat(e.target.value) || 0 })}
+                className="w-full p-3 border border-gray-300 rounded-lg"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Time Limit (minutes)</label>
+              <input
+                type="number"
+                min="1"
+                value={quiz.time_limit_minutes || ''}
+                onChange={(e) => setQuiz({ ...quiz, time_limit_minutes: e.target.value ? parseInt(e.target.value) : null })}
+                className="w-full p-3 border border-gray-300 rounded-lg"
+                placeholder="Optional"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-4 mt-4">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={quiz.shuffle_questions}
+                onChange={(e) => setQuiz({ ...quiz, shuffle_questions: e.target.checked })}
+                className="mr-2"
+              />
+              Shuffle Questions
+            </label>
+            
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={quiz.shuffle_options}
+                onChange={(e) => setQuiz({ ...quiz, shuffle_options: e.target.checked })}
+                className="mr-2"
+              />
+              Shuffle Options
+            </label>
+            
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={quiz.is_public}
+                onChange={(e) => setQuiz({ ...quiz, is_public: e.target.checked, allowed_users: [] })}
+                className="mr-2"
+              />
+              Public Quiz
             </label>
           </div>
 
           {quiz.is_public && (
-            <div>
+            <div className="mt-4">
               <label className="block text-gray-700 font-semibold mb-2">
-                Select Users Who Can Access This Quiz ({quiz.allowed_users.length} selected)
+                Select Users ({quiz.allowed_users.length} selected)
               </label>
-              <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-3">
+              <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-3">
                 {allUsers.map((user) => (
                   <div key={user.id} className="flex items-center mb-2">
                     <input
@@ -1686,142 +1908,46 @@ function AdminCreateQuiz({ setCurrentView }) {
         </div>
       </div>
 
-      {/* Add Question Form */}
-      <div className="bg-gray-50 p-6 rounded-lg mb-6">
-        <h3 className="text-lg font-semibold mb-4">Add Question</h3>
-        
-        <div className="mb-4">
-          <label className="block text-gray-700 font-semibold mb-2">Question</label>
-          <input
-            type="text"
-            value={currentQuestion.question_text}
-            onChange={(e) => setCurrentQuestion({ ...currentQuestion, question_text: e.target.value })}
-            className="w-full p-3 border border-gray-300 rounded-lg"
-            placeholder="Enter your question"
-          />
-        </div>
-
-        {/* Image Upload Section */}
-        <div className="mb-4">
-          <label className="block text-gray-700 font-semibold mb-2">Question Image (Optional)</label>
-          {!currentQuestion.image_url ? (
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-                id="imageUpload"
-                disabled={uploadingImage}
-              />
-              <label
-                htmlFor="imageUpload"
-                className={`cursor-pointer inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 ${
-                  uploadingImage ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                {uploadingImage ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    📷 Upload Image
-                  </>
-                )}
-              </label>
-              <p className="text-sm text-gray-500 mt-2">
-                Supported formats: JPG, PNG, GIF, WEBP (max 5MB)
-              </p>
-            </div>
-          ) : (
-            <div className="relative">
-              <img
-                src={currentQuestion.image_url}
-                alt="Question"
-                className="max-w-full h-auto rounded-lg shadow"
-                style={{ maxHeight: '300px' }}
-              />
-              <button
-                onClick={removeImage}
-                className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-700 transition duration-200"
-              >
-                ✕
-              </button>
-            </div>
-          )}
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-gray-700 font-semibold mb-2">Options</label>
-          {currentQuestion.options.map((option, index) => (
-            <div key={index} className="flex items-center mb-2">
-              <input
-                type="radio"
-                name="correct-answer"
-                checked={option.is_correct}
-                onChange={() => {
-                  const updatedOptions = currentQuestion.options.map((opt, i) => ({
-                    ...opt,
-                    is_correct: i === index
-                  }));
-                  setCurrentQuestion({ ...currentQuestion, options: updatedOptions });
-                }}
-                className="mr-3"
-              />
-              <input
-                type="text"
-                value={option.text}
-                onChange={(e) => {
-                  const updatedOptions = [...currentQuestion.options];
-                  updatedOptions[index].text = e.target.value;
-                  setCurrentQuestion({ ...currentQuestion, options: updatedOptions });
-                }}
-                className="flex-1 p-2 border border-gray-300 rounded-lg"
-                placeholder={`Option ${String.fromCharCode(65 + index)}`}
-              />
-            </div>
-          ))}
-        </div>
-
-        <button
-          onClick={addQuestion}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
-        >
-          Add Question
-        </button>
-      </div>
+      {/* Question Creation Form */}
+      <QuestionCreationForm
+        currentQuestion={currentQuestion}
+        setCurrentQuestion={setCurrentQuestion}
+        uploadingFile={uploadingFile}
+        handleFileUpload={handleFileUpload}
+        removeFile={removeFile}
+        addOption={addOption}
+        removeOption={removeOption}
+        updateOption={updateOption}
+        updateOpenEndedAnswer={updateOpenEndedAnswer}
+        addExpectedAnswer={addExpectedAnswer}
+        updateExpectedAnswer={updateExpectedAnswer}
+        removeExpectedAnswer={removeExpectedAnswer}
+        validateCurrentQuestion={validateCurrentQuestion}
+        addQuestion={addQuestion}
+      />
 
       {/* Questions Preview */}
       {quiz.questions.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-4">Questions Added ({quiz.questions.length})</h3>
-          <div className="space-y-4">
-            {quiz.questions.map((question, index) => (
-              <div key={index} className="bg-blue-50 p-4 rounded-lg">
-                <p className="font-semibold mb-2">{index + 1}. {question.question_text}</p>
-                {question.image_url && (
-                  <div className="mb-3">
-                    <img
-                      src={question.image_url}
-                      alt="Question"
-                      className="max-w-full h-auto rounded-lg shadow"
-                      style={{ maxHeight: '200px' }}
-                    />
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  {question.options.map((option, optIndex) => (
-                    <div key={optIndex} className={`p-2 rounded ${option.is_correct ? 'bg-green-100 text-green-800' : 'bg-gray-100'}`}>
-                      {String.fromCharCode(65 + optIndex)}. {option.text}
-                      {option.is_correct && ' ✓'}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">
+              Questions Added ({quiz.questions.length}) - Total Points: {getTotalPoints()}
+            </h3>
+            <button
+              onClick={() => setShowPreview(!showPreview)}
+              className="text-blue-600 hover:text-blue-800 font-semibold"
+            >
+              {showPreview ? '👁️ Hide Preview' : '👀 Show Preview'}
+            </button>
           </div>
+
+          {showPreview && (
+            <div className="space-y-4">
+              {quiz.questions.map((question, index) => (
+                <QuestionPreview key={index} question={question} index={index} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1830,7 +1956,7 @@ function AdminCreateQuiz({ setCurrentView }) {
           onClick={createQuiz}
           className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition duration-200 font-semibold"
         >
-          Create Quiz
+          🚀 Create Advanced Quiz
         </button>
         <button
           onClick={() => setCurrentView('quizzes')}
