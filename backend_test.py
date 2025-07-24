@@ -1290,6 +1290,17 @@ class OnlineTestMakerAPITester:
                 mc_count = sum(1 for q in questions if q.get('question_type') == 'multiple_choice')
                 oe_count = sum(1 for q in questions if q.get('question_type') == 'open_ended')
                 details += f", MC Questions: {mc_count}, Open-ended: {oe_count}"
+                
+                # Publish the quiz immediately so users can take it
+                publish_response = requests.post(
+                    f"{self.api_url}/admin/quiz/{self.flexible_quiz_id}/publish",
+                    headers=self.get_auth_headers(self.admin_token),
+                    timeout=10
+                )
+                if publish_response.status_code == 200:
+                    details += ", Published: Yes"
+                else:
+                    details += ", Published: Failed"
             else:
                 details += f", Response: {response.text[:200]}"
                 
