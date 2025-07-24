@@ -540,6 +540,8 @@ class OnlineTestMakerAPITester:
             "title": "Test Quiz with Image",
             "description": "A test quiz with image questions",
             "category": "Test Category",
+            "subject": "Science",  # Required field
+            "subcategory": "General",
             "questions": [
                 {
                     "question_text": "What do you see in this image?",
