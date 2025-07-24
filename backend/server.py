@@ -216,12 +216,17 @@ class QuizAttempt(BaseModel):
     quiz_id: str
     user_id: str
     answers: List[str]
-    correct_answers: List[str] = []  # New: Store correct answers for review
-    question_results: List[dict] = []  # New: Detailed question results
-    score: int
+    correct_answers: List[str] = []  # Store correct answers for review
+    question_results: List[dict] = []  # Detailed question results
+    score: int  # Number of questions correct
     total_questions: int
-    percentage: float
+    percentage: float  # Percentage of questions correct
+    earned_points: int = 0  # Total points earned
+    total_possible_points: int = 0  # Total points possible
+    points_percentage: float = 0.0  # Percentage of points earned
+    passed: bool = False  # Whether user passed based on min_pass_percentage
     attempted_at: datetime = Field(default_factory=datetime.utcnow)
+    time_taken_minutes: Optional[int] = None  # Time taken to complete quiz
 
 class PasswordChange(BaseModel):
     current_password: str
