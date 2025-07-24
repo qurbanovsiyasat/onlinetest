@@ -975,7 +975,8 @@ function AdminCreateQuiz({ setCurrentView }) {
     title: '',
     description: '',
     category: '',
-    subject_folder: 'General',
+    subject: 'Mathematics',
+    subcategory: 'General',
     is_public: false,
     allowed_users: [],
     questions: []
@@ -994,13 +995,23 @@ function AdminCreateQuiz({ setCurrentView }) {
 
   const [uploadingImage, setUploadingImage] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
-  const [showUserSelection, setShowUserSelection] = useState(false);
+  const [predefinedSubjects, setPredefinedSubjects] = useState({});
 
   useEffect(() => {
+    fetchPredefinedSubjects();
     if (quiz.is_public) {
       fetchAllUsers();
     }
   }, [quiz.is_public]);
+
+  const fetchPredefinedSubjects = async () => {
+    try {
+      const response = await apiCall('/admin/predefined-subjects');
+      setPredefinedSubjects(response.data);
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+    }
+  };
 
   const fetchAllUsers = async () => {
     try {
@@ -1112,6 +1123,10 @@ function AdminCreateQuiz({ setCurrentView }) {
     });
   };
 
+  const getSubcategories = () => {
+    return predefinedSubjects[quiz.subject] || ['General'];
+  };
+
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-xl font-semibold text-gray-800 mb-4">Create New Quiz</h2>
@@ -1124,7 +1139,7 @@ function AdminCreateQuiz({ setCurrentView }) {
             value={quiz.title}
             onChange={(e) => setQuiz({ ...quiz, title: e.target.value })}
             className="w-full p-3 border border-gray-300 rounded-lg"
-            placeholder="Enter quiz title"
+            placeholder="Enter quiz title (e.g., Triangle Properties)"
           />
         </div>
 
@@ -1139,7 +1154,36 @@ function AdminCreateQuiz({ setCurrentView }) {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Subject</label>
+            <select
+              value={quiz.subject}
+              onChange={(e) => setQuiz({ ...quiz, subject: e.target.value, subcategory: 'General' })}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+            >
+              {Object.keys(predefinedSubjects).map(subject => (
+                <option key={subject} value={subject}>{subject}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Subcategory</label>
+            <select
+              value={quiz.subcategory}
+              onChange={(e) => setQuiz({ ...quiz, subcategory: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+            >
+              {getSubcategories().map(subcategory => (
+                <option key={subcategory} value={subcategory}>{subcategory}</option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Example: Mathematics → Triangles
+            </p>
+          </div>
+
           <div>
             <label className="block text-gray-700 font-semibold mb-2">Category</label>
             <input
@@ -1147,26 +1191,8 @@ function AdminCreateQuiz({ setCurrentView }) {
               value={quiz.category}
               onChange={(e) => setQuiz({ ...quiz, category: e.target.value })}
               className="w-full p-3 border border-gray-300 rounded-lg"
-              placeholder="Enter category (e.g., Math, Science)"
+              placeholder="Specific topic (e.g., Right Triangles)"
             />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 font-semibold mb-2">Subject Folder</label>
-            <select
-              value={quiz.subject_folder}
-              onChange={(e) => setQuiz({ ...quiz, subject_folder: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg"
-            >
-              <option value="General">General</option>
-              <option value="Mathematics">Mathematics</option>
-              <option value="Science">Science</option>
-              <option value="History">History</option>
-              <option value="Language">Language</option>
-              <option value="Geography">Geography</option>
-              <option value="Art">Art</option>
-              <option value="Technology">Technology</option>
-            </select>
           </div>
         </div>
 
