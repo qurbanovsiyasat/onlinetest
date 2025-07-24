@@ -2080,6 +2080,7 @@ function AdminCreateQuiz({ setCurrentView }) {
   const [predefinedSubjects, setPredefinedSubjects] = useState({});
   const [validationErrors, setValidationErrors] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [deleteQuestionFromQuizConfirm, setDeleteQuestionFromQuizConfirm] = useState({ show: false, questionIndex: null });
 
   useEffect(() => {
     fetchPredefinedSubjects();
