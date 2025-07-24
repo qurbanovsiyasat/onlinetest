@@ -3631,21 +3631,33 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
   const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
 
   const handleMultipleChoiceSelect = (optionText) => {
+    console.log('Question multiple_correct flag:', currentQuestion.multiple_correct);
+    console.log('Current answers:', userAnswers[currentQuestionIndex]);
+    console.log('Selecting option:', optionText);
+    
     if (currentQuestion.multiple_correct) {
       // Handle multiple correct answers
       const currentAnswers = userAnswers[currentQuestionIndex] ? 
-        userAnswers[currentQuestionIndex].split(', ').filter(a => a) : [];
+        userAnswers[currentQuestionIndex].split(', ').filter(a => a && a.trim() !== '') : [];
+      
+      console.log('Current parsed answers:', currentAnswers);
       
       if (currentAnswers.includes(optionText)) {
         // Remove if already selected
         const newAnswers = currentAnswers.filter(a => a !== optionText);
-        selectAnswer(newAnswers.join(', '));
+        const newAnswerString = newAnswers.join(', ');
+        console.log('Removing option, new answers:', newAnswerString);
+        selectAnswer(newAnswerString);
       } else {
         // Add to selected answers
-        selectAnswer([...currentAnswers, optionText].join(', '));
+        const newAnswers = [...currentAnswers, optionText];
+        const newAnswerString = newAnswers.join(', ');
+        console.log('Adding option, new answers:', newAnswerString);
+        selectAnswer(newAnswerString);
       }
     } else {
       // Single correct answer
+      console.log('Single selection mode, selecting:', optionText);
       selectAnswer(optionText);
     }
   };
@@ -3657,7 +3669,8 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
   const isOptionSelected = (optionText) => {
     const currentAnswer = userAnswers[currentQuestionIndex] || '';
     if (currentQuestion.multiple_correct) {
-      return currentAnswer.split(', ').includes(optionText);
+      const selectedOptions = currentAnswer.split(', ').filter(a => a && a.trim() !== '');
+      return selectedOptions.includes(optionText);
     }
     return currentAnswer === optionText;
   };
