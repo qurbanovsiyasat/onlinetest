@@ -1852,6 +1852,7 @@ function UserDashboard({ currentView, setCurrentView }) {
   const [userAnswers, setUserAnswers] = useState([]);
   const [quizResult, setQuizResult] = useState(null);
   const [myAttempts, setMyAttempts] = useState([]);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
 
   useEffect(() => {
     if (currentView === 'home') fetchQuizzes();
@@ -1910,7 +1911,7 @@ function UserDashboard({ currentView, setCurrentView }) {
       setQuizResult(response.data);
       setCurrentView('result');
     } catch (error) {
-      alert('Error submitting quiz');
+      alert('Error submitting quiz: ' + (error.response?.data?.detail || 'Unknown error'));
     }
   };
 
@@ -1962,6 +1963,12 @@ function UserDashboard({ currentView, setCurrentView }) {
               📊 My Results
             </button>
             <button
+              onClick={() => setShowPasswordChange(true)}
+              className="text-gray-700 hover:bg-gray-100 px-4 py-2 rounded-lg transition duration-200"
+            >
+              🔑 Change Password
+            </button>
+            <button
               onClick={logout}
               className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200"
             >
@@ -1983,17 +1990,26 @@ function UserDashboard({ currentView, setCurrentView }) {
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {quizzes.map((quiz) => (
                   <div key={quiz.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition duration-200">
-                    <div className="mb-2">
+                    <div className="mb-2 flex flex-wrap gap-1">
                       <span className="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded">
-                        {quiz.category}
+                        {quiz.subject || 'General'}
+                      </span>
+                      <span className="inline-block bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">
+                        {quiz.subcategory || 'General'}
                       </span>
                     </div>
                     <h3 className="text-xl font-semibold text-gray-800 mb-2">{quiz.title}</h3>
                     <p className="text-gray-600 mb-4">{quiz.description}</p>
+                    <div className="flex justify-between items-center mb-4 text-sm text-gray-500">
+                      <span>{quiz.total_questions} questions</span>
+                      <span>{quiz.total_attempts || 0} attempts</span>
+                    </div>
                     <div className="flex justify-between items-center mb-4">
-                      <span className="text-sm text-gray-500">{quiz.total_questions} questions</span>
                       <span className="text-sm text-gray-500">
-                        {new Date(quiz.created_at).toLocaleDateString()}
+                        Category: {quiz.category}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        Avg: {quiz.average_score || 0}%
                       </span>
                     </div>
                     <button
@@ -2046,6 +2062,131 @@ function UserDashboard({ currentView, setCurrentView }) {
             )}
           </div>
         )}
+      </div>
+
+      {/* Password Change Modal */}
+      {showPasswordChange && (
+        <PasswordChangeModal 
+          onClose={() => setShowPasswordChange(false)} 
+          userName={user.name}
+        />
+      )}
+    </div>
+  );
+}
+
+function PasswordChangeModal({ onClose, userName }) {
+  const [formData, setFormData] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_password: ''
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (formData.new_password !== formData.confirm_password) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    if (formData.new_password.length < 6) {
+      setError('New password must be at least 6 characters long');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await apiCall('/auth/change-password', {
+        method: 'POST',
+        data: {
+          current_password: formData.current_password,
+          new_password: formData.new_password
+        }
+      });
+      alert('Password changed successfully!');
+      onClose();
+    } catch (error) {
+      setError(error.response?.data?.detail || 'Error changing password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-lg font-semibold">Change Password</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-xl"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Current Password</label>
+            <input
+              type="password"
+              value={formData.current_password}
+              onChange={(e) => setFormData({ ...formData, current_password: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">New Password</label>
+            <input
+              type="password"
+              value={formData.new_password}
+              onChange={(e) => setFormData({ ...formData, new_password: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+              required
+              minLength="6"
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Confirm New Password</label>
+            <input
+              type="password"
+              value={formData.confirm_password}
+              onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg"
+              required
+            />
+          </div>
+
+          {error && (
+            <div className="p-3 rounded-lg bg-red-100 text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div className="flex gap-4 pt-4">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition duration-200 font-semibold disabled:opacity-50"
+            >
+              {loading ? 'Changing...' : 'Change Password'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
