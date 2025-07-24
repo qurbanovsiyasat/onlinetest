@@ -3309,7 +3309,7 @@ function QuestionPreview({ question, index, onDelete }) {
                   option.is_correct ? 'bg-green-100 text-green-800' : 'bg-gray-100'
                 }`}
               >
-                {String.fromCharCode(65 + optIndex)}. {option.text}
+                {String.fromCharCode(65 + optIndex)}. {renderMathContent(option.text)}
                 {option.is_correct && ' ✓'}
               </div>
             ))}
