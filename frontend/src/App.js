@@ -851,26 +851,34 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
     }
   };
 
-  const deleteQuiz = async (quizId) => {
-    if (window.confirm('Are you sure you want to delete this quiz?')) {
-      try {
-        console.log('Attempting to delete quiz with ID:', quizId);
-        const response = await apiCall(`/admin/quiz/${quizId}`, { method: 'DELETE' });
-        console.log('Delete response:', response);
-        
-        // Show success message
-        alert('Quiz deleted successfully!');
-        
-        // Refresh quiz list
-        fetchQuizzes();
-        if (viewMode === 'folders') {
-          fetchSubjectsStructure();
-        }
-      } catch (error) {
-        console.error('Error deleting quiz:', error);
-        const errorMessage = error.response?.data?.detail || error.message || 'Unknown error occurred';
-        alert(`Error deleting quiz: ${errorMessage}`);
+  const [deleteConfirmation, setDeleteConfirmation] = useState({ show: false, quizId: null, quizTitle: '' });
+
+  const deleteQuiz = async (quizId, quizTitle = 'this quiz') => {
+    setDeleteConfirmation({ show: true, quizId, quizTitle });
+  };
+
+  const confirmDeleteQuiz = async () => {
+    const { quizId } = deleteConfirmation;
+    try {
+      console.log('Attempting to delete quiz with ID:', quizId);
+      const response = await apiCall(`/admin/quiz/${quizId}`, { method: 'DELETE' });
+      console.log('Delete response:', response);
+      
+      // Show success message
+      alert('Quiz deleted successfully!');
+      
+      // Refresh quiz list
+      fetchQuizzes();
+      if (viewMode === 'folders') {
+        fetchSubjectsStructure();
       }
+      
+      setDeleteConfirmation({ show: false, quizId: null, quizTitle: '' });
+    } catch (error) {
+      console.error('Error deleting quiz:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Unknown error occurred';
+      alert(`Error deleting quiz: ${errorMessage}`);
+      setDeleteConfirmation({ show: false, quizId: null, quizTitle: '' });
     }
   };
 
