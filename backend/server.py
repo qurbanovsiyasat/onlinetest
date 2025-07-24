@@ -484,7 +484,7 @@ async def get_quiz(quiz_id: str, current_user: User = Depends(get_current_user))
 
 @api_router.post("/quiz/{quiz_id}/attempt", response_model=QuizAttempt)
 async def submit_quiz_attempt(quiz_id: str, attempt_data: QuizAttemptCreate, current_user: User = Depends(get_current_user)):
-    """Submit quiz attempt (users only)"""
+    """Submit quiz attempt (users only) - Enhanced with mistake review"""
     if current_user.role == UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Admins cannot take quizzes")
     
@@ -493,27 +493,56 @@ async def submit_quiz_attempt(quiz_id: str, attempt_data: QuizAttemptCreate, cur
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
     
+    # Check access permissions for public quizzes
+    if quiz.get("is_public", False) and current_user.id not in quiz.get("allowed_users", []):
+        raise HTTPException(status_code=403, detail="You don't have access to this quiz")
+    
     quiz_obj = Quiz(**quiz)
     
-    # Calculate score
+    # Calculate score and track mistakes
     score = 0
     total_questions = len(quiz_obj.questions)
+    correct_answers = []
+    question_results = []
     
     for i, user_answer in enumerate(attempt_data.answers):
         if i < len(quiz_obj.questions):
             question = quiz_obj.questions[i]
+            
+            # Find correct answer
+            correct_option = None
             for option in question.options:
-                if option.is_correct and option.text == user_answer:
-                    score += 1
+                if option.is_correct:
+                    correct_option = option
                     break
+            
+            correct_answer = correct_option.text if correct_option else "No correct answer found"
+            correct_answers.append(correct_answer)
+            
+            # Check if user's answer is correct
+            is_correct = user_answer == correct_answer
+            if is_correct:
+                score += 1
+            
+            # Store detailed question result
+            question_results.append({
+                "question_number": i + 1,
+                "question_text": question.question_text,
+                "user_answer": user_answer,
+                "correct_answer": correct_answer,
+                "is_correct": is_correct,
+                "all_options": [opt.text for opt in question.options]
+            })
     
     percentage = (score / total_questions * 100) if total_questions > 0 else 0
     
-    # Create attempt
+    # Create attempt with enhanced data
     attempt = QuizAttempt(
         quiz_id=quiz_id,
         user_id=current_user.id,
         answers=attempt_data.answers,
+        correct_answers=correct_answers,
+        question_results=question_results,
         score=score,
         total_questions=total_questions,
         percentage=percentage
