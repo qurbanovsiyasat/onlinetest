@@ -887,14 +887,14 @@ async def get_quiz(quiz_id: str, current_user: User = Depends(get_current_user))
 
 @api_router.post("/quiz/{quiz_id}/attempt", response_model=QuizAttempt)
 async def submit_quiz_attempt(quiz_id: str, attempt_data: QuizAttemptCreate, current_user: User = Depends(get_current_user)):
-    """Submit quiz attempt (users only) - Enhanced with mistake review and statistics update"""
+    """Submit quiz attempt with enhanced question type support (users only)"""
     if current_user.role == UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Admins cannot take quizzes")
     
     # Get quiz
-    quiz = await db.quizzes.find_one({"id": quiz_id, "is_active": True})
+    quiz = await db.quizzes.find_one({"id": quiz_id, "is_active": True, "is_draft": False})
     if not quiz:
-        raise HTTPException(status_code=404, detail="Quiz not found")
+        raise HTTPException(status_code=404, detail="Quiz not found or not published")
     
     # Check access permissions for public quizzes
     if quiz.get("is_public", False) and current_user.id not in quiz.get("allowed_users", []):
@@ -902,9 +902,10 @@ async def submit_quiz_attempt(quiz_id: str, attempt_data: QuizAttemptCreate, cur
     
     quiz_obj = Quiz(**quiz)
     
-    # Calculate score and track mistakes
+    # Calculate score and track detailed results
     score = 0
-    total_questions = len(quiz_obj.questions)
+    total_possible_points = sum(question.points for question in quiz_obj.questions)
+    earned_points = 0
     correct_answers = []
     question_results = []
     
@@ -912,35 +913,39 @@ async def submit_quiz_attempt(quiz_id: str, attempt_data: QuizAttemptCreate, cur
         if i < len(quiz_obj.questions):
             question = quiz_obj.questions[i]
             
-            # Find correct answer
-            correct_option = None
-            for option in question.options:
-                if option.is_correct:
-                    correct_option = option
-                    break
+            if question.question_type == QuestionType.MULTIPLE_CHOICE:
+                result = grade_multiple_choice_question(question, user_answer, i)
+            elif question.question_type == QuestionType.OPEN_ENDED:
+                result = grade_open_ended_question(question, user_answer, i)
+            else:
+                result = {
+                    "question_number": i + 1,
+                    "question_text": question.question_text,
+                    "question_type": question.question_type,
+                    "user_answer": user_answer,
+                    "correct_answer": "Unknown",
+                    "is_correct": False,
+                    "points_earned": 0,
+                    "points_possible": question.points,
+                    "explanation": "Unknown question type"
+                }
             
-            correct_answer = correct_option.text if correct_option else "No correct answer found"
-            correct_answers.append(correct_answer)
+            question_results.append(result)
+            correct_answers.append(result["correct_answer"])
             
-            # Check if user's answer is correct
-            is_correct = user_answer == correct_answer
-            if is_correct:
+            if result["is_correct"]:
                 score += 1
             
-            # Store detailed question result
-            question_results.append({
-                "question_number": i + 1,
-                "question_text": question.question_text,
-                "user_answer": user_answer,
-                "correct_answer": correct_answer,
-                "is_correct": is_correct,
-                "all_options": [opt.text for opt in question.options],
-                "question_image": question.image_url if hasattr(question, 'image_url') else None
-            })
+            earned_points += result["points_earned"]
     
-    percentage = (score / total_questions * 100) if total_questions > 0 else 0
+    # Calculate percentages
+    percentage = (score / len(quiz_obj.questions) * 100) if len(quiz_obj.questions) > 0 else 0
+    points_percentage = (earned_points / total_possible_points * 100) if total_possible_points > 0 else 0
     
-    # Create attempt with enhanced data
+    # Determine if user passed
+    passed = points_percentage >= quiz.get("min_pass_percentage", 60.0)
+    
+    # Create enhanced attempt record
     attempt = QuizAttempt(
         quiz_id=quiz_id,
         user_id=current_user.id,
@@ -948,8 +953,12 @@ async def submit_quiz_attempt(quiz_id: str, attempt_data: QuizAttemptCreate, cur
         correct_answers=correct_answers,
         question_results=question_results,
         score=score,
-        total_questions=total_questions,
-        percentage=percentage
+        total_questions=len(quiz_obj.questions),
+        percentage=percentage,
+        earned_points=earned_points,
+        total_possible_points=total_possible_points,
+        points_percentage=points_percentage,
+        passed=passed
     )
     
     await db.quiz_attempts.insert_one(attempt.dict())
@@ -958,6 +967,117 @@ async def submit_quiz_attempt(quiz_id: str, attempt_data: QuizAttemptCreate, cur
     await update_quiz_statistics(quiz_id)
     
     return attempt
+
+def grade_multiple_choice_question(question: QuizQuestion, user_answer: str, question_index: int) -> dict:
+    """Grade a multiple choice question"""
+    correct_options = [opt.text for opt in question.options if opt.is_correct]
+    
+    if question.multiple_correct:
+        # For multiple correct answers, user_answer should be comma-separated
+        user_answers = [ans.strip() for ans in user_answer.split(',') if ans.strip()]
+        correct_count = len([ans for ans in user_answers if ans in correct_options])
+        incorrect_count = len([ans for ans in user_answers if ans not in correct_options])
+        missed_count = len([opt for opt in correct_options if opt not in user_answers])
+        
+        # Partial credit calculation
+        if correct_count == len(correct_options) and incorrect_count == 0:
+            points_earned = question.points  # Full credit
+            is_correct = True
+        elif correct_count > 0 and incorrect_count == 0:
+            points_earned = question.points * (correct_count / len(correct_options))  # Partial credit
+            is_correct = False
+        else:
+            points_earned = 0  # Incorrect answers present
+            is_correct = False
+        
+        correct_answer = ", ".join(correct_options)
+    else:
+        # Single correct answer
+        is_correct = user_answer in correct_options
+        points_earned = question.points if is_correct else 0
+        correct_answer = correct_options[0] if correct_options else "No correct answer"
+    
+    return {
+        "question_number": question_index + 1,
+        "question_text": question.question_text,
+        "question_type": question.question_type,
+        "user_answer": user_answer,
+        "correct_answer": correct_answer,
+        "is_correct": is_correct,
+        "points_earned": points_earned,
+        "points_possible": question.points,
+        "all_options": [opt.text for opt in question.options],
+        "question_image": question.image_url,
+        "question_pdf": question.pdf_url,
+        "explanation": question.explanation,
+        "difficulty": question.difficulty
+    }
+
+def grade_open_ended_question(question: QuizQuestion, user_answer: str, question_index: int) -> dict:
+    """Grade an open-ended question"""
+    if not question.open_ended_answer:
+        return {
+            "question_number": question_index + 1,
+            "question_text": question.question_text,
+            "question_type": question.question_type,
+            "user_answer": user_answer,
+            "correct_answer": "No expected answer defined",
+            "is_correct": False,
+            "points_earned": 0,
+            "points_possible": question.points,
+            "explanation": "Question configuration error"
+        }
+    
+    expected_answers = question.open_ended_answer.expected_answers
+    keywords = question.open_ended_answer.keywords
+    case_sensitive = question.open_ended_answer.case_sensitive
+    partial_credit = question.open_ended_answer.partial_credit
+    
+    user_answer_processed = user_answer if case_sensitive else user_answer.lower()
+    
+    # Check for exact matches
+    is_exact_match = False
+    for expected in expected_answers:
+        expected_processed = expected if case_sensitive else expected.lower()
+        if user_answer_processed.strip() == expected_processed.strip():
+            is_exact_match = True
+            break
+    
+    # Check for keyword matches if partial credit is enabled
+    keyword_matches = 0
+    if keywords and partial_credit:
+        for keyword in keywords:
+            keyword_processed = keyword if case_sensitive else keyword.lower()
+            if keyword_processed in user_answer_processed:
+                keyword_matches += 1
+    
+    # Calculate points
+    if is_exact_match:
+        points_earned = question.points
+        is_correct = True
+    elif keyword_matches > 0 and partial_credit:
+        points_earned = question.points * (keyword_matches / len(keywords)) * 0.5  # 50% max for partial
+        is_correct = False
+    else:
+        points_earned = 0
+        is_correct = False
+    
+    return {
+        "question_number": question_index + 1,
+        "question_text": question.question_text,
+        "question_type": question.question_type,
+        "user_answer": user_answer,
+        "correct_answer": " OR ".join(expected_answers),
+        "is_correct": is_correct,
+        "points_earned": points_earned,
+        "points_possible": question.points,
+        "keyword_matches": keyword_matches,
+        "total_keywords": len(keywords),
+        "question_image": question.image_url,
+        "question_pdf": question.pdf_url,
+        "explanation": question.explanation,
+        "difficulty": question.difficulty
+    }
 
 async def update_quiz_statistics(quiz_id: str):
     """Update quiz statistics after a new attempt"""
