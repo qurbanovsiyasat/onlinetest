@@ -1046,7 +1046,9 @@ async def get_predefined_subjects(admin_user: User = Depends(get_admin_user)):
     # Also get custom subjects from database
     custom_subjects = await db.subject_categories.find().to_list(1000)
     for custom in custom_subjects:
-        predefined[custom["subject"]] = custom["subcategories"]
+        # Handle both old and new field structures for backward compatibility
+        subject_name = custom.get("name", custom.get("subject", "Unknown"))
+        predefined[subject_name] = custom["subcategories"]
     
     return predefined
 
