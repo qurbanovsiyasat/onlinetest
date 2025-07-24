@@ -88,15 +88,18 @@ class Quiz(BaseModel):
     title: str
     description: str
     category: str
+    subject: str  # Main subject (e.g., "Mathematics", "Science")
+    subcategory: str = "General"  # Subcategory (e.g., "Triangle", "Algebra")
     questions: List[QuizQuestion]
     created_by: str  # Admin user ID
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     total_questions: int = 0
     is_active: bool = True
-    is_public: bool = False  # New: Public/Private toggle
-    allowed_users: List[str] = []  # New: List of user IDs who can access public quiz
-    subject_folder: str = "General"  # New: Subject folder organization
+    is_public: bool = False  # Public/Private toggle
+    allowed_users: List[str] = []  # List of user IDs who can access public quiz
+    total_attempts: int = 0  # Track how many times quiz was taken
+    average_score: float = 0.0  # Average score across all attempts
 
 class QuizCreate(BaseModel):
     title: str
