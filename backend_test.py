@@ -908,12 +908,12 @@ class OnlineTestMakerAPITester:
 
     def test_quiz_results_ranking(self):
         """Test quiz results ranking with leaderboard"""
-        if not self.user_token or not hasattr(self, 'nested_quiz_id'):
-            return self.log_test("Quiz Results Ranking", False, "No user token or nested quiz ID available")
+        if not self.user_token or not self.created_quiz_id:
+            return self.log_test("Quiz Results Ranking", False, "No user token or quiz ID available")
             
         try:
             response = requests.get(
-                f"{self.api_url}/quiz/{self.nested_quiz_id}/results-ranking",
+                f"{self.api_url}/quiz/{self.created_quiz_id}/results-ranking",
                 headers=self.get_auth_headers(self.user_token),
                 timeout=10
             )
