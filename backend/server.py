@@ -1055,7 +1055,141 @@ async def get_my_attempts(current_user: User = Depends(get_current_user)):
     attempts = await db.quiz_attempts.find({"user_id": current_user.id}).to_list(1000)
     return [QuizAttempt(**attempt) for attempt in attempts]
 
-# Image Upload Routes
+# Enhanced Media Upload (Images and PDFs)
+@api_router.post("/admin/upload-file")
+async def upload_file(file: UploadFile = File(...), admin_user: User = Depends(get_admin_user)):
+    """Upload file (image or PDF) for quiz questions (admin only)"""
+    # Validate file type
+    allowed_image_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+    allowed_pdf_types = ['application/pdf']
+    allowed_types = allowed_image_types + allowed_pdf_types
+    
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"File type not supported. Allowed types: {', '.join(allowed_types)}"
+        )
+    
+    # Validate file size (max 10MB for PDFs, 5MB for images)
+    content = await file.read()
+    max_size = 10 * 1024 * 1024 if file.content_type in allowed_pdf_types else 5 * 1024 * 1024
+    
+    if len(content) > max_size:
+        size_limit = "10MB" if file.content_type in allowed_pdf_types else "5MB"
+        raise HTTPException(status_code=400, detail=f"File size must be less than {size_limit}")
+    
+    # Validate file format for images
+    if file.content_type in allowed_image_types:
+        file_type = imghdr.what(None, h=content)
+        if file_type not in ['jpeg', 'jpg', 'png', 'gif', 'webp']:
+            raise HTTPException(status_code=400, detail="Invalid image format")
+    
+    # Generate unique filename
+    file_id = str(uuid.uuid4())
+    file_extension = file.filename.split('.')[-1] if '.' in file.filename else (
+        'pdf' if file.content_type in allowed_pdf_types else file_type
+    )
+    filename = f"{file_id}.{file_extension}"
+    
+    # Convert to base64 for storage (in production, use cloud storage)
+    base64_content = base64.b64encode(content).decode('utf-8')
+    
+    # Determine file category
+    file_category = 'pdf' if file.content_type in allowed_pdf_types else 'image'
+    
+    # Store file metadata in database
+    file_data = {
+        "id": file_id,
+        "filename": filename,
+        "original_name": file.filename,
+        "content_type": file.content_type,
+        "category": file_category,
+        "size": len(content),
+        "base64_data": base64_content,
+        "uploaded_by": admin_user.id,
+        "uploaded_at": datetime.utcnow()
+    }
+    
+    await db.files.insert_one(file_data)
+    
+    # Return file URL (base64 data URL)
+    data_url = f"data:{file.content_type};base64,{base64_content}"
+    
+    return {
+        "id": file_id,
+        "filename": filename,
+        "original_name": file.filename,
+        "url": data_url,
+        "size": len(content),
+        "category": file_category,
+        "content_type": file.content_type
+    }
+
+@api_router.get("/file/{file_id}")
+async def get_file(file_id: str):
+    """Get file by ID (public access for quiz files)"""
+    file_doc = await db.files.find_one({"id": file_id})
+    if not file_doc:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Return base64 data URL
+    data_url = f"data:{file_doc['content_type']};base64,{file_doc['base64_data']}"
+    return {
+        "url": data_url,
+        "filename": file_doc['filename'],
+        "original_name": file_doc['original_name'],
+        "content_type": file_doc['content_type'],
+        "size": file_doc['size']
+    }
+
+@api_router.get("/admin/files")
+async def get_admin_files(admin_user: User = Depends(get_admin_user)):
+    """Get all uploaded files for admin"""
+    files = await db.files.find({"uploaded_by": admin_user.id}).to_list(1000)
+    
+    file_list = []
+    for file_doc in files:
+        file_list.append({
+            "id": file_doc["id"],
+            "filename": file_doc["filename"],
+            "original_name": file_doc["original_name"],
+            "content_type": file_doc["content_type"],
+            "category": file_doc.get("category", "unknown"),
+            "size": file_doc["size"],
+            "uploaded_at": file_doc["uploaded_at"]
+        })
+    
+    return file_list
+
+@api_router.delete("/admin/file/{file_id}")
+async def delete_file(file_id: str, admin_user: User = Depends(get_admin_user)):
+    """Delete uploaded file (admin only)"""
+    file_doc = await db.files.find_one({"id": file_id})
+    if not file_doc:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    if file_doc["uploaded_by"] != admin_user.id:
+        raise HTTPException(status_code=403, detail="You can only delete files you uploaded")
+    
+    # Check if file is used in any quiz questions
+    quizzes_using_file = await db.quizzes.find({
+        "$or": [
+            {"questions.image_url": {"$regex": file_id}},
+            {"questions.pdf_url": {"$regex": file_id}}
+        ]
+    }).to_list(10)
+    
+    if quizzes_using_file:
+        quiz_titles = [quiz.get("title", "Unknown") for quiz in quizzes_using_file]
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot delete file. It is used in {len(quizzes_using_file)} quiz(s): {', '.join(quiz_titles[:3])}"
+        )
+    
+    # Delete file
+    await db.files.delete_one({"id": file_id})
+    
+    return {"message": "File deleted successfully"}
 @api_router.post("/admin/upload-image")
 async def upload_image(file: UploadFile = File(...), admin_user: User = Depends(get_admin_user)):
     """Upload image for quiz questions (admin only)"""
