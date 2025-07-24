@@ -1588,6 +1588,149 @@ class OnlineTestMakerAPITester:
         except Exception as e:
             return self.log_test("Unauthorized Access", False, f"Error: {str(e)}")
 
+    def test_admin_delete_quiz(self):
+        """Test admin deleting a quiz - FOCUSED TEST FOR QUIZ DELETION"""
+        if not self.admin_token:
+            return self.log_test("Admin Delete Quiz", False, "No admin token available")
+        
+        # First create a quiz specifically for deletion testing
+        quiz_data = {
+            "title": "Quiz to Delete - Test",
+            "description": "This quiz will be deleted as part of testing",
+            "category": "Test Category",
+            "subject": "Testing",
+            "subcategory": "Deletion",
+            "questions": [
+                {
+                    "question_text": "This is a test question for deletion",
+                    "options": [
+                        {"text": "Option A", "is_correct": True},
+                        {"text": "Option B", "is_correct": False}
+                    ]
+                }
+            ]
+        }
+
+        try:
+            # Create the quiz first
+            create_response = requests.post(
+                f"{self.api_url}/admin/quiz",
+                json=quiz_data,
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            
+            if create_response.status_code != 200:
+                return self.log_test("Admin Delete Quiz", False, f"Failed to create quiz for deletion test: {create_response.status_code}")
+            
+            quiz_to_delete = create_response.json()
+            quiz_id_to_delete = quiz_to_delete.get('id')
+            
+            if not quiz_id_to_delete:
+                return self.log_test("Admin Delete Quiz", False, "No quiz ID returned from creation")
+            
+            # Verify quiz exists before deletion
+            get_response = requests.get(
+                f"{self.api_url}/admin/quizzes",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            
+            if get_response.status_code == 200:
+                all_quizzes = get_response.json()
+                quiz_exists_before = any(q.get('id') == quiz_id_to_delete for q in all_quizzes)
+                if not quiz_exists_before:
+                    return self.log_test("Admin Delete Quiz", False, "Quiz not found in quiz list before deletion")
+            
+            # Now attempt to delete the quiz
+            delete_response = requests.delete(
+                f"{self.api_url}/admin/quiz/{quiz_id_to_delete}",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            
+            success = delete_response.status_code == 200
+            details = f"Status: {delete_response.status_code}"
+            
+            if success:
+                data = delete_response.json()
+                details += f", Message: {data.get('message', 'No message')}"
+                
+                # Verify quiz is actually deleted from database
+                verify_response = requests.get(
+                    f"{self.api_url}/admin/quizzes",
+                    headers=self.get_auth_headers(self.admin_token),
+                    timeout=10
+                )
+                
+                if verify_response.status_code == 200:
+                    all_quizzes_after = verify_response.json()
+                    quiz_exists_after = any(q.get('id') == quiz_id_to_delete for q in all_quizzes_after)
+                    
+                    if quiz_exists_after:
+                        success = False
+                        details += ", ERROR: Quiz still exists in database after deletion"
+                    else:
+                        details += ", Verified: Quiz removed from database"
+                else:
+                    details += ", WARNING: Could not verify deletion from database"
+                    
+            else:
+                details += f", Response: {delete_response.text[:200]}"
+                
+            return self.log_test("Admin Delete Quiz", success, details)
+            
+        except Exception as e:
+            return self.log_test("Admin Delete Quiz", False, f"Error: {str(e)}")
+
+    def test_admin_delete_nonexistent_quiz(self):
+        """Test admin trying to delete non-existent quiz (should return 404)"""
+        if not self.admin_token:
+            return self.log_test("Admin Delete Non-existent Quiz", False, "No admin token available")
+        
+        fake_quiz_id = "non-existent-quiz-id-12345"
+        
+        try:
+            response = requests.delete(
+                f"{self.api_url}/admin/quiz/{fake_quiz_id}",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            
+            success = response.status_code == 404  # Should return 404 for non-existent quiz
+            details = f"Status: {response.status_code} (Expected 404)"
+            
+            if success:
+                data = response.json()
+                details += f", Message: {data.get('detail', 'No message')}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Delete Non-existent Quiz", success, details)
+            
+        except Exception as e:
+            return self.log_test("Admin Delete Non-existent Quiz", False, f"Error: {str(e)}")
+
+    def test_user_delete_quiz_forbidden(self):
+        """Test user trying to delete quiz (should be forbidden)"""
+        if not self.user_token or not self.created_quiz_id:
+            return self.log_test("User Delete Quiz (Forbidden)", False, "No user token or quiz ID available")
+        
+        try:
+            response = requests.delete(
+                f"{self.api_url}/admin/quiz/{self.created_quiz_id}",
+                headers=self.get_auth_headers(self.user_token),
+                timeout=10
+            )
+            
+            success = response.status_code == 403  # Should be forbidden
+            details = f"Status: {response.status_code} (Expected 403)"
+            
+            return self.log_test("User Delete Quiz (Forbidden)", success, details)
+            
+        except Exception as e:
+            return self.log_test("User Delete Quiz (Forbidden)", False, f"Error: {str(e)}")
+
     def run_all_tests(self):
         """Run all API tests"""
         print("🚀 Starting OnlineTestMaker API Tests - Enhanced Features Testing")
