@@ -987,7 +987,7 @@ async def submit_quiz_attempt(quiz_id: str, attempt_data: QuizAttemptCreate, cur
         score=score,
         total_questions=len(quiz_obj.questions),
         percentage=percentage,
-        earned_points=earned_points,
+        earned_points=int(round(earned_points)),  # Convert float to int
         total_possible_points=total_possible_points,
         points_percentage=points_percentage,
         passed=passed
