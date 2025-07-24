@@ -2673,6 +2673,8 @@ function QuestionPreview({ question, index }) {
     </div>
   );
 }
+
+function PasswordChangeModal({ onClose, userName }) {
   const [formData, setFormData] = useState({
     current_password: '',
     new_password: '',
