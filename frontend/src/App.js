@@ -3304,6 +3304,8 @@ function PasswordChangeModal({ onClose, userName }) {
 
 // User Quiz Taking Components
 function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, userAnswers, selectAnswer, nextQuestion, setCurrentView }) {
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  
   if (!quiz) return null;
 
   const currentQuestion = quiz.questions[currentQuestionIndex];
@@ -3354,36 +3356,60 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
     }
   };
 
+  const getAnsweredCount = () => {
+    return userAnswers.filter(answer => answer && answer.trim() !== '').length;
+  };
+
+  const handleFinishQuiz = () => {
+    setShowFinishModal(true);
+  };
+
+  const confirmFinishQuiz = () => {
+    // Fill unanswered questions with empty strings
+    const filledAnswers = [...userAnswers];
+    for (let i = 0; i < quiz.questions.length; i++) {
+      if (!filledAnswers[i]) {
+        filledAnswers[i] = '';
+      }
+    }
+    // Submit with filled answers
+    const submitEvent = { target: { value: filledAnswers } };
+    nextQuestion(submitEvent, true); // force submit
+    setShowFinishModal(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-100">
-      <div className="container mx-auto px-4 py-8">
-        <header className="mb-8">
+      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+        <header className="mb-4 sm:mb-8">
           <button
             onClick={() => setCurrentView('home')}
-            className="mb-4 text-indigo-600 hover:text-indigo-800 font-semibold"
+            className="mb-4 text-indigo-600 hover:text-indigo-800 font-semibold text-sm sm:text-base"
           >
             ← Back to Home
           </button>
-          <h1 className="text-4xl font-bold text-teal-900 mb-2">{quiz.title}</h1>
-          <p className="text-gray-600 mb-4">{quiz.description}</p>
+          <h1 className="text-2xl sm:text-4xl font-bold text-teal-900 mb-2">{renderMathContent(quiz.title)}</h1>
+          <p className="text-gray-600 mb-4 text-sm sm:text-base">{renderMathContent(quiz.description)}</p>
           
-          <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+          <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3 mb-4">
             <div
-              className="bg-teal-600 h-3 rounded-full transition-all duration-300"
+              className="bg-teal-600 h-2 sm:h-3 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             ></div>
           </div>
-          <p className="text-sm text-gray-600">
-            Question {currentQuestionIndex + 1} of {quiz.questions.length}
-          </p>
+          
+          <div className="flex justify-between items-center text-xs sm:text-sm text-gray-600">
+            <span>Question {currentQuestionIndex + 1} of {quiz.questions.length}</span>
+            <span>Answered: {getAnsweredCount()}/{quiz.questions.length}</span>
+          </div>
         </header>
 
-        <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-lg p-8">
+        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-4 sm:p-8">
           {/* Question Header */}
-          <div className="flex justify-between items-start mb-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6">
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-2xl">{getQuestionTypeIcon(currentQuestion.question_type)}</span>
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <span className="text-xl sm:text-2xl">{getQuestionTypeIcon(currentQuestion.question_type)}</span>
                 <span className={`px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(currentQuestion.difficulty)}`}>
                   {currentQuestion.difficulty}
                 </span>
@@ -3396,33 +3422,34 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
                   </span>
                 )}
               </div>
-              <h2 className="text-2xl font-semibold text-gray-800">
-                {currentQuestion.question_text}
+              <h2 className="text-lg sm:text-2xl font-semibold text-gray-800">
+                {renderMathContent(currentQuestion.question_text)}
               </h2>
             </div>
           </div>
 
           {/* Media Display */}
-          <div className="flex gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
             {currentQuestion.image_url && (
-              <div className="mb-6">
+              <div className="mb-4 sm:mb-6">
                 <img
                   src={currentQuestion.image_url}
                   alt="Question"
                   className="max-w-full h-auto rounded-lg shadow"
+                  style={{ maxHeight: '300px' }}
                 />
               </div>
             )}
             {currentQuestion.pdf_url && (
-              <div className="mb-6">
-                <div className="border-2 border-dashed border-red-300 rounded-lg p-6 text-center bg-red-50">
-                  <div className="text-4xl mb-2">📄</div>
-                  <p className="text-red-700 font-medium">PDF Attachment Available</p>
+              <div className="mb-4 sm:mb-6">
+                <div className="border-2 border-dashed border-red-300 rounded-lg p-4 sm:p-6 text-center bg-red-50">
+                  <div className="text-2xl sm:text-4xl mb-2">📄</div>
+                  <p className="text-red-700 font-medium text-sm sm:text-base">PDF Attachment Available</p>
                   <a
                     href={currentQuestion.pdf_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-block mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition duration-200"
+                    className="inline-block mt-2 px-3 sm:px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition duration-200 text-sm"
                   >
                     View PDF
                   </a>
@@ -3432,9 +3459,9 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
           </div>
 
           {/* Question Content Based on Type */}
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             {currentQuestion.question_type === 'multiple_choice' ? (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {currentQuestion.multiple_correct && (
                   <div className="p-3 bg-blue-50 rounded-lg mb-4">
                     <p className="text-blue-800 text-sm font-medium">
@@ -3447,7 +3474,7 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
                   <button
                     key={index}
                     onClick={() => handleMultipleChoiceSelect(option.text)}
-                    className={`w-full p-4 text-left rounded-lg border-2 transition duration-200 ${
+                    className={`w-full p-3 sm:p-4 text-left rounded-lg border-2 transition duration-200 ${
                       isOptionSelected(option.text)
                         ? 'border-teal-500 bg-teal-50 text-teal-800'
                         : 'border-gray-200 hover:border-teal-300 hover:bg-teal-50'
@@ -3467,8 +3494,8 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
                           </div>
                         )}
                       </div>
-                      <span className="font-semibold mr-3">{String.fromCharCode(65 + index)}.</span>
-                      <span className="flex-1">{option.text}</span>
+                      <span className="font-semibold mr-3 text-sm sm:text-base">{String.fromCharCode(65 + index)}.</span>
+                      <span className="flex-1 text-sm sm:text-base">{renderMathContent(option.text)}</span>
                     </div>
                   </button>
                 ))}
@@ -3484,12 +3511,12 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
                 <textarea
                   value={userAnswers[currentQuestionIndex] || ''}
                   onChange={(e) => handleOpenEndedInput(e.target.value)}
-                  className="w-full p-4 border-2 border-gray-300 rounded-lg focus:border-teal-500 focus:outline-none resize-y min-h-32"
+                  className="w-full p-3 sm:p-4 border-2 border-gray-300 rounded-lg focus:border-teal-500 focus:outline-none resize-y min-h-24 sm:min-h-32 text-sm sm:text-base"
                   placeholder="Type your answer here..."
                   rows="4"
                 />
                 
-                <div className="text-sm text-gray-500">
+                <div className="text-xs sm:text-sm text-gray-500">
                   {userAnswers[currentQuestionIndex]?.length || 0} characters
                 </div>
               </div>
@@ -3497,26 +3524,70 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
           </div>
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0">
             <button
               onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
               disabled={currentQuestionIndex === 0}
-              className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 sm:px-6 py-2 sm:py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               Previous
             </button>
             
-            <button
-              onClick={nextQuestion}
-              disabled={!userAnswers[currentQuestionIndex] || 
-                       (userAnswers[currentQuestionIndex] && userAnswers[currentQuestionIndex].trim() === '')}
-              className="px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
-            >
-              {currentQuestionIndex === quiz.questions.length - 1 ? 'Submit Quiz' : 'Next Question'}
-            </button>
+            <div className="flex gap-2 sm:gap-3">
+              <button
+                onClick={handleFinishQuiz}
+                className="px-3 sm:px-4 py-2 sm:py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition duration-200 font-semibold text-xs sm:text-sm"
+              >
+                🏁 Finish Quiz
+              </button>
+              
+              <button
+                onClick={nextQuestion}
+                disabled={!userAnswers[currentQuestionIndex] || 
+                         (userAnswers[currentQuestionIndex] && userAnswers[currentQuestionIndex].trim() === '')}
+                className="px-4 sm:px-6 py-2 sm:py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm sm:text-base"
+              >
+                {currentQuestionIndex === quiz.questions.length - 1 ? 'Submit Quiz' : 'Next Question'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Finish Quiz Confirmation Modal */}
+      {showFinishModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-4">🏁</div>
+              <h3 className="text-lg font-semibold mb-2">Finish Quiz?</h3>
+              <p className="text-gray-600 text-sm">
+                You have answered {getAnsweredCount()} out of {quiz.questions.length} questions.
+              </p>
+              {getAnsweredCount() < quiz.questions.length && (
+                <p className="text-orange-600 text-sm mt-2">
+                  ⚠️ {quiz.questions.length - getAnsweredCount()} questions will be marked as unanswered.
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={confirmFinishQuiz}
+                className="flex-1 bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 transition duration-200 font-semibold"
+              >
+                Yes, Finish
+              </button>
+              <button
+                onClick={() => setShowFinishModal(false)}
+                className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold"
+              >
+                Continue Quiz
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
