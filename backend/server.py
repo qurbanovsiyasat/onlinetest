@@ -158,6 +158,10 @@ class QuizCreate(BaseModel):
     questions: List[QuizQuestion]
     is_public: bool = False
     allowed_users: List[str] = []
+    min_pass_percentage: float = 60.0
+    time_limit_minutes: Optional[int] = None
+    shuffle_questions: bool = False
+    shuffle_options: bool = False
 
 class QuizUpdate(BaseModel):
     title: Optional[str] = None
@@ -169,6 +173,16 @@ class QuizUpdate(BaseModel):
     is_public: Optional[bool] = None
     allowed_users: Optional[List[str]] = None
     is_active: Optional[bool] = None
+    min_pass_percentage: Optional[float] = None
+    time_limit_minutes: Optional[int] = None
+    shuffle_questions: Optional[bool] = None
+    shuffle_options: Optional[bool] = None
+    is_draft: Optional[bool] = None
+
+class QuizValidationError(BaseModel):
+    field: str
+    message: str
+    question_index: Optional[int] = None
 
 class SubjectFolder(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
