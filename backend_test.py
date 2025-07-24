@@ -1827,6 +1827,13 @@ class OnlineTestMakerAPITester:
         
         # Security tests
         self.test_unauthorized_access()
+        
+        # QUIZ DELETION FUNCTIONALITY TESTS (as requested)
+        print("\n🗑️  Testing Quiz Deletion Functionality...")
+        self.test_quiz_deletion_comprehensive()
+        self.test_admin_delete_quiz()
+        self.test_admin_delete_nonexistent_quiz()
+        self.test_user_delete_quiz_forbidden()
 
         # Summary
         print("=" * 80)
