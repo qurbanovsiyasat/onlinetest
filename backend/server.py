@@ -1009,14 +1009,21 @@ async def get_subjects_structure(admin_user: User = Depends(get_admin_user)):
 @api_router.post("/admin/subject-category")
 async def create_subject_category(subject: str, subcategories: List[str], admin_user: User = Depends(get_admin_user)):
     """Create or update subject with subcategories"""
-    # Check if subject already exists
-    existing = await db.subject_categories.find_one({"subject": subject})
+    # Check if subject already exists (check both old and new field names)
+    existing = await db.subject_categories.find_one({
+        "$or": [{"subject": subject}, {"name": subject}]
+    })
     
     if existing:
-        # Update existing subject
+        # Update existing subject (update both field structures for compatibility)
         await db.subject_categories.update_one(
-            {"subject": subject},
-            {"$set": {"subcategories": subcategories}}
+            {"_id": existing["_id"]},
+            {"$set": {
+                "name": subject,
+                "subject": subject,  # Keep old field for backward compatibility
+                "subcategories": subcategories,
+                "updated_at": datetime.utcnow()
+            }}
         )
     else:
         # Create new subject
