@@ -932,14 +932,14 @@ class OnlineTestMakerAPITester:
         except Exception as e:
             return self.log_test("Admin Quiz Leaderboard", False, f"Error: {str(e)}")
 
-    def test_admin_subject_folders(self):
-        """Test admin getting subject folders"""
+    def test_admin_subjects_structure(self):
+        """Test admin getting nested subjects structure"""
         if not self.admin_token:
-            return self.log_test("Admin Subject Folders", False, "No admin token available")
+            return self.log_test("Admin Subjects Structure", False, "No admin token available")
             
         try:
             response = requests.get(
-                f"{self.api_url}/admin/subject-folders",
+                f"{self.api_url}/admin/subjects-structure",
                 headers=self.get_auth_headers(self.admin_token),
                 timeout=10
             )
@@ -947,18 +947,49 @@ class OnlineTestMakerAPITester:
             details = f"Status: {response.status_code}"
             
             if success:
-                folders = response.json()
-                details += f", Folders Count: {len(folders)}"
-                if len(folders) > 0:
-                    first_folder = folders[0]
-                    details += f", First Folder: {first_folder.get('name', 'Unknown')}"
-                    details += f", Quiz Count: {first_folder.get('quiz_count', 0)}"
+                structure = response.json()
+                details += f", Subjects Count: {len(structure)}"
+                if len(structure) > 0:
+                    first_subject = list(structure.keys())[0]
+                    subject_data = structure[first_subject]
+                    details += f", First Subject: {first_subject}"
+                    details += f", Subcategories: {len(subject_data.get('subcategories', {}))}"
+                    details += f", Total Quizzes: {subject_data.get('total_quizzes', 0)}"
             else:
                 details += f", Response: {response.text[:200]}"
                 
-            return self.log_test("Admin Subject Folders", success, details)
+            return self.log_test("Admin Subjects Structure", success, details)
         except Exception as e:
-            return self.log_test("Admin Subject Folders", False, f"Error: {str(e)}")
+            return self.log_test("Admin Subjects Structure", False, f"Error: {str(e)}")
+
+    def test_admin_predefined_subjects(self):
+        """Test admin getting predefined subjects"""
+        if not self.admin_token:
+            return self.log_test("Admin Predefined Subjects", False, "No admin token available")
+            
+        try:
+            response = requests.get(
+                f"{self.api_url}/admin/predefined-subjects",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                subjects = response.json()
+                details += f", Predefined Subjects Count: {len(subjects)}"
+                if 'Mathematics' in subjects:
+                    math_subcategories = subjects['Mathematics']
+                    details += f", Math Subcategories: {len(math_subcategories)}"
+                    if 'Triangles' in math_subcategories:
+                        details += ", Has Triangles subcategory"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Predefined Subjects", success, details)
+        except Exception as e:
+            return self.log_test("Admin Predefined Subjects", False, f"Error: {str(e)}")
 
     def test_admin_user_details(self):
         """Test admin getting individual user details with quiz history and mistakes"""
