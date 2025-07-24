@@ -122,10 +122,20 @@ class QuizAttempt(BaseModel):
     quiz_id: str
     user_id: str
     answers: List[str]
+    correct_answers: List[str] = []  # New: Store correct answers for review
+    question_results: List[dict] = []  # New: Detailed question results
     score: int
     total_questions: int
     percentage: float
     attempted_at: datetime = Field(default_factory=datetime.utcnow)
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+class UserQuizAccess(BaseModel):
+    quiz_id: str
+    user_ids: List[str]
 
 class QuizAttemptCreate(BaseModel):
     quiz_id: str
