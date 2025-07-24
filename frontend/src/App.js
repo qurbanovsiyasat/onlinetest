@@ -2494,7 +2494,12 @@ function AdminCreateQuiz({ setCurrentView }) {
           {showPreview && (
             <div className="space-y-4">
               {quiz.questions.map((question, index) => (
-                <QuestionPreview key={index} question={question} index={index} />
+                <QuestionPreview 
+                  key={index} 
+                  question={question} 
+                  index={index} 
+                  onDelete={removeQuestionFromQuiz}
+                />
               ))}
             </div>
           )}
