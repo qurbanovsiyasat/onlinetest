@@ -756,6 +756,357 @@ class OnlineTestMakerAPITester:
         except Exception as e:
             return self.log_test("User Access Quiz Results (Forbidden)", False, f"Error: {str(e)}")
 
+    def test_admin_create_enhanced_quiz(self):
+        """Test admin creating quiz with new enhancements (public/private, subject folder, user access)"""
+        if not self.admin_token:
+            return self.log_test("Admin Create Enhanced Quiz", False, "No admin token available")
+        
+        # First get a user ID for allowed_users
+        try:
+            users_response = requests.get(
+                f"{self.api_url}/admin/users",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            if users_response.status_code != 200:
+                return self.log_test("Admin Create Enhanced Quiz", False, "Could not get users list")
+            
+            users = users_response.json()
+            test_user_id = None
+            for user in users:
+                if user.get('role') == 'user':
+                    test_user_id = user.get('id')
+                    break
+            
+            if not test_user_id:
+                return self.log_test("Admin Create Enhanced Quiz", False, "No test user found for allowed_users")
+            
+            quiz_data = {
+                "title": "Enhanced Test Quiz - Public",
+                "description": "A test quiz with new enhancements",
+                "category": "Mathematics",
+                "subject_folder": "Mathematics",
+                "is_public": True,
+                "allowed_users": [test_user_id],
+                "questions": [
+                    {
+                        "question_text": "What is 5 + 3?",
+                        "options": [
+                            {"text": "7", "is_correct": False},
+                            {"text": "8", "is_correct": True},
+                            {"text": "9", "is_correct": False},
+                            {"text": "10", "is_correct": False}
+                        ]
+                    }
+                ]
+            }
+
+            response = requests.post(
+                f"{self.api_url}/admin/quiz",
+                json=quiz_data,
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                quiz = response.json()
+                self.enhanced_quiz_id = quiz.get('id')
+                details += f", Quiz ID: {self.enhanced_quiz_id}"
+                details += f", Public: {quiz.get('is_public', False)}"
+                details += f", Subject: {quiz.get('subject_folder', 'Unknown')}"
+                details += f", Allowed Users: {len(quiz.get('allowed_users', []))}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Create Enhanced Quiz", success, details)
+        except Exception as e:
+            return self.log_test("Admin Create Enhanced Quiz", False, f"Error: {str(e)}")
+
+    def test_admin_edit_quiz(self):
+        """Test admin editing quiz (only creator can edit)"""
+        if not self.admin_token or not hasattr(self, 'enhanced_quiz_id'):
+            return self.log_test("Admin Edit Quiz", False, "No admin token or enhanced quiz ID available")
+            
+        update_data = {
+            "title": "Updated Enhanced Quiz Title",
+            "description": "Updated description for enhanced quiz",
+            "subject_folder": "Science",
+            "is_public": False
+        }
+
+        try:
+            response = requests.put(
+                f"{self.api_url}/admin/quiz/{self.enhanced_quiz_id}",
+                json=update_data,
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                quiz = response.json()
+                details += f", Updated Title: {quiz.get('title', 'Unknown')}"
+                details += f", Updated Subject: {quiz.get('subject_folder', 'Unknown')}"
+                details += f", Updated Public: {quiz.get('is_public', False)}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Edit Quiz", success, details)
+        except Exception as e:
+            return self.log_test("Admin Edit Quiz", False, f"Error: {str(e)}")
+
+    def test_admin_quiz_access_control(self):
+        """Test admin setting quiz access control"""
+        if not self.admin_token or not hasattr(self, 'enhanced_quiz_id'):
+            return self.log_test("Admin Quiz Access Control", False, "No admin token or enhanced quiz ID available")
+        
+        # Get user IDs for access control
+        try:
+            users_response = requests.get(
+                f"{self.api_url}/admin/users",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            if users_response.status_code != 200:
+                return self.log_test("Admin Quiz Access Control", False, "Could not get users list")
+            
+            users = users_response.json()
+            user_ids = [user.get('id') for user in users if user.get('role') == 'user'][:2]  # Get first 2 users
+            
+            if not user_ids:
+                return self.log_test("Admin Quiz Access Control", False, "No test users found")
+            
+            access_data = {
+                "quiz_id": self.enhanced_quiz_id,
+                "user_ids": user_ids
+            }
+
+            response = requests.post(
+                f"{self.api_url}/admin/quiz/{self.enhanced_quiz_id}/access",
+                json=access_data,
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                data = response.json()
+                details += f", Message: {data.get('message', 'No message')}"
+                details += f", Users Added: {len(user_ids)}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Quiz Access Control", success, details)
+        except Exception as e:
+            return self.log_test("Admin Quiz Access Control", False, f"Error: {str(e)}")
+
+    def test_admin_quiz_leaderboard(self):
+        """Test admin getting quiz leaderboard"""
+        if not self.admin_token or not self.created_quiz_id:
+            return self.log_test("Admin Quiz Leaderboard", False, "No admin token or quiz ID available")
+            
+        try:
+            response = requests.get(
+                f"{self.api_url}/admin/quiz/{self.created_quiz_id}/leaderboard",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                leaderboard = response.json()
+                details += f", Leaderboard Entries: {len(leaderboard)}"
+                if len(leaderboard) > 0:
+                    top_entry = leaderboard[0]
+                    details += f", Top User: {top_entry.get('user_name', 'Unknown')}"
+                    details += f", Top Score: {top_entry.get('percentage', 0)}%"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Quiz Leaderboard", success, details)
+        except Exception as e:
+            return self.log_test("Admin Quiz Leaderboard", False, f"Error: {str(e)}")
+
+    def test_admin_subject_folders(self):
+        """Test admin getting subject folders"""
+        if not self.admin_token:
+            return self.log_test("Admin Subject Folders", False, "No admin token available")
+            
+        try:
+            response = requests.get(
+                f"{self.api_url}/admin/subject-folders",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                folders = response.json()
+                details += f", Folders Count: {len(folders)}"
+                if len(folders) > 0:
+                    first_folder = folders[0]
+                    details += f", First Folder: {first_folder.get('name', 'Unknown')}"
+                    details += f", Quiz Count: {first_folder.get('quiz_count', 0)}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Subject Folders", success, details)
+        except Exception as e:
+            return self.log_test("Admin Subject Folders", False, f"Error: {str(e)}")
+
+    def test_admin_user_details(self):
+        """Test admin getting individual user details with quiz history and mistakes"""
+        if not self.admin_token:
+            return self.log_test("Admin User Details", False, "No admin token available")
+        
+        # Get a user ID first
+        try:
+            users_response = requests.get(
+                f"{self.api_url}/admin/users",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            if users_response.status_code != 200:
+                return self.log_test("Admin User Details", False, "Could not get users list")
+            
+            users = users_response.json()
+            test_user = None
+            for user in users:
+                if user.get('role') == 'user':
+                    test_user = user
+                    break
+            
+            if not test_user:
+                return self.log_test("Admin User Details", False, "No test user found")
+            
+            user_id = test_user.get('id')
+            response = requests.get(
+                f"{self.api_url}/admin/user/{user_id}/details",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                user_details = response.json()
+                user_info = user_details.get('user', {})
+                stats = user_details.get('statistics', {})
+                attempts = user_details.get('attempts', [])
+                
+                details += f", User: {user_info.get('name', 'Unknown')}"
+                details += f", Total Attempts: {stats.get('total_attempts', 0)}"
+                details += f", Avg Percentage: {stats.get('average_percentage', 0)}%"
+                details += f", Attempts with Details: {len(attempts)}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin User Details", success, details)
+        except Exception as e:
+            return self.log_test("Admin User Details", False, f"Error: {str(e)}")
+
+    def test_user_enhanced_quiz_submission(self):
+        """Test user taking quiz with enhanced submission (mistake review)"""
+        if not self.user_token or not self.created_quiz_id:
+            return self.log_test("User Enhanced Quiz Submission", False, "No user token or quiz ID available")
+
+        # Submit with some wrong answers to test mistake review
+        attempt_data = {
+            "quiz_id": self.created_quiz_id,
+            "answers": ["3", "London"]  # Wrong answers to test mistake review
+        }
+
+        try:
+            response = requests.post(
+                f"{self.api_url}/quiz/{self.created_quiz_id}/attempt",
+                json=attempt_data,
+                headers=self.get_auth_headers(self.user_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                result = response.json()
+                details += f", Score: {result.get('score', 0)}/{result.get('total_questions', 0)}"
+                details += f", Percentage: {result.get('percentage', 0):.1f}%"
+                
+                # Check for enhanced features
+                correct_answers = result.get('correct_answers', [])
+                question_results = result.get('question_results', [])
+                
+                details += f", Correct Answers Provided: {len(correct_answers)}"
+                details += f", Question Results: {len(question_results)}"
+                
+                if len(question_results) > 0:
+                    first_result = question_results[0]
+                    details += f", First Q Correct: {first_result.get('is_correct', False)}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("User Enhanced Quiz Submission", success, details)
+        except Exception as e:
+            return self.log_test("User Enhanced Quiz Submission", False, f"Error: {str(e)}")
+
+    def test_password_change(self):
+        """Test password change functionality"""
+        if not self.user_token:
+            return self.log_test("Password Change", False, "No user token available")
+            
+        password_data = {
+            "current_password": "testpass123",
+            "new_password": "newtestpass123"
+        }
+
+        try:
+            response = requests.post(
+                f"{self.api_url}/auth/change-password",
+                json=password_data,
+                headers=self.get_auth_headers(self.user_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                data = response.json()
+                details += f", Message: {data.get('message', 'No message')}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Password Change", success, details)
+        except Exception as e:
+            return self.log_test("Password Change", False, f"Error: {str(e)}")
+
+    def test_password_change_wrong_current(self):
+        """Test password change with wrong current password"""
+        if not self.user_token:
+            return self.log_test("Password Change Wrong Current", False, "No user token available")
+            
+        password_data = {
+            "current_password": "wrongpassword",
+            "new_password": "newtestpass123"
+        }
+
+        try:
+            response = requests.post(
+                f"{self.api_url}/auth/change-password",
+                json=password_data,
+                headers=self.get_auth_headers(self.user_token),
+                timeout=10
+            )
+            success = response.status_code == 400  # Should fail with bad request
+            details = f"Status: {response.status_code} (Expected 400)"
+            return self.log_test("Password Change Wrong Current", success, details)
+        except Exception as e:
+            return self.log_test("Password Change Wrong Current", False, f"Error: {str(e)}")
+
     def test_unauthorized_access(self):
         """Test accessing protected endpoints without token"""
         try:
