@@ -800,31 +800,207 @@ function QuizEditModal({ quiz, onClose, onUpdate }) {
     title: quiz.title,
     description: quiz.description,
     category: quiz.category,
-    subject_folder: quiz.subject_folder,
+    subject: quiz.subject || 'Mathematics',
+    subcategory: quiz.subcategory || 'General',
     is_public: quiz.is_public,
-    is_active: quiz.is_active
+    is_active: quiz.is_active,
+    allowed_users: quiz.allowed_users || [],
+    questions: [...quiz.questions] // Deep copy of questions
   });
+
+  const [predefinedSubjects, setPredefinedSubjects] = useState({});
+  const [allUsers, setAllUsers] = useState([]);
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  useEffect(() => {
+    fetchPredefinedSubjects();
+    if (editData.is_public) {
+      fetchAllUsers();
+    }
+  }, [editData.is_public]);
+
+  const fetchPredefinedSubjects = async () => {
+    try {
+      const response = await apiCall('/admin/predefined-subjects');
+      setPredefinedSubjects(response.data);
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+    }
+  };
+
+  const fetchAllUsers = async () => {
+    try {
+      const response = await apiCall('/admin/users');
+      setAllUsers(response.data.filter(user => user.role === 'user'));
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  const uploadImage = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      setUploadingImage(true);
+      const response = await apiCall('/admin/upload-image', {
+        method: 'POST',
+        data: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      return response.data.url;
+    } catch (error) {
+      alert('Error uploading image: ' + (error.response?.data?.detail || 'Unknown error'));
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleImageUpload = async (event, questionIndex) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      return;
+    }
+
+    const imageUrl = await uploadImage(file);
+    if (imageUrl) {
+      const updatedQuestions = [...editData.questions];
+      updatedQuestions[questionIndex].image_url = imageUrl;
+      setEditData({ ...editData, questions: updatedQuestions });
+    }
+  };
+
+  const removeImage = (questionIndex) => {
+    const updatedQuestions = [...editData.questions];
+    updatedQuestions[questionIndex].image_url = null;
+    setEditData({ ...editData, questions: updatedQuestions });
+  };
+
+  const updateQuestion = (questionIndex, field, value) => {
+    const updatedQuestions = [...editData.questions];
+    updatedQuestions[questionIndex][field] = value;
+    setEditData({ ...editData, questions: updatedQuestions });
+  };
+
+  const updateQuestionOption = (questionIndex, optionIndex, field, value) => {
+    const updatedQuestions = [...editData.questions];
+    if (field === 'is_correct' && value) {
+      // Set all options to false first, then set the selected one to true
+      updatedQuestions[questionIndex].options.forEach(opt => opt.is_correct = false);
+    }
+    updatedQuestions[questionIndex].options[optionIndex][field] = value;
+    setEditData({ ...editData, questions: updatedQuestions });
+  };
+
+  const addNewQuestion = () => {
+    const newQuestion = {
+      id: Date.now().toString(),
+      question_text: '',
+      options: [
+        { text: '', is_correct: false },
+        { text: '', is_correct: false },
+        { text: '', is_correct: false },
+        { text: '', is_correct: false }
+      ],
+      image_url: null
+    };
+    setEditData({
+      ...editData,
+      questions: [...editData.questions, newQuestion]
+    });
+    setEditingQuestionIndex(editData.questions.length);
+  };
+
+  const removeQuestion = (questionIndex) => {
+    if (confirm('Are you sure you want to remove this question?')) {
+      const updatedQuestions = editData.questions.filter((_, index) => index !== questionIndex);
+      setEditData({ ...editData, questions: updatedQuestions });
+      setEditingQuestionIndex(null);
+    }
+  };
+
+  const toggleUserAccess = (userId) => {
+    setEditData({
+      ...editData,
+      allowed_users: editData.allowed_users.includes(userId)
+        ? editData.allowed_users.filter(id => id !== userId)
+        : [...editData.allowed_users, userId]
+    });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Validate questions
+    for (let i = 0; i < editData.questions.length; i++) {
+      const question = editData.questions[i];
+      if (!question.question_text || !question.options.every(opt => opt.text) || !question.options.some(opt => opt.is_correct)) {
+        alert(`Question ${i + 1} is incomplete. Please fill all fields and select correct answer.`);
+        return;
+      }
+    }
+    
+    if (editData.questions.length === 0) {
+      alert('Please add at least one question');
+      return;
+    }
+
     onUpdate(quiz.id, editData);
   };
 
+  const getSubcategories = () => {
+    return predefinedSubjects[editData.subject] || ['General'];
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-        <h3 className="text-lg font-semibold mb-4">Edit Quiz: {quiz.title}</h3>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+      <div className="bg-white rounded-lg p-6 w-full max-w-4xl mx-4 my-8 max-h-screen overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-2xl font-semibold">Edit Quiz: {quiz.title}</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-2xl"
+          >
+            ✕
+          </button>
+        </div>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-gray-700 font-semibold mb-2">Title</label>
-            <input
-              type="text"
-              value={editData.title}
-              onChange={(e) => setEditData({ ...editData, title: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg"
-              required
-            />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Quiz Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Title</label>
+              <input
+                type="text"
+                value={editData.title}
+                onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+                className="w-full p-3 border border-gray-300 rounded-lg"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Category</label>
+              <input
+                type="text"
+                value={editData.category}
+                onChange={(e) => setEditData({ ...editData, category: e.target.value })}
+                className="w-full p-3 border border-gray-300 rounded-lg"
+                required
+              />
+            </div>
           </div>
 
           <div>
@@ -838,41 +1014,42 @@ function QuizEditModal({ quiz, onClose, onUpdate }) {
             />
           </div>
 
-          <div>
-            <label className="block text-gray-700 font-semibold mb-2">Category</label>
-            <input
-              type="text"
-              value={editData.category}
-              onChange={(e) => setEditData({ ...editData, category: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg"
-              required
-            />
+          {/* Subject Structure */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Subject</label>
+              <select
+                value={editData.subject}
+                onChange={(e) => setEditData({ ...editData, subject: e.target.value, subcategory: 'General' })}
+                className="w-full p-3 border border-gray-300 rounded-lg"
+              >
+                {Object.keys(predefinedSubjects).map(subject => (
+                  <option key={subject} value={subject}>{subject}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Subcategory</label>
+              <select
+                value={editData.subcategory}
+                onChange={(e) => setEditData({ ...editData, subcategory: e.target.value })}
+                className="w-full p-3 border border-gray-300 rounded-lg"
+              >
+                {getSubcategories().map(subcategory => (
+                  <option key={subcategory} value={subcategory}>{subcategory}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-gray-700 font-semibold mb-2">Subject Folder</label>
-            <select
-              value={editData.subject_folder}
-              onChange={(e) => setEditData({ ...editData, subject_folder: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg"
-            >
-              <option value="General">General</option>
-              <option value="Mathematics">Mathematics</option>
-              <option value="Science">Science</option>
-              <option value="History">History</option>
-              <option value="Language">Language</option>
-              <option value="Geography">Geography</option>
-              <option value="Art">Art</option>
-              <option value="Technology">Technology</option>
-            </select>
-          </div>
-
-          <div className="flex items-center space-x-4">
+          {/* Quiz Settings */}
+          <div className="flex flex-wrap items-center space-x-6">
             <label className="flex items-center">
               <input
                 type="checkbox"
                 checked={editData.is_public}
-                onChange={(e) => setEditData({ ...editData, is_public: e.target.checked })}
+                onChange={(e) => setEditData({ ...editData, is_public: e.target.checked, allowed_users: [] })}
                 className="mr-2"
               />
               Public Quiz
@@ -889,17 +1066,171 @@ function QuizEditModal({ quiz, onClose, onUpdate }) {
             </label>
           </div>
 
-          <div className="flex gap-4 pt-4">
+          {/* User Access Control */}
+          {editData.is_public && (
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <label className="block text-gray-700 font-semibold mb-2">
+                Select Users Who Can Access This Quiz ({editData.allowed_users.length} selected)
+              </label>
+              <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-3">
+                {allUsers.map((user) => (
+                  <div key={user.id} className="flex items-center mb-2">
+                    <input
+                      type="checkbox"
+                      checked={editData.allowed_users.includes(user.id)}
+                      onChange={() => toggleUserAccess(user.id)}
+                      className="mr-3"
+                    />
+                    <span className="text-sm">{user.name} ({user.email})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Questions Section */}
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-lg font-semibold">Questions ({editData.questions.length})</h4>
+              <button
+                type="button"
+                onClick={addNewQuestion}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200"
+              >
+                ➕ Add Question
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {editData.questions.map((question, questionIndex) => (
+                <div key={questionIndex} className="border border-gray-300 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h5 className="font-semibold">Question {questionIndex + 1}</h5>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingQuestionIndex(editingQuestionIndex === questionIndex ? null : questionIndex)}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        {editingQuestionIndex === questionIndex ? '📝 Editing' : '✏️ Edit'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeQuestion(questionIndex)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        🗑️ Remove
+                      </button>
+                    </div>
+                  </div>
+
+                  {editingQuestionIndex === questionIndex ? (
+                    // Edit Mode
+                    <div className="space-y-4">
+                      <input
+                        type="text"
+                        value={question.question_text}
+                        onChange={(e) => updateQuestion(questionIndex, 'question_text', e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg"
+                        placeholder="Enter question text"
+                      />
+
+                      {/* Image Upload */}
+                      <div>
+                        {question.image_url ? (
+                          <div className="relative inline-block">
+                            <img
+                              src={question.image_url}
+                              alt="Question"
+                              className="max-w-xs h-auto rounded-lg shadow"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(questionIndex)}
+                              className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-700"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <div>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleImageUpload(e, questionIndex)}
+                              className="hidden"
+                              id={`imageUpload-${questionIndex}`}
+                              disabled={uploadingImage}
+                            />
+                            <label
+                              htmlFor={`imageUpload-${questionIndex}`}
+                              className="cursor-pointer inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200 text-sm"
+                            >
+                              {uploadingImage ? 'Uploading...' : '📷 Add Image'}
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Options */}
+                      <div className="space-y-2">
+                        {question.options.map((option, optionIndex) => (
+                          <div key={optionIndex} className="flex items-center space-x-3">
+                            <input
+                              type="radio"
+                              name={`correct-${questionIndex}`}
+                              checked={option.is_correct}
+                              onChange={() => updateQuestionOption(questionIndex, optionIndex, 'is_correct', true)}
+                            />
+                            <input
+                              type="text"
+                              value={option.text}
+                              onChange={(e) => updateQuestionOption(questionIndex, optionIndex, 'text', e.target.value)}
+                              className="flex-1 p-2 border border-gray-300 rounded-lg"
+                              placeholder={`Option ${String.fromCharCode(65 + optionIndex)}`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    // Display Mode
+                    <div>
+                      <p className="mb-3">{question.question_text}</p>
+                      {question.image_url && (
+                        <img src={question.image_url} alt="Question" className="max-w-xs h-auto rounded-lg shadow mb-3" />
+                      )}
+                      <div className="grid grid-cols-2 gap-2">
+                        {question.options.map((option, optionIndex) => (
+                          <div
+                            key={optionIndex}
+                            className={`p-2 rounded text-sm ${
+                              option.is_correct ? 'bg-green-100 text-green-800' : 'bg-gray-100'
+                            }`}
+                          >
+                            {String.fromCharCode(65 + optionIndex)}. {option.text}
+                            {option.is_correct && ' ✓'}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-4 pt-6 border-t">
             <button
               type="submit"
-              className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-200"
+              className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition duration-200 font-semibold"
             >
-              Update Quiz
+              💾 Update Quiz
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition duration-200"
+              className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold"
             >
               Cancel
             </button>
