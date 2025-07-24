@@ -1836,16 +1836,21 @@ function AdminCategoriesView({ categories, fetchCategories }) {
   };
 
   const deleteFolder = async (folderId, folderName) => {
-    if (window.confirm(`Are you sure you want to delete the folder "${folderName}"? This action cannot be undone.`)) {
-      try {
-        await apiCall(`/admin/subject-folder/${folderId}`, {
-          method: 'DELETE'
-        });
-        fetchSubjectFolders();
-        alert('Folder deleted successfully!');
-      } catch (error) {
-        alert('Error deleting folder: ' + (error.response?.data?.detail || 'Unknown error'));
-      }
+    setDeleteFolderConfirm({ show: true, folderId, folderName });
+  };
+
+  const confirmDeleteFolder = async () => {
+    const { folderId, folderName } = deleteFolderConfirm;
+    try {
+      await apiCall(`/admin/subject-folder/${folderId}`, {
+        method: 'DELETE'
+      });
+      fetchSubjectFolders();
+      alert('Folder deleted successfully!');
+      setDeleteFolderConfirm({ show: false, folderId: null, folderName: '' });
+    } catch (error) {
+      alert('Error deleting folder: ' + (error.response?.data?.detail || 'Unknown error'));
+      setDeleteFolderConfirm({ show: false, folderId: null, folderName: '' });
     }
   };
 
