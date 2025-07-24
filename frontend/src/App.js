@@ -2201,7 +2201,478 @@ function UserDashboard({ currentView, setCurrentView }) {
   );
 }
 
-function PasswordChangeModal({ onClose, userName }) {
+// Supporting Components for Advanced Quiz Creation
+function QuestionCreationForm({
+  currentQuestion,
+  setCurrentQuestion,
+  uploadingFile,
+  handleFileUpload,
+  removeFile,
+  addOption,
+  removeOption,
+  updateOption,
+  updateOpenEndedAnswer,
+  addExpectedAnswer,
+  updateExpectedAnswer,
+  removeExpectedAnswer,
+  validateCurrentQuestion,
+  addQuestion
+}) {
+  return (
+    <div className="bg-gray-50 p-6 rounded-lg mb-6">
+      <h3 className="text-lg font-semibold mb-4">Add Question</h3>
+      
+      {/* Question Type Selection */}
+      <div className="mb-4">
+        <label className="block text-gray-700 font-semibold mb-2">Question Type</label>
+        <div className="flex gap-4">
+          <label className="flex items-center">
+            <input
+              type="radio"
+              name="questionType"
+              value="multiple_choice"
+              checked={currentQuestion.question_type === 'multiple_choice'}
+              onChange={(e) => setCurrentQuestion({ ...currentQuestion, question_type: e.target.value })}
+              className="mr-2"
+            />
+            📝 Multiple Choice
+          </label>
+          <label className="flex items-center">
+            <input
+              type="radio"
+              name="questionType"
+              value="open_ended"
+              checked={currentQuestion.question_type === 'open_ended'}
+              onChange={(e) => setCurrentQuestion({ ...currentQuestion, question_type: e.target.value })}
+              className="mr-2"
+            />
+            ✏️ Open Ended
+          </label>
+        </div>
+      </div>
+
+      {/* Question Text */}
+      <div className="mb-4">
+        <label className="block text-gray-700 font-semibold mb-2">Question Text *</label>
+        <textarea
+          value={currentQuestion.question_text}
+          onChange={(e) => setCurrentQuestion({ ...currentQuestion, question_text: e.target.value })}
+          className="w-full p-3 border border-gray-300 rounded-lg"
+          rows="2"
+          placeholder="Enter your question (min 5 characters)"
+        />
+      </div>
+
+      {/* Question Metadata */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div>
+          <label className="block text-gray-700 font-semibold mb-2">Points</label>
+          <input
+            type="number"
+            min="1"
+            max="10"
+            value={currentQuestion.points}
+            onChange={(e) => setCurrentQuestion({ ...currentQuestion, points: parseInt(e.target.value) || 1 })}
+            className="w-full p-3 border border-gray-300 rounded-lg"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-gray-700 font-semibold mb-2">Difficulty</label>
+          <select
+            value={currentQuestion.difficulty}
+            onChange={(e) => setCurrentQuestion({ ...currentQuestion, difficulty: e.target.value })}
+            className="w-full p-3 border border-gray-300 rounded-lg"
+          >
+            <option value="easy">🟢 Easy</option>
+            <option value="medium">🟡 Medium</option>
+            <option value="hard">🔴 Hard</option>
+          </select>
+        </div>
+        
+        <div className="flex items-center pt-8">
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={currentQuestion.is_mandatory}
+              onChange={(e) => setCurrentQuestion({ ...currentQuestion, is_mandatory: e.target.checked })}
+              className="mr-2"
+            />
+            Mandatory
+          </label>
+        </div>
+
+        {currentQuestion.question_type === 'multiple_choice' && (
+          <div className="flex items-center pt-8">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={currentQuestion.multiple_correct}
+                onChange={(e) => setCurrentQuestion({ ...currentQuestion, multiple_correct: e.target.checked })}
+                className="mr-2"
+              />
+              Multiple Correct
+            </label>
+          </div>
+        )}
+      </div>
+
+      {/* File Uploads */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        {/* Image Upload */}
+        <div>
+          <label className="block text-gray-700 font-semibold mb-2">Question Image</label>
+          {!currentQuestion.image_url ? (
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleFileUpload(e, 'image')}
+                className="hidden"
+                id="imageUpload"
+                disabled={uploadingFile}
+              />
+              <label
+                htmlFor="imageUpload"
+                className={`cursor-pointer inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-200 text-sm ${
+                  uploadingFile ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                {uploadingFile ? 'Uploading...' : '📷 Upload Image'}
+              </label>
+              <p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF, WEBP (max 5MB)</p>
+            </div>
+          ) : (
+            <div className="relative">
+              <img
+                src={currentQuestion.image_url}
+                alt="Question"
+                className="w-full h-32 object-cover rounded-lg"
+              />
+              <button
+                onClick={() => removeFile('image')}
+                className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-700"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* PDF Upload */}
+        <div>
+          <label className="block text-gray-700 font-semibold mb-2">Question PDF</label>
+          {!currentQuestion.pdf_url ? (
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => handleFileUpload(e, 'pdf')}
+                className="hidden"
+                id="pdfUpload"
+                disabled={uploadingFile}
+              />
+              <label
+                htmlFor="pdfUpload"
+                className={`cursor-pointer inline-flex items-center px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition duration-200 text-sm ${
+                  uploadingFile ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                {uploadingFile ? 'Uploading...' : '📄 Upload PDF'}
+              </label>
+              <p className="text-xs text-gray-500 mt-1">PDF files (max 10MB)</p>
+            </div>
+          ) : (
+            <div className="relative border rounded-lg p-4 bg-red-50">
+              <div className="flex items-center">
+                <span className="text-2xl mr-2">📄</span>
+                <span className="text-sm font-medium">PDF Attached</span>
+              </div>
+              <button
+                onClick={() => removeFile('pdf')}
+                className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-700"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Question Type Specific Fields */}
+      {currentQuestion.question_type === 'multiple_choice' ? (
+        <MultipleChoiceQuestionForm
+          currentQuestion={currentQuestion}
+          addOption={addOption}
+          removeOption={removeOption}
+          updateOption={updateOption}
+        />
+      ) : (
+        <OpenEndedQuestionForm
+          currentQuestion={currentQuestion}
+          updateOpenEndedAnswer={updateOpenEndedAnswer}
+          addExpectedAnswer={addExpectedAnswer}
+          updateExpectedAnswer={updateExpectedAnswer}
+          removeExpectedAnswer={removeExpectedAnswer}
+        />
+      )}
+
+      {/* Explanation */}
+      <div className="mb-4">
+        <label className="block text-gray-700 font-semibold mb-2">Explanation (Optional)</label>
+        <textarea
+          value={currentQuestion.explanation}
+          onChange={(e) => setCurrentQuestion({ ...currentQuestion, explanation: e.target.value })}
+          className="w-full p-3 border border-gray-300 rounded-lg"
+          rows="2"
+          placeholder="Explain the answer or provide additional context"
+        />
+      </div>
+
+      <button
+        onClick={addQuestion}
+        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
+      >
+        ➕ Add Question
+      </button>
+    </div>
+  );
+}
+
+function MultipleChoiceQuestionForm({ currentQuestion, addOption, removeOption, updateOption }) {
+  return (
+    <div className="mb-4">
+      <div className="flex justify-between items-center mb-2">
+        <label className="block text-gray-700 font-semibold">Options *</label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={addOption}
+            disabled={currentQuestion.options.length >= 6}
+            className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50"
+          >
+            ➕ Add Option
+          </button>
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        {currentQuestion.options.map((option, index) => (
+          <div key={index} className="flex items-center gap-2">
+            <input
+              type={currentQuestion.multiple_correct ? 'checkbox' : 'radio'}
+              name="correct-answer"
+              checked={option.is_correct}
+              onChange={(e) => updateOption(index, 'is_correct', e.target.checked)}
+            />
+            <span className="text-sm font-medium w-6">{String.fromCharCode(65 + index)}.</span>
+            <input
+              type="text"
+              value={option.text}
+              onChange={(e) => updateOption(index, 'text', e.target.value)}
+              className="flex-1 p-2 border border-gray-300 rounded-lg"
+              placeholder={`Option ${String.fromCharCode(65 + index)}`}
+            />
+            {currentQuestion.options.length > 2 && (
+              <button
+                type="button"
+                onClick={() => removeOption(index)}
+                className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      
+      <p className="text-xs text-gray-500 mt-2">
+        {currentQuestion.multiple_correct 
+          ? 'Check all correct answers' 
+          : 'Select one correct answer'
+        } (2-6 options allowed)
+      </p>
+    </div>
+  );
+}
+
+function OpenEndedQuestionForm({
+  currentQuestion,
+  updateOpenEndedAnswer,
+  addExpectedAnswer,
+  updateExpectedAnswer,
+  removeExpectedAnswer
+}) {
+  return (
+    <div className="space-y-4 mb-4">
+      {/* Expected Answers */}
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-gray-700 font-semibold">Expected Answers *</label>
+          <button
+            type="button"
+            onClick={addExpectedAnswer}
+            className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+          >
+            ➕ Add Answer
+          </button>
+        </div>
+        
+        <div className="space-y-2">
+          {currentQuestion.open_ended_answer.expected_answers.map((answer, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <span className="text-sm font-medium w-8">{index + 1}.</span>
+              <input
+                type="text"
+                value={answer}
+                onChange={(e) => updateExpectedAnswer(index, e.target.value)}
+                className="flex-1 p-2 border border-gray-300 rounded-lg"
+                placeholder={`Expected answer ${index + 1}`}
+              />
+              {currentQuestion.open_ended_answer.expected_answers.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeExpectedAnswer(index)}
+                  className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Keywords for Auto-grading */}
+      <div>
+        <label className="block text-gray-700 font-semibold mb-2">Keywords for Partial Credit</label>
+        <input
+          type="text"
+          value={currentQuestion.open_ended_answer.keywords.join(', ')}
+          onChange={(e) => updateOpenEndedAnswer('keywords', e.target.value.split(',').map(k => k.trim()).filter(k => k))}
+          className="w-full p-2 border border-gray-300 rounded-lg"
+          placeholder="Enter keywords separated by commas (optional)"
+        />
+        <p className="text-xs text-gray-500 mt-1">Keywords found in answers will give partial credit</p>
+      </div>
+
+      {/* Grading Options */}
+      <div className="flex gap-4">
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={currentQuestion.open_ended_answer.case_sensitive}
+            onChange={(e) => updateOpenEndedAnswer('case_sensitive', e.target.checked)}
+            className="mr-2"
+          />
+          <span className="text-sm">Case Sensitive</span>
+        </label>
+        
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={currentQuestion.open_ended_answer.partial_credit}
+            onChange={(e) => updateOpenEndedAnswer('partial_credit', e.target.checked)}
+            className="mr-2"
+          />
+          <span className="text-sm">Allow Partial Credit</span>
+        </label>
+      </div>
+    </div>
+  );
+}
+
+function QuestionPreview({ question, index }) {
+  const getDifficultyColor = (difficulty) => {
+    switch (difficulty) {
+      case 'easy': return 'bg-green-100 text-green-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'hard': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <div className="bg-white border rounded-lg p-4">
+      <div className="flex justify-between items-start mb-3">
+        <h4 className="font-semibold text-gray-800">
+          Question {index + 1}: {question.question_text}
+        </h4>
+        <div className="flex gap-2">
+          <span className={`px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(question.difficulty)}`}>
+            {question.difficulty}
+          </span>
+          <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+            {question.points} pts
+          </span>
+          {!question.is_mandatory && (
+            <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-800">
+              Optional
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Media Display */}
+      <div className="flex gap-4 mb-3">
+        {question.image_url && (
+          <img
+            src={question.image_url}
+            alt="Question"
+            className="w-32 h-20 object-cover rounded"
+          />
+        )}
+        {question.pdf_url && (
+          <div className="flex items-center p-2 bg-red-50 rounded">
+            <span className="text-red-600">📄 PDF Attached</span>
+          </div>
+        )}
+      </div>
+
+      {/* Question Content */}
+      {question.question_type === 'multiple_choice' ? (
+        <div>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            {question.options.map((option, optIndex) => (
+              <div
+                key={optIndex}
+                className={`p-2 rounded text-sm ${
+                  option.is_correct ? 'bg-green-100 text-green-800' : 'bg-gray-100'
+                }`}
+              >
+                {String.fromCharCode(65 + optIndex)}. {option.text}
+                {option.is_correct && ' ✓'}
+              </div>
+            ))}
+          </div>
+          {question.multiple_correct && (
+            <p className="text-xs text-blue-600">Multiple correct answers allowed</p>
+          )}
+        </div>
+      ) : (
+        <div className="bg-yellow-50 p-3 rounded">
+          <p className="text-sm font-medium text-yellow-800 mb-2">Open-ended Question</p>
+          <p className="text-xs text-yellow-700">
+            Expected: {question.open_ended_answer.expected_answers.join(' OR ')}
+          </p>
+          {question.open_ended_answer.keywords.length > 0 && (
+            <p className="text-xs text-yellow-700">
+              Keywords: {question.open_ended_answer.keywords.join(', ')}
+            </p>
+          )}
+        </div>
+      )}
+
+      {question.explanation && (
+        <div className="mt-3 p-2 bg-blue-50 rounded">
+          <p className="text-xs text-blue-700">
+            <strong>Explanation:</strong> {question.explanation}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
   const [formData, setFormData] = useState({
     current_password: '',
     new_password: '',
