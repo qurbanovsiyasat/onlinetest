@@ -234,6 +234,31 @@ function MainApp() {
   const { user, loading } = useAuth();
   const [currentView, setCurrentView] = useState('home');
 
+  // Local MathJax initialization for self-hosted setup
+  useEffect(() => {
+    const initializeMathJax = async () => {
+      try {
+        // Check if MathJax is already loaded from window
+        if (window.MathJax && window.MathJax.typesetPromise) {
+          console.log('✅ MathJax already loaded from window object (self-hosted)');
+          return;
+        }
+        
+        // Try to load MathJax locally
+        const { MathJax } = await import('mathjax/es5/tex-mml-chtml.js');
+        window.MathJax = MathJax;
+        
+        // Configure MathJax
+        await MathJax.startup.defaultReady();
+        console.log('✅ MathJax initialized locally (self-hosted)');
+      } catch (error) {
+        console.warn('⚠️ MathJax local loading failed, using window fallback:', error);
+      }
+    };
+    
+    initializeMathJax();
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
