@@ -42,7 +42,26 @@ class UserRole(str, Enum):
     ADMIN = "admin"
     USER = "user"
 
-# Models
+# Health check endpoint for self-hosted deployment verification
+@api_router.get("/health")
+async def health_check():
+    """Health check endpoint to verify self-hosted backend is running"""
+    try:
+        # Check database connection
+        await db.command("ping")
+        return {
+            "status": "healthy",
+            "message": "OnlineTestMaker backend is running (self-hosted)",
+            "database": "connected",
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": "1.0.0",
+            "hosting": "self-hosted"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Health check failed: {str(e)}"
+        )
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: EmailStr
