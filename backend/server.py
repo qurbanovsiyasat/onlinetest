@@ -1839,13 +1839,59 @@ async def get_user_details(user_id: str, admin_user: User = Depends(get_admin_us
 # Include router
 app.include_router(api_router)
 
-# CORS
+# CORS Configuration for Self-Hosted Deployment
+def get_cors_origins():
+    """Get allowed CORS origins from environment or use secure defaults"""
+    allowed_origins = os.environ.get('ALLOWED_ORIGINS', '').split(',')
+    
+    # Default origins for self-hosted deployment
+    default_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost",
+        "http://127.0.0.1",
+    ]
+    
+    # Add server IP addresses
+    try:
+        import socket
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+        default_origins.extend([
+            f"http://{local_ip}:3000",
+            f"http://{local_ip}",
+            f"https://{local_ip}:3000", 
+            f"https://{local_ip}"
+        ])
+    except:
+        pass
+    
+    # Combine environment origins with defaults
+    all_origins = list(set(default_origins + [origin.strip() for origin in allowed_origins if origin.strip()]))
+    
+    # Remove empty strings
+    all_origins = [origin for origin in all_origins if origin]
+    
+    logging.info(f"CORS allowed origins: {all_origins}")
+    return all_origins
+
+# Apply CORS middleware
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=get_cors_origins(),
     allow_credentials=True,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Accept",
+        "Accept-Language", 
+        "Content-Language",
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "X-CSRF-Token"
+    ],
+    expose_headers=["Content-Range", "X-Content-Range"],
+    max_age=600  # Cache preflight requests for 10 minutes
 )
 
 # Logging
