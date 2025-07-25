@@ -137,7 +137,7 @@ fi
 echo ""
 
 # 7. Environment Configuration
-echo "7. Environment Configuration"
+echo "8. Environment Configuration"
 if [ -f "/app/backend/.env" ]; then
     if grep -q "localhost\|127.0.0.1" /app/backend/.env; then
         echo -e "   ${GREEN}✅ Backend configured for local database${NC}"
