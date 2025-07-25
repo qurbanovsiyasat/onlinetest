@@ -62,6 +62,21 @@ async def health_check():
             status_code=503,
             detail=f"Health check failed: {str(e)}"
         )
+
+@api_router.get("/cors-info")
+async def cors_info():
+    """CORS configuration information for debugging"""
+    return {
+        "allowed_origins": get_cors_origins(),
+        "allowed_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allowed_headers": [
+            "Accept", "Accept-Language", "Content-Language",
+            "Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token"
+        ],
+        "credentials_allowed": True,
+        "max_age": 600,
+        "note": "This endpoint helps debug CORS issues in self-hosted deployments"
+    }
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: EmailStr
