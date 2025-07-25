@@ -127,7 +127,7 @@ fi
 echo ""
 
 # 6. Check MathJax
-echo "6. Mathematical Expressions (MathJax)"
+echo "7. Mathematical Expressions (MathJax)"
 if grep -q "mathjax" /app/frontend/package.json; then
     echo -e "   ${GREEN}✅ Using local MathJax package (self-hosted)${NC}"
 else
