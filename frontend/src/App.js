@@ -4,37 +4,6 @@ import axios from "axios";
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
-// Local MathJax initialization for self-hosted setup
-useEffect(() => {
-  const initializeMathJax = async () => {
-    try {
-      const { MathJax } = await import('mathjax/es5/tex-mml-chtml.js');
-      window.MathJax = MathJax;
-      
-      // Configure MathJax
-      MathJax.config({
-        tex: {
-          inlineMath: [['$', '$'], ['\\(', '\\)']],
-          displayMath: [['$$', '$$'], ['\\[', '\\]']],
-          processEscapes: true,
-          processEnvironments: true
-        },
-        options: {
-          ignoreHtmlClass: 'tex2jax_ignore',
-          processHtmlClass: 'tex2jax_process'
-        }
-      });
-      
-      await MathJax.startup.defaultReady();
-      console.log('✅ MathJax initialized locally (self-hosted)');
-    } catch (error) {
-      console.warn('⚠️ MathJax local loading failed, falling back to window.MathJax:', error);
-    }
-  };
-  
-  initializeMathJax();
-}, []);
-
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
