@@ -93,8 +93,31 @@ fi
 
 echo ""
 
-# 5. Verify File Storage
-echo "5. File Storage Configuration"
+# 5. CORS Configuration Check
+echo "5. CORS Configuration"
+echo -n "Checking CORS settings... "
+
+if curl -s --max-time 5 "http://localhost:8001/api/cors-info" | grep -q "allowed_origins"; then
+    echo -e "${GREEN}✅ CORS properly configured${NC}"
+    
+    # Test CORS preflight
+    echo -n "Testing CORS preflight... "
+    if curl -s -H "Origin: http://localhost:3000" \
+            -H "Access-Control-Request-Method: POST" \
+            -X OPTIONS \
+            "http://localhost:8001/api/health" | grep -q "200\|OK"; then
+        echo -e "${GREEN}✅ CORS preflight working${NC}"
+    else
+        echo -e "${YELLOW}⚠️  CORS preflight test failed${NC}"
+    fi
+else
+    echo -e "${RED}❌ CORS configuration not accessible${NC}"
+fi
+
+echo ""
+
+# 6. Verify File Storage
+echo "6. File Storage Configuration"
 if grep -q "base64" /app/backend/server.py; then
     echo -e "   ${GREEN}✅ Using local base64 storage (self-hosted)${NC}"
 else
