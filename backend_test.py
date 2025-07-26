@@ -11,7 +11,7 @@ from datetime import datetime
 import uuid
 
 class OnlineTestMakerAPITester:
-    def __init__(self, base_url="https://1b7c47ce-de06-48ef-a590-a8a0defe3c72.preview.emergentagent.com"):
+    def __init__(self, base_url="https://a08d31b4-eacd-4c8c-840e-a701a3486e84.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
