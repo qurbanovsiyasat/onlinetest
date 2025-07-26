@@ -1978,9 +1978,14 @@ class OnlineTestMakerAPITester:
 
     def run_all_tests(self):
         """Run all API tests"""
-        print("🚀 Starting OnlineTestMaker API Tests - Enhanced Features Testing")
+        print("🚀 Starting OnlineTestMaker API Tests - Self-hosted Backend Verification")
         print(f"🌐 Testing against: {self.api_url}")
         print("=" * 80)
+
+        # DECOUPLING VERIFICATION TESTS (as requested in review)
+        print("\n🔍 Testing Backend Decoupling from Emergenet Infrastructure...")
+        self.test_health_check()
+        self.test_cors_info()
 
         # Basic connectivity
         self.test_api_root()
