@@ -1434,6 +1434,73 @@ class OnlineTestMakerAPITester:
         except Exception as e:
             return self.log_test("Admin Move Quiz to Folder", False, f"Error: {str(e)}")
 
+    def test_admin_delete_quiz(self):
+        """Test admin deleting quiz"""
+        if not self.admin_token or not self.created_quiz_id:
+            return self.log_test("Admin Delete Quiz", False, "No admin token or quiz ID available")
+            
+        try:
+            response = requests.delete(
+                f"{self.api_url}/admin/quiz/{self.created_quiz_id}",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                data = response.json()
+                details += f", Message: {data.get('message', 'No message')}"
+                
+                # Verify quiz is deleted by trying to access it
+                verify_response = requests.get(
+                    f"{self.api_url}/quiz/{self.created_quiz_id}",
+                    headers=self.get_auth_headers(self.user_token),
+                    timeout=10
+                )
+                details += f", Verification: {verify_response.status_code} (Expected 404)"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin Delete Quiz", success, details)
+        except Exception as e:
+            return self.log_test("Admin Delete Quiz", False, f"Error: {str(e)}")
+
+    def test_user_delete_quiz_forbidden(self):
+        """Test user trying to delete quiz (should fail)"""
+        if not self.user_token or not hasattr(self, 'flexible_quiz_id'):
+            return self.log_test("User Delete Quiz (Forbidden)", False, "No user token or quiz ID available")
+            
+        try:
+            response = requests.delete(
+                f"{self.api_url}/admin/quiz/{self.flexible_quiz_id}",
+                headers=self.get_auth_headers(self.user_token),
+                timeout=10
+            )
+            success = response.status_code == 403  # Should be forbidden
+            details = f"Status: {response.status_code} (Expected 403)"
+            return self.log_test("User Delete Quiz (Forbidden)", success, details)
+        except Exception as e:
+            return self.log_test("User Delete Quiz (Forbidden)", False, f"Error: {str(e)}")
+
+    def test_admin_delete_quiz_nonexistent(self):
+        """Test admin deleting non-existent quiz"""
+        if not self.admin_token:
+            return self.log_test("Admin Delete Non-existent Quiz", False, "No admin token available")
+            
+        fake_quiz_id = "nonexistent-quiz-id"
+        try:
+            response = requests.delete(
+                f"{self.api_url}/admin/quiz/{fake_quiz_id}",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 404  # Should return 404
+            details = f"Status: {response.status_code} (Expected 404)"
+            return self.log_test("Admin Delete Non-existent Quiz", success, details)
+        except Exception as e:
+            return self.log_test("Admin Delete Non-existent Quiz", False, f"Error: {str(e)}")
+
     def test_admin_delete_subject_folder(self):
         """Test admin deleting subject folder (should fail if has quizzes)"""
         if not self.admin_token or not hasattr(self, 'created_folder_id'):
