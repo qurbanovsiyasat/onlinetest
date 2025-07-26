@@ -39,6 +39,40 @@ class OnlineTestMakerAPITester:
             'Authorization': f'Bearer {token}'
         } if token else {'Content-Type': 'application/json'}
 
+    def test_health_check(self):
+        """Test health check endpoint to verify self-hosted backend"""
+        try:
+            response = requests.get(f"{self.api_url}/health", timeout=10)
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            if success:
+                data = response.json()
+                details += f", Status: {data.get('status', 'Unknown')}"
+                details += f", Hosting: {data.get('hosting', 'Unknown')}"
+                details += f", Database: {data.get('database', 'Unknown')}"
+                details += f", Message: {data.get('message', 'No message')}"
+            return self.log_test("Health Check (Self-hosted)", success, details)
+        except Exception as e:
+            return self.log_test("Health Check (Self-hosted)", False, f"Error: {str(e)}")
+
+    def test_cors_info(self):
+        """Test CORS configuration for localhost origins"""
+        try:
+            response = requests.get(f"{self.api_url}/cors-info", timeout=10)
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            if success:
+                data = response.json()
+                allowed_origins = data.get('allowed_origins', [])
+                details += f", Origins: {len(allowed_origins)}"
+                # Check if localhost is allowed
+                localhost_allowed = any('localhost' in origin for origin in allowed_origins)
+                details += f", Localhost allowed: {localhost_allowed}"
+                details += f", Methods: {len(data.get('allowed_methods', []))}"
+            return self.log_test("CORS Configuration", success, details)
+        except Exception as e:
+            return self.log_test("CORS Configuration", False, f"Error: {str(e)}")
+
     def test_api_root(self):
         """Test API root endpoint"""
         try:
