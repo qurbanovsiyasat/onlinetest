@@ -238,18 +238,50 @@ function MainApp() {
   useEffect(() => {
     const initializeMathJax = async () => {
       try {
-        // Temporarily disable MathJax to isolate the issue
-        console.log('⚠️ MathJax loading temporarily disabled for debugging');
-        // MathJax initialization code commented out for troubleshooting
-        /*
         // Check if MathJax is already loaded from window
         if (window.MathJax && window.MathJax.typesetPromise) {
-          console.log('✅ MathJax already loaded from window object (self-hosted)');
+          console.log('✅ MathJax already loaded from window object');
           return;
         }
-        */
+        
+        // Use a safer MathJax loading approach to prevent webpack conflicts
+        const loadMathJax = () => {
+          // Only load if not already loading
+          if (window.mathJaxLoading) return;
+          window.mathJaxLoading = true;
+          
+          // Set configuration before loading to prevent conflicts
+          window.MathJax = {
+            tex: {
+              inlineMath: [['$', '$'], ['\\(', '\\)']],
+              displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: { fontCache: 'global' },
+            startup: {
+              ready() {
+                window.MathJax.startup.defaultReady();
+                console.log('✅ MathJax initialized successfully');
+                window.mathJaxLoading = false;
+              }
+            }
+          };
+          
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js';
+          script.async = true;
+          script.onload = () => console.log('✅ MathJax loaded from CDN');
+          script.onerror = () => {
+            console.warn('⚠️ MathJax CDN loading failed');
+            window.mathJaxLoading = false;
+          };
+          document.head.appendChild(script);
+        };
+        
+        // Delay MathJax loading to avoid conflicts with React 18
+        setTimeout(loadMathJax, 100);
+        
       } catch (error) {
-        console.warn('⚠️ MathJax initialization failed, continuing without mathematical expressions:', error);
+        console.warn('⚠️ MathJax initialization failed:', error);
       }
     };
     
