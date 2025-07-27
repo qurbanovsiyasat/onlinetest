@@ -2796,7 +2796,13 @@ function UserDashboard({ currentView, setCurrentView }) {
   };
 
   const submitQuiz = async () => {
+    console.log('🎯 Starting quiz submission...');
+    console.log('Quiz ID:', selectedQuiz.id);
+    console.log('User answers:', userAnswers);
+    
     try {
+      console.log('📡 Making API call to:', `/quiz/${selectedQuiz.id}/attempt`);
+      
       const response = await apiCall(`/quiz/${selectedQuiz.id}/attempt`, {
         method: 'POST',
         data: {
@@ -2804,10 +2810,48 @@ function UserDashboard({ currentView, setCurrentView }) {
           answers: userAnswers
         }
       });
+      
+      console.log('✅ Quiz submission successful:', response.data);
+      
+      // Verify we have valid result data
+      if (!response.data || typeof response.data.score === 'undefined') {
+        throw new Error('Invalid response data received from server');
+      }
+      
       setQuizResult(response.data);
       setCurrentView('result');
+      
     } catch (error) {
-      alert('Error submitting quiz: ' + (error.response?.data?.detail || 'Unknown error'));
+      console.error('❌ Quiz submission failed:', error);
+      
+      let errorMessage = 'Unknown error occurred';
+      
+      // Handle different types of errors
+      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        errorMessage = 'Network error: Unable to reach the server. This might be due to:\n\n' +
+          '• Browser extensions blocking the request\n' +
+          '• Internet connection issues\n' +
+          '• Server temporarily unavailable\n\n' +
+          'Please try:\n' +
+          '1. Disable browser extensions (ad blockers)\n' +
+          '2. Use incognito/private mode\n' +
+          '3. Check your internet connection';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Quiz not found or no longer available';
+      } else if (error.response?.status === 403) {
+        errorMessage = 'You do not have permission to take this quiz';
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again';
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert('❌ Quiz Submission Failed\n\n' + errorMessage);
+      
+      // Do NOT proceed to results page on error
+      console.log('🔄 Staying on quiz page due to submission error');
     }
   };
 
