@@ -1869,6 +1869,9 @@ def get_cors_origins():
         "http://127.0.0.1:3000",
         "http://localhost",
         "http://127.0.0.1",
+        # Add the specific frontend and backend URLs for this deployment
+        "https://c70c9883-8b81-45c7-9e6e-61b3ff673baf.preview.emergentagent.com",
+        "https://12ff668f-64d6-4150-813f-b4f1806bfd6f.preview.emergentagent.com"
     ]
     
     # Add server IP addresses
@@ -1891,6 +1894,8 @@ def get_cors_origins():
     # Remove empty strings
     all_origins = [origin for origin in all_origins if origin]
     
+    print(f"DEBUG: ALLOWED_ORIGINS env var: {os.environ.get('ALLOWED_ORIGINS', 'NOT SET')}")
+    print(f"DEBUG: All CORS origins: {all_origins}")
     logging.info(f"CORS allowed origins: {all_origins}")
     return all_origins
 
