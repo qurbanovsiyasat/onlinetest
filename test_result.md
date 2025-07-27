@@ -102,6 +102,52 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
+user_problem_statement: "When running quizzes created in the admin account, the 'Complete Quiz' does not appear and it gives an error."
+
+backend:
+  - task: "Fix admin quiz completion restriction"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Fixed the hardcoded restriction that prevented admins from completing quizzes. Modified the code to allow admins to complete quizzes they created while still restricting access to other quizzes."
+
+frontend:
+  - task: "Quiz completion UI functionality"
+    implemented: true
+    working: true
+    file: "frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Quiz completion UI should now work for admin accounts after backend fix."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Fix admin quiz completion restriction"
+    - "Test quiz completion for admin accounts"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Fixed the backend restriction that prevented admin users from completing quizzes. The issue was in the submit_quiz_attempt endpoint where there was a blanket restriction blocking all admin users. Now admins can complete quizzes they created for testing purposes."
+
 user_problem_statement: Complete the frontend implementation for flexible question types (multiple choice with multiple correct answers, open-ended questions with expected answers/keywords), admin folder visibility controls, quiz player enhancements, moving quizzes between folders, and comprehensive client-side validation. The backend already supports these features extensively.
 
 backend:
