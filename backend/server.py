@@ -1668,6 +1668,44 @@ async def get_subjects_structure(admin_user: User = Depends(get_admin_user)):
     
     return subjects
 
+# Global Subject Management Models
+class GlobalSubfolder(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: Optional[str] = None
+
+class GlobalSubject(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: Optional[str] = None
+    subfolders: List[GlobalSubfolder] = []
+    created_by: str  # Admin user ID
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class GlobalSubjectCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    subfolders: List[str] = []  # List of subfolder names
+
+class GlobalSubjectUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    subfolders: Optional[List[str]] = None
+
+class PersonalSubject(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: Optional[str] = None
+    subfolders: List[str] = []  # Simple list of subfolder names
+    user_id: str  # User who created this
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class PersonalSubjectCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    subfolders: List[str] = []
+
 # Enhanced Folder Management for Admin
 @api_router.post("/admin/subject-folder", response_model=SubjectFolder)
 async def create_subject_folder(folder_data: SubjectFolderCreate, admin_user: User = Depends(get_admin_user)):
