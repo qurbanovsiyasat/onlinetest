@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Testing for OnlineTestMaker - Admin-Centered Authentication System
-Tests all API endpoints with JWT authentication and role-based access control
+Backend API Testing for OnlineTestMaker - Quiz Submission and Results Recording Focus
+Tests the specific flow: admin auth -> create quiz -> user takes quiz -> verify results
 """
 
 import requests
@@ -9,9 +9,23 @@ import json
 import sys
 from datetime import datetime
 import uuid
+import os
 
 class OnlineTestMakerAPITester:
-    def __init__(self, base_url="http://localhost:8001"):
+    def __init__(self, base_url=None):
+        # Use the production URL from frontend/.env
+        if base_url is None:
+            try:
+                with open('/app/frontend/.env', 'r') as f:
+                    for line in f:
+                        if line.startswith('REACT_APP_BACKEND_URL='):
+                            base_url = line.split('=')[1].strip()
+                            break
+                if not base_url:
+                    base_url = "http://localhost:8001"
+            except:
+                base_url = "http://localhost:8001"
+        
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
@@ -21,6 +35,7 @@ class OnlineTestMakerAPITester:
         self.created_quiz_id = None
         self.uploaded_image_id = None
         self.test_user_id = str(uuid.uuid4())[:8]
+        self.quiz_attempt_id = None
 
     def log_test(self, test_name, success, details=""):
         """Log test results"""
