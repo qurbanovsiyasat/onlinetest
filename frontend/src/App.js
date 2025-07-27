@@ -2819,6 +2819,7 @@ function UserDashboard({ currentView, setCurrentView }) {
       userAnswers={userAnswers}
       selectAnswer={selectAnswer}
       nextQuestion={nextQuestion}
+      submitQuiz={submitQuiz}
       setCurrentView={setCurrentView}
     />;
   }
