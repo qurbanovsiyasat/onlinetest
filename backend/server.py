@@ -1872,8 +1872,8 @@ async def delete_global_subfolder(
 
 @api_router.get("/user/available-subjects")
 async def get_available_subjects_for_user(current_user: User = Depends(get_current_user)):
-    """Get combined list of global subjects and user's personal subjects"""
-    # Get global subjects
+    """Get list of admin-created global subjects only"""
+    # Get global subjects (admin-created only)
     global_subjects = await db.global_subjects.find().to_list(1000)
     global_formatted = []
     for subject in global_subjects:
@@ -1889,26 +1889,10 @@ async def get_available_subjects_for_user(current_user: User = Depends(get_curre
             "icon": "🌐"
         })
     
-    # Get user's personal subjects
-    personal_subjects = await db.personal_subjects.find({"user_id": current_user.id}).to_list(1000)
-    personal_formatted = []
-    for subject in personal_subjects:
-        personal_formatted.append({
-            "id": subject["id"],
-            "name": subject["name"], 
-            "description": subject.get("description", ""),
-            "subfolders": [
-                {"id": f"personal_{i}", "name": sf, "description": ""}
-                for i, sf in enumerate(subject.get("subfolders", []))
-            ],
-            "type": "personal",
-            "icon": "👤"
-        })
-    
     return {
         "global_subjects": global_formatted,
-        "personal_subjects": personal_formatted,
-        "combined": global_formatted + personal_formatted
+        "personal_subjects": [],  # No personal subjects allowed
+        "combined": global_formatted  # Only global subjects
     }
 
 @api_router.post("/user/quiz", response_model=Quiz)
