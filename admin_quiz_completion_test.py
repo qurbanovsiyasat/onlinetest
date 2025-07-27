@@ -13,18 +13,9 @@ import uuid
 
 class AdminQuizCompletionTester:
     def __init__(self, base_url=None):
-        # Use the production URL from frontend/.env
+        # Use localhost for testing since external URL is not accessible
         if base_url is None:
-            try:
-                with open('/app/frontend/.env', 'r') as f:
-                    for line in f:
-                        if line.startswith('REACT_APP_BACKEND_URL='):
-                            base_url = line.split('=')[1].strip()
-                            break
-                if not base_url:
-                    base_url = "http://localhost:8001"
-            except:
-                base_url = "http://localhost:8001"
+            base_url = "http://localhost:8001"
         
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
