@@ -3905,6 +3905,31 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
           </div>
         </header>
 
+        {/* Error Display */}
+        {quizError && (
+          <div className="max-w-4xl mx-auto mb-6">
+            <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <span className="text-red-400 text-xl">❌</span>
+                </div>
+                <div className="ml-3 flex-1">
+                  <h3 className="text-sm font-medium text-red-800">Quiz Submission Failed</h3>
+                  <p className="mt-1 text-sm text-red-700">{quizError}</p>
+                  <div className="mt-3">
+                    <button
+                      onClick={() => setQuizError(null)}
+                      className="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded text-sm transition duration-200"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-4 sm:p-8">
           {/* Question Header */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6">
