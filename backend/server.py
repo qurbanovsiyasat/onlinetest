@@ -1323,6 +1323,383 @@ async def get_my_attempts(current_user: User = Depends(get_current_user)):
     attempts = await db.quiz_attempts.find({"user_id": current_user.id}).to_list(1000)
     return [QuizAttempt(**attempt) for attempt in attempts]
 
+# Real-time Quiz Session Management
+@api_router.post("/quiz-session/start", response_model=QuizSessionResponse)
+async def start_quiz_session(session_data: QuizSessionCreate, current_user: User = Depends(get_current_user)):
+    """Start a new real-time quiz session"""
+    if current_user.role == UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admins cannot take quizzes")
+    
+    # Get quiz
+    quiz = await db.quizzes.find_one({"id": session_data.quiz_id, "is_active": True, "is_draft": False})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found or not published")
+    
+    # Check access permissions
+    if quiz.get("is_public", False) and current_user.id not in quiz.get("allowed_users", []):
+        raise HTTPException(status_code=403, detail="You don't have access to this quiz")
+    
+    # Check if user already has an active session for this quiz
+    existing_session = await db.quiz_sessions.find_one({
+        "quiz_id": session_data.quiz_id,
+        "user_id": current_user.id,
+        "status": {"$in": ["pending", "active", "paused"]}
+    })
+    
+    if existing_session:
+        raise HTTPException(status_code=400, detail="You already have an active session for this quiz")
+    
+    # Determine time limit (session override or quiz default)
+    time_limit = session_data.time_limit_minutes or quiz.get("time_limit_minutes")
+    time_remaining = time_limit * 60 if time_limit else None  # Convert to seconds
+    
+    # Create new session
+    session = QuizSession(
+        quiz_id=session_data.quiz_id,
+        user_id=current_user.id,
+        status=QuizSessionStatus.PENDING,
+        time_limit_minutes=time_limit,
+        time_remaining_seconds=time_remaining,
+        is_auto_submit=time_limit is not None  # Auto-submit if there's a time limit
+    )
+    
+    await db.quiz_sessions.insert_one(session.dict())
+    
+    # Return session with quiz info
+    return QuizSessionResponse(
+        id=session.id,
+        quiz_id=session.quiz_id,
+        quiz_title=quiz["title"],
+        user_id=session.user_id,
+        status=session.status,
+        start_time=session.start_time,
+        end_time=session.end_time,
+        time_limit_minutes=session.time_limit_minutes,
+        time_remaining_seconds=session.time_remaining_seconds,
+        current_question_index=session.current_question_index,
+        total_questions=len(quiz.get("questions", [])),
+        answers=session.answers,
+        is_auto_submit=session.is_auto_submit,
+        created_at=session.created_at,
+        last_activity=session.last_activity
+    )
+
+@api_router.post("/quiz-session/{session_id}/activate")
+async def activate_quiz_session(session_id: str, current_user: User = Depends(get_current_user)):
+    """Activate a pending quiz session (start the timer)"""
+    session = await db.quiz_sessions.find_one({"id": session_id, "user_id": current_user.id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session["status"] != QuizSessionStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Session is not in pending state")
+    
+    # Activate session
+    start_time = datetime.utcnow()
+    update_data = {
+        "status": QuizSessionStatus.ACTIVE,
+        "start_time": start_time,
+        "updated_at": start_time,
+        "last_activity": start_time
+    }
+    
+    await db.quiz_sessions.update_one({"id": session_id}, {"$set": update_data})
+    
+    # Get updated session with quiz info
+    updated_session = await db.quiz_sessions.find_one({"id": session_id})
+    quiz = await db.quizzes.find_one({"id": updated_session["quiz_id"]})
+    
+    return QuizSessionResponse(
+        id=updated_session["id"],
+        quiz_id=updated_session["quiz_id"],
+        quiz_title=quiz["title"],
+        user_id=updated_session["user_id"],
+        status=QuizSessionStatus(updated_session["status"]),
+        start_time=updated_session["start_time"],
+        end_time=updated_session.get("end_time"),
+        time_limit_minutes=updated_session.get("time_limit_minutes"),
+        time_remaining_seconds=updated_session.get("time_remaining_seconds"),
+        current_question_index=updated_session["current_question_index"],
+        total_questions=len(quiz.get("questions", [])),
+        answers=updated_session["answers"],
+        is_auto_submit=updated_session["is_auto_submit"],
+        created_at=updated_session["created_at"],
+        last_activity=updated_session["last_activity"]
+    )
+
+@api_router.get("/quiz-session/{session_id}/status", response_model=QuizSessionResponse)
+async def get_quiz_session_status(session_id: str, current_user: User = Depends(get_current_user)):
+    """Get current status of a quiz session with real-time timer updates"""
+    session = await db.quiz_sessions.find_one({"id": session_id, "user_id": current_user.id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    quiz = await db.quizzes.find_one({"id": session["quiz_id"]})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Calculate remaining time if session is active
+    time_remaining_seconds = session.get("time_remaining_seconds")
+    if session["status"] == QuizSessionStatus.ACTIVE and session.get("start_time") and time_remaining_seconds:
+        elapsed_seconds = (datetime.utcnow() - session["start_time"]).total_seconds()
+        time_remaining_seconds = max(0, time_remaining_seconds - int(elapsed_seconds))
+        
+        # Auto-expire session if time is up
+        if time_remaining_seconds <= 0 and session["status"] == QuizSessionStatus.ACTIVE:
+            await db.quiz_sessions.update_one(
+                {"id": session_id},
+                {"$set": {
+                    "status": QuizSessionStatus.EXPIRED,
+                    "end_time": datetime.utcnow(),
+                    "updated_at": datetime.utcnow()
+                }}
+            )
+            session["status"] = QuizSessionStatus.EXPIRED
+            session["end_time"] = datetime.utcnow()
+    
+    return QuizSessionResponse(
+        id=session["id"],
+        quiz_id=session["quiz_id"],
+        quiz_title=quiz["title"],
+        user_id=session["user_id"],
+        status=QuizSessionStatus(session["status"]),
+        start_time=session.get("start_time"),
+        end_time=session.get("end_time"),
+        time_limit_minutes=session.get("time_limit_minutes"),
+        time_remaining_seconds=time_remaining_seconds,
+        current_question_index=session["current_question_index"],
+        total_questions=len(quiz.get("questions", [])),
+        answers=session["answers"],
+        is_auto_submit=session["is_auto_submit"],
+        created_at=session["created_at"],
+        last_activity=session["last_activity"]
+    )
+
+@api_router.put("/quiz-session/{session_id}/update")  
+async def update_quiz_session(session_id: str, update_data: QuizSessionUpdate, current_user: User = Depends(get_current_user)):
+    """Update quiz session progress (save answers, update current question)"""
+    session = await db.quiz_sessions.find_one({"id": session_id, "user_id": current_user.id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session["status"] not in [QuizSessionStatus.ACTIVE, QuizSessionStatus.PAUSED]:
+        raise HTTPException(status_code=400, detail="Session is not active")
+    
+    # Check if session has expired
+    if session.get("start_time") and session.get("time_remaining_seconds"):
+        elapsed_seconds = (datetime.utcnow() - session["start_time"]).total_seconds()
+        time_remaining = max(0, session["time_remaining_seconds"] - int(elapsed_seconds))
+        
+        if time_remaining <= 0:
+            await db.quiz_sessions.update_one(
+                {"id": session_id},
+                {"$set": {
+                    "status": QuizSessionStatus.EXPIRED,
+                    "end_time": datetime.utcnow(),
+                    "updated_at": datetime.utcnow()
+                }}
+            )
+            raise HTTPException(status_code=400, detail="Session has expired")
+    
+    # Update session data
+    update_fields = {
+        "updated_at": datetime.utcnow(),
+        "last_activity": datetime.utcnow()
+    }
+    
+    if update_data.current_question_index is not None:
+        update_fields["current_question_index"] = update_data.current_question_index
+    
+    if update_data.answers is not None:
+        update_fields["answers"] = update_data.answers
+    
+    if update_data.status is not None:
+        update_fields["status"] = update_data.status
+    
+    await db.quiz_sessions.update_one({"id": session_id}, {"$set": update_fields})
+    
+    return {"message": "Session updated successfully"}
+
+@api_router.post("/quiz-session/{session_id}/submit", response_model=QuizAttempt)
+async def submit_quiz_session(session_id: str, current_user: User = Depends(get_current_user)):
+    """Submit quiz session and create final attempt record"""
+    session = await db.quiz_sessions.find_one({"id": session_id, "user_id": current_user.id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session["status"] not in [QuizSessionStatus.ACTIVE, QuizSessionStatus.PAUSED, QuizSessionStatus.EXPIRED]:
+        raise HTTPException(status_code=400, detail="Session cannot be submitted")
+    
+    # Get quiz
+    quiz = await db.quizzes.find_one({"id": session["quiz_id"]})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Calculate actual time taken
+    time_taken_minutes = None
+    if session.get("start_time"):
+        elapsed_seconds = (datetime.utcnow() - session["start_time"]).total_seconds()
+        time_taken_minutes = int(elapsed_seconds / 60)
+    
+    # Create quiz attempt using existing grading logic
+    attempt_data = QuizAttemptCreate(
+        quiz_id=session["quiz_id"],
+        answers=session["answers"]
+    )
+    
+    # Use existing submit_quiz_attempt logic for grading
+    quiz_obj = Quiz(**quiz)
+    
+    # Calculate score and track detailed results (copied from existing function)
+    score = 0
+    total_possible_points = sum(question.points for question in quiz_obj.questions)
+    earned_points = 0
+    correct_answers = []
+    question_results = []
+    
+    for i, user_answer in enumerate(attempt_data.answers):
+        if i < len(quiz_obj.questions):
+            question = quiz_obj.questions[i]
+            
+            if question.question_type == QuestionType.MULTIPLE_CHOICE:
+                result = grade_multiple_choice_question(question, user_answer, i)
+            elif question.question_type == QuestionType.OPEN_ENDED:
+                result = grade_open_ended_question(question, user_answer, i)
+            else:
+                result = {
+                    "question_number": i + 1,
+                    "question_text": question.question_text,
+                    "question_type": question.question_type,
+                    "user_answer": user_answer,
+                    "correct_answer": "Unknown",
+                    "is_correct": False,
+                    "points_earned": 0,
+                    "points_possible": question.points,
+                    "explanation": "Unknown question type"
+                }
+            
+            question_results.append(result)
+            correct_answers.append(result["correct_answer"])
+            
+            if result["is_correct"]:
+                score += 1
+            
+            earned_points += result["points_earned"]
+    
+    # Calculate percentages
+    percentage = (score / len(quiz_obj.questions) * 100) if len(quiz_obj.questions) > 0 else 0
+    points_percentage = (earned_points / total_possible_points * 100) if total_possible_points > 0 else 0
+    
+    # Determine if user passed
+    passed = points_percentage >= quiz.get("min_pass_percentage", 60.0)
+    
+    # Create enhanced attempt record
+    attempt = QuizAttempt(
+        quiz_id=session["quiz_id"],
+        user_id=current_user.id,
+        answers=attempt_data.answers,
+        correct_answers=correct_answers,
+        question_results=question_results,
+        score=score,
+        total_questions=len(quiz_obj.questions),
+        percentage=percentage,
+        earned_points=int(round(earned_points)),
+        total_possible_points=total_possible_points,
+        points_percentage=points_percentage,
+        passed=passed,
+        time_taken_minutes=time_taken_minutes
+    )
+    
+    await db.quiz_attempts.insert_one(attempt.dict())
+    
+    # Update session to completed
+    await db.quiz_sessions.update_one(
+        {"id": session_id},
+        {"$set": {
+            "status": QuizSessionStatus.COMPLETED,
+            "end_time": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    # Update quiz statistics
+    await update_quiz_statistics(session["quiz_id"])
+    
+    return attempt
+
+@api_router.get("/quiz-session/{session_id}/pause")
+async def pause_quiz_session(session_id: str, current_user: User = Depends(get_current_user)):
+    """Pause an active quiz session"""
+    session = await db.quiz_sessions.find_one({"id": session_id, "user_id": current_user.id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session["status"] != QuizSessionStatus.ACTIVE:
+        raise HTTPException(status_code=400, detail="Only active sessions can be paused")
+    
+    await db.quiz_sessions.update_one(
+        {"id": session_id},
+        {"$set": {
+            "status": QuizSessionStatus.PAUSED,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    return {"message": "Session paused successfully"}
+
+@api_router.get("/quiz-session/{session_id}/resume")
+async def resume_quiz_session(session_id: str, current_user: User = Depends(get_current_user)):
+    """Resume a paused quiz session"""
+    session = await db.quiz_sessions.find_one({"id": session_id, "user_id": current_user.id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session["status"] != QuizSessionStatus.PAUSED:
+        raise HTTPException(status_code=400, detail="Only paused sessions can be resumed")
+    
+    await db.quiz_sessions.update_one(
+        {"id": session_id},
+        {"$set": {
+            "status": QuizSessionStatus.ACTIVE,
+            "updated_at": datetime.utcnow(),
+            "last_activity": datetime.utcnow()
+        }}
+    )
+    
+    return {"message": "Session resumed successfully"}
+
+@api_router.get("/my-quiz-sessions", response_model=List[QuizSessionResponse])
+async def get_my_quiz_sessions(current_user: User = Depends(get_current_user)):
+    """Get all quiz sessions for current user"""
+    sessions = await db.quiz_sessions.find({"user_id": current_user.id}).to_list(1000)
+    
+    session_responses = []
+    for session in sessions:
+        quiz = await db.quizzes.find_one({"id": session["quiz_id"]})
+        if quiz:
+            session_responses.append(QuizSessionResponse(
+                id=session["id"],
+                quiz_id=session["quiz_id"],
+                quiz_title=quiz["title"],
+                user_id=session["user_id"],
+                status=QuizSessionStatus(session["status"]),
+                start_time=session.get("start_time"),
+                end_time=session.get("end_time"),
+                time_limit_minutes=session.get("time_limit_minutes"),
+                time_remaining_seconds=session.get("time_remaining_seconds"),
+                current_question_index=session["current_question_index"],
+                total_questions=len(quiz.get("questions", [])),
+                answers=session["answers"],
+                is_auto_submit=session["is_auto_submit"],
+                created_at=session["created_at"],
+                last_activity=session["last_activity"]
+            ))
+    
+    # Sort by last activity (most recent first)
+    session_responses.sort(key=lambda x: x.last_activity, reverse=True)
+    
+    return session_responses
+
 # Enhanced Media Upload (Images and PDFs)
 @api_router.post("/admin/upload-file")
 async def upload_file(file: UploadFile = File(...), admin_user: User = Depends(get_admin_user)):
