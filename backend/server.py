@@ -26,7 +26,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 # JWT Settings
-JWT_SECRET = "OnlineTestMaker_Secret_Key_2025"  # In production, use environment variable
+JWT_SECRET = "Squiz_Secret_Key_2025"  # In production, use environment variable
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
