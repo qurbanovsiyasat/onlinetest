@@ -857,12 +857,12 @@ async def get_categories(admin_user: User = Depends(get_admin_user)):
 @api_router.get("/quizzes", response_model=List[Quiz])
 async def get_public_quizzes(current_user: User = Depends(get_current_user)):
     """Get all accessible quizzes for users (sorted by creation date)"""
-    # Get all active and published quizzes (exclude drafts) - strengthen filtering
+    # Get all active and published quizzes (explicitly exclude drafts)
     all_quizzes = await db.quizzes.find({
         "is_active": True, 
         "$or": [
-            {"is_draft": False},
-            {"is_draft": {"$exists": False}}  # Handle legacy quizzes without is_draft field
+            {"is_draft": False},  # Explicitly published
+            {"is_draft": {"$exists": False}}  # Legacy quizzes without is_draft field (treated as published)
         ]
     }).to_list(1000)
     
