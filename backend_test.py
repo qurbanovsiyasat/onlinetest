@@ -2149,7 +2149,8 @@ class OnlineTestMakerAPITester:
                 }
             ],
             "min_pass_percentage": 60.0,
-            "is_public": False,  # Make it accessible to all users
+            "is_public": True,   # Make it accessible to all users
+            "allowed_users": [], # Empty list means all users can access
             "is_draft": False    # Publish immediately
         }
 
