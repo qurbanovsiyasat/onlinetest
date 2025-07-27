@@ -862,6 +862,10 @@ async def get_public_quizzes(current_user: User = Depends(get_current_user)):
     
     accessible_quizzes = []
     for quiz in all_quizzes:
+        # CRITICAL: Exclude draft quizzes explicitly - security requirement
+        if quiz.get('is_draft', False) is True:
+            continue  # Skip draft quizzes - they should not be visible to users
+            
         # Handle old quizzes without required fields (same as admin function)
         if 'category' not in quiz:
             quiz['category'] = 'Uncategorized'
