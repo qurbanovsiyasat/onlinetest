@@ -84,6 +84,22 @@ def test_admin_quiz_results():
         print(f"   Quiz ID: {quiz_id}")
         print(f"   Quiz Title: {quiz_response.json()['title']}")
         print(f"   Created By: {quiz_response.json().get('created_by', 'Unknown')}")
+        print(f"   Is Draft: {quiz_response.json().get('is_draft', 'Unknown')}")
+        
+        # Publish the quiz
+        if quiz_response.json().get('is_draft', True):
+            print("   Publishing quiz...")
+            publish_response = requests.post(
+                f"{BACKEND_URL}/api/admin/quiz/{quiz_id}/publish",
+                headers=headers
+            )
+            
+            if publish_response.status_code == 200:
+                print("✅ Quiz published successfully")
+            else:
+                print(f"❌ Quiz publish failed: {publish_response.status_code}")
+                print(f"   Response: {publish_response.text}")
+                return
     else:
         print(f"❌ Quiz creation failed: {quiz_response.status_code}")
         print(f"   Response: {quiz_response.text}")
