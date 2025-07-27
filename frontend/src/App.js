@@ -2756,6 +2756,22 @@ function AdminCreateQuiz({ setCurrentView }) {
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-xl font-semibold text-gray-800 mb-4">Create Advanced Quiz</h2>
       
+      {/* No Subjects Warning */}
+      {Object.keys(predefinedSubjects).length === 0 && (
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <h4 className="text-yellow-800 font-semibold mb-2">📝 Create Subjects First</h4>
+          <p className="text-yellow-700 text-sm mb-3">
+            No subjects are available for quiz creation. You need to create subjects and subfolders first.
+          </p>
+          <button
+            onClick={() => setCurrentView('categories')}
+            className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition duration-200 text-sm"
+          >
+            📚 Go to Categories & Subjects
+          </button>
+        </div>
+      )}
+      
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
