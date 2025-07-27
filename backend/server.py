@@ -566,6 +566,8 @@ async def change_password(password_data: PasswordChange, current_user: User = De
     )
     
     return {"message": "Password updated successfully"}
+
+@api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(current_user: User = Depends(get_current_user)):
     """Get current user info"""
     return UserResponse(**current_user.dict())
