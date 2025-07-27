@@ -421,9 +421,7 @@ metadata:
 test_plan:
   current_focus:
     - "User Access Filtering"
-  stuck_tasks:
-    - "Bulk Quiz Publishing Functionality"
-    - "Systematic Quiz Draft Issue Prevention"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
