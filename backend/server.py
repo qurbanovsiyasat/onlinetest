@@ -1460,7 +1460,7 @@ async def initialize_admin():
     
     return {
         "message": "Admin user created successfully",
-        "email": "admin@onlinetestmaker.com",
+        "email": "admin@squiz.com",
         "password": "admin123"
     }
 
