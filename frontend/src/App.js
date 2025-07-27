@@ -1228,6 +1228,34 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
           </button>
         </div>
       </div>
+      
+      {/* Bulk Actions Bar */}
+      {selectedQuizzes.size > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-blue-800">
+                {selectedQuizzes.size} quiz{selectedQuizzes.size > 1 ? 'es' : ''} selected
+              </span>
+              <button
+                onClick={() => setSelectedQuizzes(new Set())}
+                className="text-blue-600 hover:text-blue-800 text-sm underline"
+              >
+                Clear selection
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowBulkPublishModal(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition duration-200"
+                disabled={bulkPublishingQuizzes}
+              >
+                {bulkPublishingQuizzes ? '⏳ Publishing...' : '🚀 Bulk Publish'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {viewMode === 'list' ? <ListView /> : <FoldersView />}
 
