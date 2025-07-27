@@ -3253,6 +3253,14 @@ function UserDashboard({ currentView, setCurrentView }) {
     />;
   }
 
+  if (currentView === 'realtime-quiz') {
+    return <RealTimeQuizSession 
+      quiz={selectedQuiz}
+      setCurrentView={setCurrentView}
+      user={user}
+    />;
+  }
+
   if (currentView === 'result') {
     return <UserResult 
       result={quizResult}
