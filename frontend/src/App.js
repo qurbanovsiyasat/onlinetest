@@ -980,6 +980,29 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
     }
   };
 
+  const toggleQuizPublish = async (quiz) => {
+    try {
+      if (quiz.is_draft) {
+        // Publish the quiz
+        await apiCall(`/admin/quiz/${quiz.id}/publish`, {
+          method: 'POST'
+        });
+        alert('Quiz published successfully! Users can now take this quiz.');
+      } else {
+        // Cannot unpublish - would need a separate endpoint for that
+        alert('Quiz is already published. To make changes, please create a new version.');
+        return;
+      }
+      fetchQuizzes();
+      if (viewMode === 'folders') {
+        fetchSubjectsStructure();
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || error.message || 'Unknown error';
+      alert('Error publishing quiz: ' + errorMessage);
+    }
+  };
+
   const moveQuiz = (quiz) => {
     setMovingQuiz(quiz);
     setMoveDestination({ 
