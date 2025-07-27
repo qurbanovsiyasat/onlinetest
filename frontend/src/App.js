@@ -2409,12 +2409,25 @@ function AdminCreateQuiz({ setCurrentView }) {
     }
   }, [quiz.is_public]);
 
+  useEffect(() => {
+    // Update quiz subject when predefined subjects are loaded
+    const availableSubjects = Object.keys(predefinedSubjects);
+    if (availableSubjects.length > 0 && !availableSubjects.includes(quiz.subject)) {
+      setQuiz(prev => ({
+        ...prev,
+        subject: availableSubjects[0],
+        subcategory: 'General'
+      }));
+    }
+  }, [predefinedSubjects]);
+
   const fetchPredefinedSubjects = async () => {
     try {
       const response = await apiCall('/admin/predefined-subjects');
       setPredefinedSubjects(response.data);
     } catch (error) {
       console.error('Error fetching subjects:', error);
+      setPredefinedSubjects({});
     }
   };
 
