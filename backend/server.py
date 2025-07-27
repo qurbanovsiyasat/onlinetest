@@ -820,6 +820,12 @@ async def get_all_quizzes_admin(admin_user: User = Depends(get_admin_user)):
             quiz['total_attempts'] = 0
         if 'average_score' not in quiz:
             quiz['average_score'] = 0.0
+        # Handle ownership fields for backwards compatibility
+        if 'quiz_owner_type' not in quiz:
+            quiz['quiz_owner_type'] = 'admin'  # Legacy quizzes are admin-created
+        if 'quiz_owner_id' not in quiz:
+            quiz['quiz_owner_id'] = quiz['created_by']
+            
         try:
             valid_quizzes.append(Quiz(**quiz))
         except Exception as e:
