@@ -11,7 +11,7 @@ from typing import List, Optional
 import uuid
 from datetime import datetime, timedelta
 import jwt
-from jwt.exceptions import JWTError, ExpiredSignatureError
+from jwt.exceptions import PyJWTError, ExpiredSignatureError
 import bcrypt
 from enum import Enum
 import base64
@@ -464,7 +464,7 @@ def decode_access_token(token: str) -> dict:
         return payload
     except ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
-    except JWTError:
+    except PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 # Dependencies
