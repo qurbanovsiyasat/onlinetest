@@ -2227,7 +2227,7 @@ class OnlineTestMakerAPITester:
                     
                     # Verify attempt has all required data
                     required_fields = ['id', 'quiz_id', 'user_id', 'score', 'percentage', 'attempted_at']
-                    missing_fields = [field for field in required_fields if field not in required_fields]
+                    missing_fields = [field for field in required_fields if field not in our_attempt]
                     if missing_fields:
                         details += f", Missing Required Fields: {missing_fields}"
                         success = False
