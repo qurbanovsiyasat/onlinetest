@@ -188,18 +188,17 @@ def test_admin_quiz_results():
         # Print first few results for debugging
         for i, result in enumerate(admin_results[:3]):
             print(f"   Result {i+1}:")
-            print(f"     ID: {result.get('id', 'N/A')}")
-            print(f"     Quiz ID: {result.get('quiz_id', 'N/A')}")
-            print(f"     User ID: {result.get('user_id', 'N/A')}")
+            print(f"     Attempt ID: {result.get('attempt_id', 'N/A')}")
+            print(f"     User: {result.get('user', {})}")
+            print(f"     Quiz: {result.get('quiz', {})}")
             print(f"     Score: {result.get('score', 'N/A')}")
             print(f"     Percentage: {result.get('percentage', 'N/A')}")
-            print(f"     User Name: {result.get('user_name', 'N/A')}")
-            print(f"     Quiz Title: {result.get('quiz_title', 'N/A')}")
+            print(f"     Total Questions: {result.get('total_questions', 'N/A')}")
         
-        # Find our test result
+        # Find our test result by checking the quiz title
         test_result = None
         for result in admin_results:
-            if result.get('quiz_id') == quiz_id:
+            if result.get('quiz', {}).get('title') == 'Admin Quiz Results Test':
                 test_result = result
                 break
         
@@ -207,11 +206,11 @@ def test_admin_quiz_results():
             print(f"✅ Test result found in admin results")
             print(f"   Score: {test_result.get('score', 'N/A')}")
             print(f"   Percentage: {test_result.get('percentage', 'N/A'):.1f}%")
-            print(f"   User: {test_result.get('user_name', 'N/A')}")
-            print(f"   Quiz: {test_result.get('quiz_title', 'N/A')}")
+            print(f"   User: {test_result.get('user', {}).get('name', 'N/A')}")
+            print(f"   Quiz: {test_result.get('quiz', {}).get('title', 'N/A')}")
         else:
             print(f"❌ Test result NOT found in admin results")
-            print(f"   Looking for quiz_id: {quiz_id}")
+            print(f"   Looking for quiz title: Admin Quiz Results Test")
     else:
         print(f"❌ Could not retrieve admin results: {admin_results_response.status_code}")
         print(f"   Response: {admin_results_response.text}")
