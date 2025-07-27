@@ -185,6 +185,17 @@ def test_admin_quiz_results():
         print(f"✅ Admin results retrieved")
         print(f"   Total Results: {len(admin_results)}")
         
+        # Print first few results for debugging
+        for i, result in enumerate(admin_results[:3]):
+            print(f"   Result {i+1}:")
+            print(f"     ID: {result.get('id', 'N/A')}")
+            print(f"     Quiz ID: {result.get('quiz_id', 'N/A')}")
+            print(f"     User ID: {result.get('user_id', 'N/A')}")
+            print(f"     Score: {result.get('score', 'N/A')}")
+            print(f"     Percentage: {result.get('percentage', 'N/A')}")
+            print(f"     User Name: {result.get('user_name', 'N/A')}")
+            print(f"     Quiz Title: {result.get('quiz_title', 'N/A')}")
+        
         # Find our test result
         test_result = None
         for result in admin_results:
@@ -200,8 +211,10 @@ def test_admin_quiz_results():
             print(f"   Quiz: {test_result.get('quiz_title', 'N/A')}")
         else:
             print(f"❌ Test result NOT found in admin results")
+            print(f"   Looking for quiz_id: {quiz_id}")
     else:
         print(f"❌ Could not retrieve admin results: {admin_results_response.status_code}")
+        print(f"   Response: {admin_results_response.text}")
     
     # Step 6: Check leaderboard
     print("\n6. Checking Quiz Leaderboard")
