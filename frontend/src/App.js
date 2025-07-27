@@ -1048,30 +1048,56 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
     return predefinedSubjects[moveDestination.subject] || ['General'];
   };
 
-  const QuizCard = ({ quiz, showSubject = true }) => (
-    <div className="border rounded-lg p-4 relative">
-      <div className="mb-2 flex flex-wrap gap-1">
-        <span className={`inline-block px-2 py-1 rounded text-xs ${
-          quiz.is_public ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-        }`}>
-          {quiz.is_public ? 'Public' : 'Private'}
-        </span>
-        <span className={`inline-block px-2 py-1 rounded text-xs ${
-          quiz.is_draft ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'
-        }`}>
-          {quiz.is_draft ? '📝 Draft' : '✅ Published'}
-        </span>
-        {showSubject && (
-          <>
-            <span className="inline-block px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
-              {quiz.subject || 'General'}
-            </span>
-            <span className="inline-block px-2 py-1 rounded text-xs bg-purple-100 text-purple-800">
-              {quiz.subcategory || 'General'}
-            </span>
-          </>
+  const QuizCard = ({ quiz, showSubject = true }) => {
+    const isSelected = selectedQuizzes.has(quiz.id);
+    const isDraft = quiz.is_draft;
+    
+    const handleSelectChange = (e) => {
+      const newSelection = new Set(selectedQuizzes);
+      if (e.target.checked) {
+        newSelection.add(quiz.id);
+      } else {
+        newSelection.delete(quiz.id);
+      }
+      setSelectedQuizzes(newSelection);
+    };
+    
+    return (
+      <div className="border rounded-lg p-4 relative">
+        {/* Selection checkbox - only for draft quizzes */}
+        {isDraft && (
+          <div className="absolute top-2 right-2 z-10">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={handleSelectChange}
+              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            />
+          </div>
         )}
-      </div>
+        
+        <div className="mb-2 flex flex-wrap gap-1">
+          <span className={`inline-block px-2 py-1 rounded text-xs ${
+            quiz.is_public ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+          }`}>
+            {quiz.is_public ? 'Public' : 'Private'}
+          </span>
+          <span className={`inline-block px-2 py-1 rounded text-xs ${
+            quiz.is_draft ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'
+          }`}>
+            {quiz.is_draft ? '📝 Draft' : '✅ Published'}
+          </span>
+          {showSubject && (
+            <>
+              <span className="inline-block px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                {quiz.subject || 'General'}
+              </span>
+              <span className="inline-block px-2 py-1 rounded text-xs bg-purple-100 text-purple-800">
+                {quiz.subcategory || 'General'}
+              </span>
+            </>
+          )}
+        </div>
       
       {quiz.is_draft && (
         <div className="mb-3 p-2 bg-orange-50 border-l-4 border-orange-400 rounded">
