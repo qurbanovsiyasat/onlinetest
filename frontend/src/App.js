@@ -2375,6 +2375,11 @@ function AdminCreateQuiz({ setCurrentView }) {
   const [predefinedSubjects, setPredefinedSubjects] = useState({});
   const [validationErrors, setValidationErrors] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
+  
+  // Publish modal state
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [createdQuizData, setCreatedQuizData] = useState(null);
+  const [publishingQuiz, setPublishingQuiz] = useState(false);
 
   useEffect(() => {
     fetchPredefinedSubjects();
