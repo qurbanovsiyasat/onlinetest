@@ -1173,7 +1173,7 @@ async def update_quiz_statistics(quiz_id: str):
 async def get_quiz_results_ranking(quiz_id: str, current_user: User = Depends(get_current_user)):
     """Get ranked results for a quiz with top performers and user's position"""
     # Check if user can access this quiz
-    quiz = await db.quizzes.find_one({"id": quiz_id, "is_active": True})
+    quiz = await db.quizzes.find_one({"id": quiz_id, "is_active": True, "is_draft": False})
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
     
