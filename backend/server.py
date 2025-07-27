@@ -965,10 +965,17 @@ async def submit_quiz_attempt(quiz_id: str, attempt_data: QuizAttemptCreate, cur
     if current_user.role == UserRole.ADMIN:
         if quiz.get("created_by") != current_user.id:
             raise HTTPException(status_code=403, detail="Admins can only complete quizzes they created")
-    
-    # Check access permissions for public quizzes (for regular users)
-    if quiz.get("is_public", False) and current_user.id not in quiz.get("allowed_users", []):
-        raise HTTPException(status_code=403, detail="You don't have access to this quiz")
+    else:
+        # Check access permissions for public quizzes (for regular users)
+        if quiz.get("is_public", False):
+            # If allowed_users list is empty, allow all users for public quizzes
+            # If allowed_users list is not empty, check if user is in the list
+            if len(quiz.get("allowed_users", [])) > 0 and current_user.id not in quiz.get("allowed_users", []):
+                raise HTTPException(status_code=403, detail="You don't have access to this quiz")
+        else:
+            # For non-public quizzes, deny access unless it's the creator (admin)
+            if quiz.get("created_by") != current_user.id:
+                raise HTTPException(status_code=403, detail="You don't have access to this quiz")
     
     quiz_obj = Quiz(**quiz)
     
