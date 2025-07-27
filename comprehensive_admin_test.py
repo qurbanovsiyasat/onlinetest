@@ -159,10 +159,17 @@ class ComprehensiveAdminTester:
         """Test Scenario 3: Private quiz (non-public)"""
         quiz_data = {
             "title": "Scenario 3: Private Quiz",
-            "description": "Testing private quiz",
+            "description": "Testing private quiz access control for admin",
             "category": "Test", "subject": "Math", "subcategory": "General",
             "is_public": False, "allowed_users": [],
-            "questions": [{"question_text": "Test?", "options": [{"text": "A", "is_correct": True}]}]
+            "questions": [{
+                "question_text": "What is 3 + 3?", 
+                "options": [
+                    {"text": "5", "is_correct": False}, 
+                    {"text": "6", "is_correct": True},
+                    {"text": "7", "is_correct": False}
+                ]
+            }]
         }
         
         # Create and publish quiz
