@@ -5380,4 +5380,657 @@ function UserMyQuizzes({ setCurrentView }) {
   );
 }
 
+// User Create Quiz Component with Combined Global/Personal Subjects
+function UserCreateQuiz({ setCurrentView }) {
+  const [availableSubjects, setAvailableSubjects] = useState({ global_subjects: [], personal_subjects: [], combined: [] });
+  const [quizData, setQuizData] = useState({
+    title: '',
+    description: '',
+    category: '',
+    subject: '',
+    subcategory: 'General',
+    questions: []
+  });
+  const [currentQuestion, setCurrentQuestion] = useState({
+    question_text: '',
+    question_type: 'multiple_choice',
+    options: [
+      { text: '', is_correct: false },
+      { text: '', is_correct: false },
+      { text: '', is_correct: false },
+      { text: '', is_correct: false }
+    ],
+    multiple_correct: false,
+    open_ended_answer: {
+      expected_answers: [''],
+      keywords: [],
+      case_sensitive: false,
+      partial_credit: true
+    },
+    points: 1,
+    difficulty: 'medium',
+    explanation: ''
+  });
+  const [showPreview, setShowPreview] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+
+  useEffect(() => {
+    fetchAvailableSubjects();
+  }, []);
+
+  const fetchAvailableSubjects = async () => {
+    try {
+      const response = await apiCall('/user/available-subjects');
+      setAvailableSubjects(response.data);
+      
+      // Set default subject if available
+      if (response.data.combined.length > 0) {
+        const firstSubject = response.data.combined[0];
+        setQuizData(prev => ({
+          ...prev,
+          subject: firstSubject.name,
+          subcategory: firstSubject.subfolders[0] || 'General'
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching available subjects:', error);
+    }
+  };
+
+  const getCurrentSubjectData = () => {
+    return availableSubjects.combined.find(s => s.name === quizData.subject);
+  };
+
+  const getAvailableSubfolders = () => {
+    const currentSubject = getCurrentSubjectData();
+    return currentSubject ? currentSubject.subfolders : ['General'];
+  };
+
+  const getSubjectDisplayName = (subject) => {
+    const isGlobal = availableSubjects.global_subjects.some(s => s.name === subject.name);
+    const isPersonal = availableSubjects.personal_subjects.some(s => s.name === subject.name);
+    
+    if (isGlobal) return `🌐 ${subject.name} (Global)`;
+    if (isPersonal) return `👤 ${subject.name} (Personal)`;
+    return subject.name;
+  };
+
+  const addQuestion = () => {
+    if (!currentQuestion.question_text.trim()) {
+      alert('Please enter a question text');
+      return;
+    }
+
+    if (currentQuestion.question_type === 'multiple_choice') {
+      const validOptions = currentQuestion.options.filter(opt => opt.text.trim());
+      if (validOptions.length < 2) {
+        alert('Please provide at least 2 answer options');
+        return;
+      }
+      if (!validOptions.some(opt => opt.is_correct)) {
+        alert('Please mark at least one correct answer');
+        return;
+      }
+    } else if (currentQuestion.question_type === 'open_ended') {
+      if (!currentQuestion.open_ended_answer.expected_answers.some(ans => ans.trim())) {
+        alert('Please provide at least one expected answer');
+        return;
+      }
+    }
+
+    const newQuestion = {
+      ...currentQuestion,
+      id: Date.now().toString(),
+      options: currentQuestion.question_type === 'multiple_choice' 
+        ? currentQuestion.options.filter(opt => opt.text.trim())
+        : []
+    };
+
+    setQuizData(prev => ({
+      ...prev,
+      questions: [...prev.questions, newQuestion]
+    }));
+
+    // Reset current question
+    setCurrentQuestion({
+      question_text: '',
+      question_type: 'multiple_choice',
+      options: [
+        { text: '', is_correct: false },
+        { text: '', is_correct: false },
+        { text: '', is_correct: false },
+        { text: '', is_correct: false }
+      ],
+      multiple_correct: false,
+      open_ended_answer: {
+        expected_answers: [''],
+        keywords: [],
+        case_sensitive: false,
+        partial_credit: true
+      },
+      points: 1,
+      difficulty: 'medium',
+      explanation: ''
+    });
+  };
+
+  const removeQuestion = (index) => {
+    setQuizData(prev => ({
+      ...prev,
+      questions: prev.questions.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateOption = (index, field, value) => {
+    const updatedOptions = [...currentQuestion.options];
+    if (field === 'is_correct' && !currentQuestion.multiple_correct) {
+      // Single correct answer - uncheck others
+      updatedOptions.forEach(opt => opt.is_correct = false);
+    }
+    updatedOptions[index][field] = value;
+    setCurrentQuestion(prev => ({ ...prev, options: updatedOptions }));
+  };
+
+  const addOption = () => {
+    if (currentQuestion.options.length < 6) {
+      setCurrentQuestion(prev => ({
+        ...prev,
+        options: [...prev.options, { text: '', is_correct: false }]
+      }));
+    }
+  };
+
+  const removeOption = (index) => {
+    if (currentQuestion.options.length > 2) {
+      const updatedOptions = currentQuestion.options.filter((_, i) => i !== index);
+      setCurrentQuestion(prev => ({ ...prev, options: updatedOptions }));
+    }
+  };
+
+  const updateExpectedAnswer = (index, value) => {
+    const updatedAnswers = [...currentQuestion.open_ended_answer.expected_answers];
+    updatedAnswers[index] = value;
+    setCurrentQuestion(prev => ({
+      ...prev,
+      open_ended_answer: { ...prev.open_ended_answer, expected_answers: updatedAnswers }
+    }));
+  };
+
+  const addExpectedAnswer = () => {
+    setCurrentQuestion(prev => ({
+      ...prev,
+      open_ended_answer: {
+        ...prev.open_ended_answer,
+        expected_answers: [...prev.open_ended_answer.expected_answers, '']
+      }
+    }));
+  };
+
+  const removeExpectedAnswer = (index) => {
+    if (currentQuestion.open_ended_answer.expected_answers.length > 1) {
+      const updatedAnswers = currentQuestion.open_ended_answer.expected_answers.filter((_, i) => i !== index);
+      setCurrentQuestion(prev => ({
+        ...prev,
+        open_ended_answer: { ...prev.open_ended_answer, expected_answers: updatedAnswers }
+      }));
+    }
+  };
+
+  const createQuiz = async (shouldPublish = false) => {
+    if (!quizData.title.trim() || !quizData.description.trim() || !quizData.category.trim()) {
+      alert('Please fill in all required fields (title, description, category)');
+      return;
+    }
+
+    if (quizData.questions.length === 0) {
+      alert('Please add at least one question');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await apiCall('/user/quiz', {
+        method: 'POST',
+        data: {
+          ...quizData,
+          is_draft: !shouldPublish
+        }
+      });
+
+      if (shouldPublish) {
+        await apiCall(`/user/quiz/${response.data.id}/publish`, {
+          method: 'POST'
+        });
+        alert('Quiz created and published successfully! It is now available to other users.');
+      } else {
+        alert('Quiz created as draft successfully! You can publish it later from "My Quizzes".');
+      }
+
+      setCurrentView('my-quizzes');
+    } catch (error) {
+      alert('Error creating quiz: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setLoading(false);
+      setShowPublishModal(false);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setShowPublishModal(true);
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-gray-800">➕ Create New Quiz</h2>
+        <button
+          onClick={() => setCurrentView('my-quizzes')}
+          className="text-gray-600 hover:text-gray-800 transition duration-200"
+        >
+          ← Back to My Quizzes
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Basic Quiz Information */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Quiz Title *</label>
+            <input
+              type="text"
+              value={quizData.title}
+              onChange={(e) => setQuizData(prev => ({ ...prev, title: e.target.value }))}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter quiz title"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Category *</label>
+            <input
+              type="text"
+              value={quizData.category}
+              onChange={(e) => setQuizData(prev => ({ ...prev, category: e.target.value }))}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="e.g., Education, Technology, Science"
+              required
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-gray-700 font-semibold mb-2">Description *</label>
+          <textarea
+            value={quizData.description}
+            onChange={(e) => setQuizData(prev => ({ ...prev, description: e.target.value }))}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            rows="3"
+            placeholder="Describe what this quiz covers"
+            required
+          />
+        </div>
+
+        {/* Combined Subject Selection */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Subject *</label>
+            <select
+              value={quizData.subject}
+              onChange={(e) => setQuizData(prev => ({ 
+                ...prev, 
+                subject: e.target.value,
+                subcategory: 'General'
+              }))}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+            >
+              <option value="">Select a subject</option>
+              {availableSubjects.combined.map(subject => (
+                <option key={subject.id} value={subject.name}>
+                  {getSubjectDisplayName(subject)}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              🌐 Global subjects are available to all users, 👤 Personal subjects are yours only
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">Subcategory *</label>
+            <select
+              value={quizData.subcategory}
+              onChange={(e) => setQuizData(prev => ({ ...prev, subcategory: e.target.value }))}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+            >
+              {getAvailableSubfolders().map(subfolder => (
+                <option key={subfolder} value={subfolder}>{subfolder}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Subject Info Display */}
+        {quizData.subject && (
+          <div className="p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Selected:</strong> {getSubjectDisplayName(getCurrentSubjectData())} → {quizData.subcategory}
+            </p>
+          </div>
+        )}
+
+        {/* Question Builder */}
+        <div className="border-t pt-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Add Questions</h3>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Question Text *</label>
+              <textarea
+                value={currentQuestion.question_text}
+                onChange={(e) => setCurrentQuestion(prev => ({ ...prev, question_text: e.target.value }))}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                rows="2"
+                placeholder="Enter your question here"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Question Type</label>
+                <select
+                  value={currentQuestion.question_type}
+                  onChange={(e) => setCurrentQuestion(prev => ({ ...prev, question_type: e.target.value }))}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="multiple_choice">Multiple Choice</option>
+                  <option value="open_ended">Open Ended</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Points</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={currentQuestion.points}
+                  onChange={(e) => setCurrentQuestion(prev => ({ ...prev, points: parseInt(e.target.value) }))}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Difficulty</label>
+                <select
+                  value={currentQuestion.difficulty}
+                  onChange={(e) => setCurrentQuestion(prev => ({ ...prev, difficulty: e.target.value }))}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="easy">Easy</option>
+                  <option value="medium">Medium</option>
+                  <option value="hard">Hard</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Multiple Choice Options */}
+            {currentQuestion.question_type === 'multiple_choice' && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-gray-700 font-semibold">Answer Options</label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={currentQuestion.multiple_correct}
+                      onChange={(e) => setCurrentQuestion(prev => ({ ...prev, multiple_correct: e.target.checked }))}
+                      className="mr-2"
+                    />
+                    Allow multiple correct answers
+                  </label>
+                </div>
+                
+                {currentQuestion.options.map((option, index) => (
+                  <div key={index} className="flex gap-2 mb-2">
+                    <input
+                      type={currentQuestion.multiple_correct ? 'checkbox' : 'radio'}
+                      name="correct_answer"
+                      checked={option.is_correct}
+                      onChange={(e) => updateOption(index, 'is_correct', e.target.checked)}
+                      className="mt-3"
+                    />
+                    <input
+                      type="text"
+                      value={option.text}
+                      onChange={(e) => updateOption(index, 'text', e.target.value)}
+                      className="flex-1 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                      placeholder={`Option ${index + 1}`}
+                    />
+                    {currentQuestion.options.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => removeOption(index)}
+                        className="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+                
+                {currentQuestion.options.length < 6 && (
+                  <button
+                    type="button"
+                    onClick={addOption}
+                    className="text-blue-600 hover:text-blue-800 text-sm"
+                  >
+                    + Add Option
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Open Ended Answers */}
+            {currentQuestion.question_type === 'open_ended' && (
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Expected Answers</label>
+                {currentQuestion.open_ended_answer.expected_answers.map((answer, index) => (
+                  <div key={index} className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={answer}
+                      onChange={(e) => updateExpectedAnswer(index, e.target.value)}
+                      className="flex-1 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                      placeholder={`Expected answer ${index + 1}`}
+                    />
+                    {currentQuestion.open_ended_answer.expected_answers.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeExpectedAnswer(index)}
+                        className="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+                
+                <button
+                  type="button"
+                  onClick={addExpectedAnswer}
+                  className="text-blue-600 hover:text-blue-800 text-sm mb-3"
+                >
+                  + Add Expected Answer
+                </button>
+
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={currentQuestion.open_ended_answer.case_sensitive}
+                      onChange={(e) => setCurrentQuestion(prev => ({
+                        ...prev,
+                        open_ended_answer: { ...prev.open_ended_answer, case_sensitive: e.target.checked }
+                      }))}
+                      className="mr-2"
+                    />
+                    Case sensitive
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={currentQuestion.open_ended_answer.partial_credit}
+                      onChange={(e) => setCurrentQuestion(prev => ({
+                        ...prev,
+                        open_ended_answer: { ...prev.open_ended_answer, partial_credit: e.target.checked }
+                      }))}
+                      className="mr-2"
+                    />
+                    Partial credit
+                  </label>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Explanation (Optional)</label>
+              <textarea
+                value={currentQuestion.explanation}
+                onChange={(e) => setCurrentQuestion(prev => ({ ...prev, explanation: e.target.value }))}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                rows="2"
+                placeholder="Explain the correct answer (shown to users after answering)"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={addQuestion}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200"
+            >
+              ➕ Add Question
+            </button>
+          </div>
+        </div>
+
+        {/* Questions Preview */}
+        {quizData.questions.length > 0 && (
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              Questions Added ({quizData.questions.length})
+            </h3>
+            
+            <div className="space-y-3">
+              {quizData.questions.map((question, index) => (
+                <div key={question.id} className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-800">
+                        {index + 1}. {question.question_text}
+                      </p>
+                      <div className="flex gap-2 mt-1">
+                        <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                          {question.question_type === 'multiple_choice' ? 'Multiple Choice' : 'Open Ended'}
+                        </span>
+                        <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">
+                          {question.points} {question.points === 1 ? 'point' : 'points'}
+                        </span>
+                        <span className="text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded">
+                          {question.difficulty}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeQuestion(index)}
+                      className="ml-4 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Submit Buttons */}
+        <div className="flex gap-4 pt-6 border-t">
+          <button
+            type="submit"
+            disabled={loading || quizData.questions.length === 0}
+            className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition duration-200 font-semibold disabled:opacity-50"
+          >
+            {loading ? '⏳ Creating...' : '🚀 Create Quiz'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentView('my-quizzes')}
+            className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+
+      {/* Publish Modal */}
+      {showPublishModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-4">🚀</div>
+              <h3 className="text-lg font-semibold mb-2">Publish Quiz?</h3>
+              <p className="text-gray-600 text-sm">
+                Would you like to publish this quiz immediately or save it as a draft?
+              </p>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <div className="p-3 bg-green-50 border border-green-200 rounded">
+                <p className="text-sm text-green-800">
+                  <strong>✅ Publish Now:</strong> Quiz will be immediately available to other users
+                </p>
+              </div>
+              <div className="p-3 bg-orange-50 border border-orange-200 rounded">
+                <p className="text-sm text-orange-800">
+                  <strong>📝 Save as Draft:</strong> You can publish it later from "My Quizzes"
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => createQuiz(true)}
+                disabled={loading}
+                className="bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition duration-200 font-semibold disabled:opacity-50"
+              >
+                {loading ? '⏳ Publishing...' : '✅ Publish Now'}
+              </button>
+              <button
+                onClick={() => createQuiz(false)}
+                disabled={loading}
+                className="bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 transition duration-200 font-semibold disabled:opacity-50"
+              >
+                {loading ? '⏳ Saving...' : '📝 Save as Draft'}
+              </button>
+            </div>
+            
+            <button
+              onClick={() => setShowPublishModal(false)}
+              disabled={loading}
+              className="w-full mt-3 bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition duration-200"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default App;
