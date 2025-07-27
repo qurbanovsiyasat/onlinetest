@@ -277,6 +277,56 @@ class QuizAttemptCreate(BaseModel):
     quiz_id: str
     answers: List[str]
 
+# Real-time Quiz Session Models
+class QuizSessionStatus(str, Enum):
+    PENDING = "pending"
+    ACTIVE = "active" 
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    EXPIRED = "expired"
+
+class QuizSession(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    quiz_id: str
+    user_id: str
+    status: QuizSessionStatus = QuizSessionStatus.PENDING
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    time_limit_minutes: Optional[int] = None  # Session-specific time limit
+    time_remaining_seconds: Optional[int] = None  # Current remaining time
+    current_question_index: int = 0  # Track current question
+    answers: List[str] = []  # Current answers (partial submission)
+    is_auto_submit: bool = False  # Whether session will auto-submit
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    last_activity: datetime = Field(default_factory=datetime.utcnow)  # For session timeout
+
+class QuizSessionCreate(BaseModel):
+    quiz_id: str
+    time_limit_minutes: Optional[int] = None  # Override quiz default time limit
+
+class QuizSessionUpdate(BaseModel):
+    current_question_index: Optional[int] = None
+    answers: Optional[List[str]] = None
+    status: Optional[QuizSessionStatus] = None
+
+class QuizSessionResponse(BaseModel):
+    id: str
+    quiz_id: str
+    quiz_title: str
+    user_id: str
+    status: QuizSessionStatus
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    time_limit_minutes: Optional[int] = None
+    time_remaining_seconds: Optional[int] = None
+    current_question_index: int
+    total_questions: int
+    answers: List[str]
+    is_auto_submit: bool
+    created_at: datetime
+    last_activity: datetime
+
 class Category(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
