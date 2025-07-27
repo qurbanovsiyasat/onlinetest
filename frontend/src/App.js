@@ -2464,7 +2464,28 @@ function AdminCreateQuiz({ setCurrentView }) {
         method: 'POST',
         data: quiz
       });
-      alert('Quiz created successfully as draft!');
+      
+      const createdQuiz = response.data;
+      
+      // Show success message with publish option
+      const shouldPublish = confirm(
+        `✅ Quiz created successfully as draft!\n\n` +
+        `📝 Draft Status: Users cannot take this quiz until published.\n` +
+        `🚀 Would you like to publish it now to make it available to users?\n\n` +
+        `Click OK to publish immediately, or Cancel to publish later from the quiz management page.`
+      );
+      
+      if (shouldPublish) {
+        try {
+          await apiCall(`/admin/quiz/${createdQuiz.id}/publish`, {
+            method: 'POST'
+          });
+          alert('🎉 Quiz published successfully! Users can now take this quiz.');
+        } catch (publishError) {
+          alert('Quiz created but failed to publish: ' + (publishError.response?.data?.detail || 'Unknown error') + '\nYou can publish it later from the quiz management page.');
+        }
+      }
+      
       setCurrentView('quizzes');
     } catch (error) {
       if (error.response?.status === 400) {
