@@ -2636,9 +2636,13 @@ class OnlineTestMakerAPITester:
             return 1
 
 def main():
-    """Main test execution - Focus on Quiz Submission and Results Recording"""
+    """Main test execution - Focus on Login Testing as requested by user"""
+    print("🔐 FOCUSED LOGIN TESTING - OnlineTestMaker Backend API")
+    print("🎯 Testing complete login flow as reported by user")
+    print("=" * 80)
+    
     tester = OnlineTestMakerAPITester()
-    return 0 if tester.run_quiz_submission_tests() else 1
+    return 0 if tester.run_login_focused_tests() else 1
 
 if __name__ == "__main__":
     sys.exit(main())
