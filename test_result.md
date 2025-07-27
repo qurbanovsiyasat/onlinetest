@@ -398,8 +398,11 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
-  stuck_tasks: []
+  current_focus:
+    - "JWT Authentication System"
+    - "Login Form Frontend Implementation"
+  stuck_tasks:
+    - "Login Form Frontend Implementation"
   test_all: false
   test_priority: "high_first"
 
