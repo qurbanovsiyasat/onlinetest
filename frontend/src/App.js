@@ -879,6 +879,11 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [moveDestination, setMoveDestination] = useState({ subject: '', subcategory: 'General' });
   const [predefinedSubjects, setPredefinedSubjects] = useState({});
+  
+  // Bulk publish state
+  const [selectedQuizzes, setSelectedQuizzes] = useState(new Set());
+  const [showBulkPublishModal, setShowBulkPublishModal] = useState(false);
+  const [bulkPublishingQuizzes, setBulkPublishingQuizzes] = useState(false);
 
   useEffect(() => {
     if (viewMode === 'folders') {
