@@ -121,7 +121,7 @@ backend:
           comment: "✅ TESTED: Admin authentication working perfectly. Successfully logged in as admin@squiz.com with password admin123. JWT tokens generated correctly, role-based access control functioning."
         - working: true
           agent: "testing"
-          comment: "✅ DECOUPLING VERIFIED: Authentication system working perfectly with local backend. Admin login (admin@onlinetestmaker.com/admin123) successful, user registration/login working, JWT tokens generated correctly, role-based access control (admin/user) functioning properly. No external dependencies."
+          comment: "✅ DECOUPLING VERIFIED: Authentication system working perfectly with local backend. Admin login (admin@squiz.com/admin123) successful, user registration/login working, JWT tokens generated correctly, role-based access control (admin/user) functioning properly. No external dependencies."
         - working: true
           agent: "testing"
           comment: "🔧 CRITICAL BUG FIXED: Found and resolved authentication issue causing 401 errors. The /api/auth/me endpoint was missing @api_router.get decorator, preventing frontend authentication status checks. Added proper route decorator. Comprehensive testing confirms all authentication flows now working: admin login, user registration/login, JWT token validation, role-based access control, and frontend auth status checks. The 401 unauthorized errors should now be completely resolved."
