@@ -3195,7 +3195,7 @@ function UserDashboard({ currentView, setCurrentView }) {
       <header className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4 flex flex-col lg:flex-row justify-between items-start lg:items-center">
           <div className="mb-4 lg:mb-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">📝 OnlineTestMaker</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">📝 Squiz</h1>
             <p className="text-gray-600 text-sm sm:text-base">Welcome, {user.name}</p>
           </div>
           <div className="flex flex-wrap gap-2 sm:gap-4">
