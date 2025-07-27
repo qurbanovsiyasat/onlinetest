@@ -414,7 +414,6 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Draft Quiz Visibility Control"
     - "User Access Filtering"
   stuck_tasks:
     - "Bulk Quiz Publishing Functionality"
