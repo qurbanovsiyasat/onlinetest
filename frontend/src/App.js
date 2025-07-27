@@ -2467,12 +2467,14 @@ function AdminCreateQuiz({ setCurrentView }) {
       
       const createdQuiz = response.data;
       
-      // Show success message with publish option
+      // Show success message with publish option (defaulting to publish)
       const shouldPublish = confirm(
-        `✅ Quiz created successfully as draft!\n\n` +
-        `📝 Draft Status: Users cannot take this quiz until published.\n` +
-        `🚀 Would you like to publish it now to make it available to users?\n\n` +
-        `Click OK to publish immediately, or Cancel to publish later from the quiz management page.`
+        `🎉 Quiz "${quiz.title}" created successfully!\n\n` +
+        `⚠️  IMPORTANT: Quiz is currently in DRAFT mode\n` +
+        `📝 Users CANNOT take this quiz until it's published\n\n` +
+        `🚀 PUBLISH NOW to make it available immediately?\n\n` +
+        `✅ Click OK to PUBLISH and make quiz available to users\n` +
+        `❌ Click Cancel to keep as draft (you can publish later)`
       );
       
       if (shouldPublish) {
@@ -2480,10 +2482,12 @@ function AdminCreateQuiz({ setCurrentView }) {
           await apiCall(`/admin/quiz/${createdQuiz.id}/publish`, {
             method: 'POST'
           });
-          alert('🎉 Quiz published successfully! Users can now take this quiz.');
+          alert('🎉 SUCCESS! Quiz published and ready for users!');
         } catch (publishError) {
-          alert('Quiz created but failed to publish: ' + (publishError.response?.data?.detail || 'Unknown error') + '\nYou can publish it later from the quiz management page.');
+          alert('⚠️ Quiz created but failed to publish: ' + (publishError.response?.data?.detail || 'Unknown error') + '\n\nYou can publish it from the Quiz Management page.');
         }
+      } else {
+        alert('📝 Quiz saved as DRAFT. Remember to publish it from the Quiz Management page when ready!');
       }
       
       setCurrentView('quizzes');
