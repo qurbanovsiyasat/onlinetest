@@ -1868,29 +1868,7 @@ async def delete_global_subfolder(
 
 # User Quiz Creation and Management API Endpoints
 
-@api_router.post("/user/personal-subject", response_model=PersonalSubject)
-async def create_personal_subject(
-    subject_data: PersonalSubjectCreate, 
-    current_user: User = Depends(get_current_user)
-):
-    """Create personal subject with subfolders (authenticated user)"""
-    # Check if personal subject already exists for this user
-    existing = await db.personal_subjects.find_one({
-        "name": subject_data.name, 
-        "user_id": current_user.id
-    })
-    if existing:
-        raise HTTPException(status_code=400, detail=f"Personal subject '{subject_data.name}' already exists")
-    
-    personal_subject = PersonalSubject(
-        name=subject_data.name,
-        description=subject_data.description,
-        subfolders=subject_data.subfolders,
-        user_id=current_user.id
-    )
-    
-    await db.personal_subjects.insert_one(personal_subject.dict())
-    return personal_subject
+# User personal subject creation removed - admin-only functionality
 
 @api_router.get("/user/available-subjects")
 async def get_available_subjects_for_user(current_user: User = Depends(get_current_user)):
