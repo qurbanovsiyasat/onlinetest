@@ -183,7 +183,7 @@ class ComprehensiveAdminTester:
                      headers=self.get_auth_headers(self.admin_token), timeout=10)
         
         # Admin takes quiz (should work - creator can take private quiz)
-        attempt_data = {"quiz_id": quiz_id, "answers": ["A"]}
+        attempt_data = {"quiz_id": quiz_id, "answers": ["6"]}
         response = requests.post(f"{self.api_url}/quiz/{quiz_id}/attempt", json=attempt_data,
                                headers=self.get_auth_headers(self.admin_token), timeout=10)
         admin_success = response.status_code == 200
