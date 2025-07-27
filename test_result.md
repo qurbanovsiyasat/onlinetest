@@ -366,15 +366,18 @@ frontend:
   
   - task: "Bulk Quiz Publishing Functionality"
     implemented: true
-    working: true
+    working: false
     file: "App.js"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "main"
           comment: "Added bulk publish functionality for admins with checkboxes for draft quiz selection, bulk actions bar, and comprehensive bulk publish modal. Includes proper error handling and user feedback for publishing multiple quizzes at once."
+        - working: false
+          agent: "testing"
+          comment: "❌ CRITICAL ISSUE: While bulk publish functionality is implemented in admin interface, there's a fundamental problem with draft quiz visibility. Draft quizzes are currently visible to regular users, which means the bulk publish feature is not preventing the core issue it was designed to solve. The draft/publish workflow is not properly filtering quizzes for user access."
 
   - task: "Systematic Quiz Draft Issue Prevention"
     implemented: true
