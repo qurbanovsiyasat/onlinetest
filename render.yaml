@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "services": [
+    {
+      "type": "web",
+      "name": "squiz-backend",
+      "env": "python",
+      "plan": "free",
+      "buildCommand": "cd backend && pip install -r requirements.txt",
+      "startCommand": "cd backend && python -m uvicorn server:app --host 0.0.0.0 --port $PORT",
+      "healthCheckPath": "/api/health",
+      "envVars": {
+        "MONGO_URL": {
+          "type": "database",
+          "property": "connectionString"
+        },
+        "DB_NAME": "squiz_production",
+        "JWT_SECRET": {
+          "generateValue": true
+        }
+      }
+    },
+    {
+      "type": "static",
+      "name": "squiz-frontend", 
+      "buildCommand": "cd frontend && yarn install && yarn build",
+      "staticPublishPath": "frontend/build",
+      "envVars": {
+        "REACT_APP_BACKEND_URL": {
+          "type": "service",
+          "property": "url",
+          "serviceType": "web"
+        },
+        "GENERATE_SOURCEMAP": "false",
+        "CI": "false"
+      }
+    }
+  ],
+  "databases": [
+    {
+      "name": "squiz-database",
+      "type": "mongodb",
+      "plan": "free"
+    }
+  ]
+}
