@@ -238,56 +238,18 @@ function MainApp() {
   useEffect(() => {
     const initializeMathJax = async () => {
       try {
+        // Temporarily disable MathJax to isolate the issue
+        console.log('⚠️ MathJax loading temporarily disabled for debugging');
+        // MathJax initialization code commented out for troubleshooting
+        /*
         // Check if MathJax is already loaded from window
         if (window.MathJax && window.MathJax.typesetPromise) {
           console.log('✅ MathJax already loaded from window object (self-hosted)');
           return;
         }
-        
-        // Prevent multiple MathJax loading attempts
-        if (window.mathJaxLoading) return;
-        window.mathJaxLoading = true;
-        
-        // Configure MathJax before loading to prevent conflicts
-        window.MathJax = {
-          tex: {
-            inlineMath: [['$', '$'], ['\\(', '\\)']],
-            displayMath: [['$$', '$$'], ['\\[', '\\]']]
-          },
-          svg: {
-            fontCache: 'global'
-          },
-          startup: {
-            ready: () => {
-              try {
-                console.log('✅ MathJax configuration ready');
-                if (window.MathJax && window.MathJax.startup && window.MathJax.startup.defaultReady) {
-                  window.MathJax.startup.defaultReady();
-                }
-              } catch (startupError) {
-                console.warn('⚠️ MathJax startup error:', startupError);
-              }
-            }
-          }
-        };
-        
-        // Load MathJax from CDN with better error handling
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
-        script.async = true;
-        script.onload = () => {
-          console.log('✅ MathJax loaded from CDN successfully');
-          window.mathJaxLoading = false;
-        };
-        script.onerror = () => {
-          console.error('❌ Failed to load MathJax from CDN');
-          window.mathJaxLoading = false;
-        };
-        
-        document.head.appendChild(script);
+        */
       } catch (error) {
         console.warn('⚠️ MathJax initialization failed, continuing without mathematical expressions:', error);
-        window.mathJaxLoading = false;
       }
     };
     
