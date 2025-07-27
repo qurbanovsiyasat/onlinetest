@@ -73,10 +73,17 @@ class ComprehensiveAdminTester:
         """Test Scenario 1: Public quiz with empty allowed_users list"""
         quiz_data = {
             "title": "Scenario 1: Public Quiz Empty Allowed Users",
-            "description": "Testing public quiz with empty allowed_users",
+            "description": "Testing public quiz with empty allowed_users list for admin access",
             "category": "Test", "subject": "Math", "subcategory": "General",
             "is_public": True, "allowed_users": [],
-            "questions": [{"question_text": "Test?", "options": [{"text": "A", "is_correct": True}]}]
+            "questions": [{
+                "question_text": "What is 1 + 1?", 
+                "options": [
+                    {"text": "1", "is_correct": False}, 
+                    {"text": "2", "is_correct": True},
+                    {"text": "3", "is_correct": False}
+                ]
+            }]
         }
         
         # Create quiz
