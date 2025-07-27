@@ -1310,7 +1310,7 @@ async def upload_file(file: UploadFile = File(...), admin_user: User = Depends(g
     # Generate unique filename
     file_id = str(uuid.uuid4())
     file_extension = file.filename.split('.')[-1] if '.' in file.filename else (
-        'pdf' if file.content_type in allowed_pdf_types else file_type
+        'pdf' if file.content_type in allowed_pdf_types else 'jpg'
     )
     filename = f"{file_id}.{file_extension}"
     
