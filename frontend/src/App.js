@@ -3281,6 +3281,18 @@ function UserDashboard({ currentView, setCurrentView }) {
           <UserHome quizzes={quizzes} startQuiz={startQuiz} />
         )}
 
+        {currentView === 'create-quiz' && (
+          <UserCreateQuiz setCurrentView={setCurrentView} />
+        )}
+
+        {currentView === 'my-quizzes' && (
+          <UserMyQuizzes setCurrentView={setCurrentView} />
+        )}
+
+        {currentView === 'my-subjects' && (
+          <UserMySubjects />
+        )}
+
         {currentView === 'my-attempts' && (
           <div>
             <h2 className="text-3xl font-bold text-gray-800 mb-6">My Quiz Results</h2>
