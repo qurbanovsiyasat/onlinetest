@@ -1902,7 +1902,7 @@ def get_cors_origins():
 # Apply CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_cors_origins(),
+    allow_origins=["*"],  # Allow all origins for now to resolve CORS issue
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=[
