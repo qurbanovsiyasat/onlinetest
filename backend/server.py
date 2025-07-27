@@ -1448,7 +1448,7 @@ async def initialize_admin():
     # Create admin user
     admin_password = hash_password("admin123")  # Change this in production
     admin_user = User(
-        email="admin@onlinetestmaker.com",
+        email="admin@squiz.com",
         name="System Administrator",
         role=UserRole.ADMIN
     )
