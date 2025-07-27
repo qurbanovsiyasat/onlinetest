@@ -234,6 +234,18 @@ backend:
           agent: "testing"
           comment: "🎯 COMPREHENSIVE QUIZ SUBMISSION AND RESULTS RECORDING TESTING COMPLETE: All 11 tests passed (100% success rate). Verified complete flow: 1) Admin authentication (admin@squiz.com/admin123) ✅ 2) Quiz creation with mixed question types (multiple choice with multiple correct, single choice, open-ended) ✅ 3) User registration and login ✅ 4) Quiz submission via POST /api/quiz/{quiz_id}/attempt with all expected response fields ✅ 5) Quiz attempt properly saved to MongoDB quiz_attempts collection ✅ 6) Admin results view via GET /api/admin/quiz-results showing all attempts ✅ 7) User results page with ranking and statistics ✅ 8) Quiz statistics updated correctly (total_attempts, average_score) ✅ 9) Detailed question results with proper grading and partial credit ✅ Backend logs show no errors - all API calls returning 200 OK. The reported issue about quiz results not being recorded or showing properly is NOT PRESENT - functionality working perfectly!"
 
+  - task: "Draft Quiz Visibility Control"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "🎉 CRITICAL DRAFT QUIZ VISIBILITY BUG FIX VERIFIED: Comprehensive testing of the draft quiz visibility bug fix completed successfully! All 12/12 tests passed (100% success rate). Key findings: ✅ Admin can create draft quizzes and they show up in admin interface with proper draft status (is_draft: true) ✅ Draft quizzes are NOT visible in the user quiz list endpoint (/api/quizzes) - SECURITY REQUIREMENT MET ✅ Users cannot access individual draft quizzes via /api/quiz/{quiz_id} - returns 404 as expected ✅ Users cannot attempt draft quizzes via /api/quiz/{quiz_id}/attempt - returns 404 as expected ✅ Only published quizzes (is_draft: false) are accessible to users ✅ Backend filtering logic working correctly: line 866 filters drafts from user quiz list, line 960 returns 404 for draft quiz access, line 972 prevents draft quiz attempts ✅ Both scenarios tested: quizzes with explicit is_draft: true and legacy quizzes (all have proper is_draft field) ✅ Admin credentials (admin@squiz.com/admin123) working perfectly ✅ Published quizzes are fully accessible to users (can view, access directly, and attempt) ✅ Draft quiz creation defaults to is_draft: true as intended ✅ Quiz publishing functionality working correctly (POST /api/admin/quiz/{quiz_id}/publish) ✅ All edge cases handled properly including explicit draft mode and legacy quiz compatibility. The critical security fix is working perfectly - draft quizzes are completely hidden from regular users while remaining accessible to admins for management."
+
 frontend:
   - task: "Enhanced Quiz Player for New Question Types"
     implemented: true
