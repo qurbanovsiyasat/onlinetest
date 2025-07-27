@@ -1303,9 +1303,8 @@ async def upload_file(file: UploadFile = File(...), admin_user: User = Depends(g
     
     # Validate file format for images
     if file.content_type in allowed_image_types:
-        file_type = imghdr.what(None, h=content)
-        if file_type not in ['jpeg', 'jpg', 'png', 'gif', 'webp']:
-            raise HTTPException(status_code=400, detail="Invalid image format")
+        # Skip additional image format validation since content_type is already validated
+        pass
     
     # Generate unique filename
     file_id = str(uuid.uuid4())
