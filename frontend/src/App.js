@@ -5544,12 +5544,27 @@ function UserHome({ quizzes, startQuiz }) {
                   Avg: {quiz.average_score || 0}%
                 </span>
               </div>
-              <button
-                onClick={() => startQuiz(quiz)}
-                className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-200 font-semibold"
-              >
-                🎯 Take Quiz
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => startQuiz(quiz)}
+                  className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-200 font-semibold text-sm"
+                >
+                  📝 Standard
+                </button>
+                {quiz.time_limit_minutes && (
+                  <button
+                    onClick={() => startRealTimeQuiz(quiz)}
+                    className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition duration-200 font-semibold text-sm"
+                  >
+                    ⏱️ Timed
+                  </button>
+                )}
+              </div>
+              {quiz.time_limit_minutes && (
+                <div className="mt-2 text-xs text-gray-500 text-center">
+                  Timed mode: {quiz.time_limit_minutes} minutes with live countdown
+                </div>
+              )}
             </div>
           ))}
         </div>
