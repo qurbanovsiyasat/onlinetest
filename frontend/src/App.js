@@ -1051,6 +1051,11 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
         }`}>
           {quiz.is_public ? 'Public' : 'Private'}
         </span>
+        <span className={`inline-block px-2 py-1 rounded text-xs ${
+          quiz.is_draft ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'
+        }`}>
+          {quiz.is_draft ? '📝 Draft' : '✅ Published'}
+        </span>
         {showSubject && (
           <>
             <span className="inline-block px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
@@ -1062,6 +1067,14 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
           </>
         )}
       </div>
+      
+      {quiz.is_draft && (
+        <div className="mb-3 p-2 bg-orange-50 border-l-4 border-orange-400 rounded">
+          <p className="text-xs text-orange-700">
+            ⚠️ This quiz is in draft mode. Users cannot take it until published.
+          </p>
+        </div>
+      )}
       
       <h3 className="font-semibold text-gray-800 mb-2">{quiz.title}</h3>
       <p className="text-gray-600 text-sm mb-2 line-clamp-2">{quiz.description}</p>
@@ -1093,24 +1106,38 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
           ✏️ Edit
         </button>
         <button
+          onClick={() => toggleQuizPublish(quiz)}
+          className={`py-2 rounded transition duration-200 ${
+            quiz.is_draft 
+              ? 'bg-green-600 text-white hover:bg-green-700' 
+              : 'bg-gray-400 text-white cursor-not-allowed'
+          }`}
+          disabled={!quiz.is_draft}
+        >
+          {quiz.is_draft ? '🚀 Publish' : '✅ Published'}
+        </button>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-1 text-xs mb-2">
+        <button
           onClick={() => toggleQuizVisibility(quiz)}
           className={`py-2 rounded transition duration-200 ${
             quiz.is_public 
               ? 'bg-yellow-600 text-white hover:bg-yellow-700' 
-              : 'bg-green-600 text-white hover:bg-green-700'
+              : 'bg-indigo-600 text-white hover:bg-indigo-700'
           }`}
         >
           {quiz.is_public ? '🔒 Private' : '🔓 Public'}
         </button>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-1 text-xs">
         <button
           onClick={() => moveQuiz(quiz)}
           className="bg-purple-600 text-white py-2 rounded hover:bg-purple-700 transition duration-200"
         >
           📁 Move
         </button>
+      </div>
+      
+      <div className="grid grid-cols-1 gap-1 text-xs">
         <button
           onClick={() => deleteQuiz(quiz.id, quiz.title)}
           className="bg-red-600 text-white py-2 rounded hover:bg-red-700 transition duration-200"
