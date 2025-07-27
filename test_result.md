@@ -118,7 +118,7 @@ backend:
           comment: "Backend authentication with admin/user roles fully implemented and working"
         - working: true
           agent: "testing"
-          comment: "✅ TESTED: Admin authentication working perfectly. Successfully logged in as admin@onlinetestmaker.com with password admin123. JWT tokens generated correctly, role-based access control functioning."
+          comment: "✅ TESTED: Admin authentication working perfectly. Successfully logged in as admin@squiz.com with password admin123. JWT tokens generated correctly, role-based access control functioning."
         - working: true
           agent: "testing"
           comment: "✅ DECOUPLING VERIFIED: Authentication system working perfectly with local backend. Admin login (admin@onlinetestmaker.com/admin123) successful, user registration/login working, JWT tokens generated correctly, role-based access control (admin/user) functioning properly. No external dependencies."
