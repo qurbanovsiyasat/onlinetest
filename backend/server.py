@@ -162,7 +162,7 @@ class Quiz(BaseModel):
     subject: str  # Main subject (e.g., "Mathematics", "Science")
     subcategory: str = "General"  # Subcategory (e.g., "Triangle", "Algebra")
     questions: List[QuizQuestion]
-    created_by: str  # Admin user ID
+    created_by: str  # User ID (admin or regular user)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     total_questions: int = 0
@@ -172,6 +172,10 @@ class Quiz(BaseModel):
     allowed_users: List[str] = []  # List of user IDs who can access public quiz
     total_attempts: int = 0  # Track how many times quiz was taken
     average_score: float = 0.0  # Average score across all attempts
+    
+    # Ownership fields
+    quiz_owner_type: str = "admin"  # "admin" or "user"
+    quiz_owner_id: str = ""  # ID of the owner (admin or user)
     
     # Validation settings
     min_pass_percentage: float = 60.0  # Minimum percentage to pass
