@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Backend API Testing for OnlineTestMaker - CORS Verification Focus
-Tests CORS headers are present for cross-origin requests and all core functionality works after CORS changes
+Backend API Testing for OnlineTestMaker - Quiz Submission 404 Error Investigation
+Focus: Testing quiz submission functionality with specific quiz ID: b9869dc1-0015-4400-8959-4b3187ce511d
+Testing JWT authentication after PyJWT fix and backend health verification
 """
 
 import requests
