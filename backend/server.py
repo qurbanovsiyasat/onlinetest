@@ -1706,6 +1706,379 @@ class PersonalSubjectCreate(BaseModel):
     description: Optional[str] = None
     subfolders: List[str] = []
 
+# Global Subject Management API Endpoints
+
+@api_router.post("/admin/global-subject", response_model=GlobalSubject)
+async def create_global_subject(subject_data: GlobalSubjectCreate, admin_user: User = Depends(get_admin_user)):
+    """Create global subject with subfolders (admin only)"""
+    # Check if subject already exists
+    existing = await db.global_subjects.find_one({"name": subject_data.name})
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Global subject '{subject_data.name}' already exists")
+    
+    # Create subfolders
+    subfolders = []
+    for subfolder_name in subject_data.subfolders:
+        subfolder = GlobalSubfolder(name=subfolder_name)
+        subfolders.append(subfolder)
+    
+    # Create global subject
+    global_subject = GlobalSubject(
+        name=subject_data.name,
+        description=subject_data.description,
+        subfolders=subfolders,
+        created_by=admin_user.id
+    )
+    
+    await db.global_subjects.insert_one(global_subject.dict())
+    return global_subject
+
+@api_router.get("/admin/global-subjects", response_model=List[GlobalSubject])
+async def get_all_global_subjects(admin_user: User = Depends(get_admin_user)):
+    """Get all global subjects with subfolders (admin only)"""
+    subjects = await db.global_subjects.find().to_list(1000)
+    return [GlobalSubject(**subject) for subject in subjects]
+
+@api_router.put("/admin/global-subject/{subject_id}", response_model=GlobalSubject)
+async def update_global_subject(
+    subject_id: str, 
+    subject_data: GlobalSubjectUpdate, 
+    admin_user: User = Depends(get_admin_user)
+):
+    """Update global subject (admin only)"""
+    existing = await db.global_subjects.find_one({"id": subject_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Global subject not found")
+    
+    update_data = {k: v for k, v in subject_data.dict().items() if v is not None}
+    
+    if "subfolders" in update_data:
+        # Convert subfolder names to GlobalSubfolder objects
+        subfolders = []
+        for subfolder_name in update_data["subfolders"]:
+            subfolder = GlobalSubfolder(name=subfolder_name)
+            subfolders.append(subfolder.dict())
+        update_data["subfolders"] = subfolders
+    
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.global_subjects.update_one({"id": subject_id}, {"$set": update_data})
+    
+    updated_subject = await db.global_subjects.find_one({"id": subject_id})
+    return GlobalSubject(**updated_subject)
+
+@api_router.post("/admin/global-subject/{subject_id}/subfolder")
+async def add_subfolder_to_global_subject(
+    subject_id: str,
+    subfolder_name: str,
+    admin_user: User = Depends(get_admin_user)
+):
+    """Add subfolder to existing global subject (admin only)"""
+    subject = await db.global_subjects.find_one({"id": subject_id})
+    if not subject:
+        raise HTTPException(status_code=404, detail="Global subject not found")
+    
+    # Check if subfolder already exists
+    existing_subfolders = [sf["name"] for sf in subject.get("subfolders", [])]
+    if subfolder_name in existing_subfolders:
+        raise HTTPException(status_code=400, detail=f"Subfolder '{subfolder_name}' already exists")
+    
+    new_subfolder = GlobalSubfolder(name=subfolder_name)
+    
+    await db.global_subjects.update_one(
+        {"id": subject_id},
+        {
+            "$push": {"subfolders": new_subfolder.dict()},
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+    
+    return {"message": f"Subfolder '{subfolder_name}' added successfully"}
+
+@api_router.delete("/admin/global-subject/{subject_id}")
+async def delete_global_subject(subject_id: str, admin_user: User = Depends(get_admin_user)):
+    """Delete global subject (admin only)"""
+    # Check if any quizzes are using this subject
+    quizzes_using_subject = await db.quizzes.find({"subject": subject_id}).to_list(10)
+    if quizzes_using_subject:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot delete subject. {len(quizzes_using_subject)} quiz(es) are using this subject."
+        )
+    
+    result = await db.global_subjects.delete_one({"id": subject_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Global subject not found")
+    
+    return {"message": "Global subject deleted successfully"}
+
+@api_router.delete("/admin/global-subject/{subject_id}/subfolder/{subfolder_id}")
+async def delete_global_subfolder(
+    subject_id: str, 
+    subfolder_id: str, 
+    admin_user: User = Depends(get_admin_user)
+):
+    """Delete specific subfolder from global subject (admin only)"""
+    subject = await db.global_subjects.find_one({"id": subject_id})
+    if not subject:
+        raise HTTPException(status_code=404, detail="Global subject not found")
+    
+    # Check if any quizzes are using this subfolder
+    quizzes_using_subfolder = await db.quizzes.find({
+        "subject": subject_id, 
+        "subcategory": subfolder_id
+    }).to_list(10)
+    
+    if quizzes_using_subfolder:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot delete subfolder. {len(quizzes_using_subfolder)} quiz(es) are using this subfolder."
+        )
+    
+    await db.global_subjects.update_one(
+        {"id": subject_id},
+        {
+            "$pull": {"subfolders": {"id": subfolder_id}},
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+    
+    return {"message": "Subfolder deleted successfully"}
+
+# User Quiz Creation and Management API Endpoints
+
+@api_router.post("/user/personal-subject", response_model=PersonalSubject)
+async def create_personal_subject(
+    subject_data: PersonalSubjectCreate, 
+    current_user: User = Depends(get_current_user)
+):
+    """Create personal subject with subfolders (authenticated user)"""
+    # Check if personal subject already exists for this user
+    existing = await db.personal_subjects.find_one({
+        "name": subject_data.name, 
+        "user_id": current_user.id
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Personal subject '{subject_data.name}' already exists")
+    
+    personal_subject = PersonalSubject(
+        name=subject_data.name,
+        description=subject_data.description,
+        subfolders=subject_data.subfolders,
+        user_id=current_user.id
+    )
+    
+    await db.personal_subjects.insert_one(personal_subject.dict())
+    return personal_subject
+
+@api_router.get("/user/available-subjects")
+async def get_available_subjects_for_user(current_user: User = Depends(get_current_user)):
+    """Get combined list of global subjects and user's personal subjects"""
+    # Get global subjects
+    global_subjects = await db.global_subjects.find().to_list(1000)
+    global_formatted = []
+    for subject in global_subjects:
+        global_formatted.append({
+            "id": subject["id"],
+            "name": subject["name"],
+            "description": subject.get("description", ""),
+            "subfolders": [
+                {"id": sf["id"], "name": sf["name"], "description": sf.get("description", "")}
+                for sf in subject.get("subfolders", [])
+            ],
+            "type": "global",
+            "icon": "🌐"
+        })
+    
+    # Get user's personal subjects
+    personal_subjects = await db.personal_subjects.find({"user_id": current_user.id}).to_list(1000)
+    personal_formatted = []
+    for subject in personal_subjects:
+        personal_formatted.append({
+            "id": subject["id"],
+            "name": subject["name"], 
+            "description": subject.get("description", ""),
+            "subfolders": [
+                {"id": f"personal_{i}", "name": sf, "description": ""}
+                for i, sf in enumerate(subject.get("subfolders", []))
+            ],
+            "type": "personal",
+            "icon": "👤"
+        })
+    
+    return {
+        "global_subjects": global_formatted,
+        "personal_subjects": personal_formatted,
+        "combined": global_formatted + personal_formatted
+    }
+
+@api_router.post("/user/quiz", response_model=Quiz)
+async def create_user_quiz(quiz_data: QuizCreate, current_user: User = Depends(get_current_user)):
+    """Create quiz by regular user"""
+    # Validate quiz data
+    validation_errors = validate_quiz_data(quiz_data)
+    if validation_errors:
+        error_messages = []
+        for error in validation_errors:
+            if error.question_index is not None:
+                error_messages.append(f"Question {error.question_index + 1}: {error.message}")
+            else:
+                error_messages.append(f"{error.field}: {error.message}")
+        
+        raise HTTPException(
+            status_code=400, 
+            detail={
+                "message": "Quiz validation failed",
+                "errors": error_messages,
+                "validation_errors": [error.dict() for error in validation_errors]
+            }
+        )
+    
+    # Calculate total points
+    total_points = sum(question.points for question in quiz_data.questions)
+    
+    # Create quiz with user ownership
+    quiz = Quiz(**quiz_data.dict(), created_by=current_user.id)
+    quiz.total_questions = len(quiz.questions)
+    quiz.total_points = total_points
+    quiz.updated_at = datetime.utcnow()
+    quiz.is_draft = True  # Start as draft
+    
+    # Add user ownership fields
+    quiz_dict = quiz.dict()
+    quiz_dict["quiz_owner_type"] = "user"
+    quiz_dict["quiz_owner_id"] = current_user.id
+    
+    await db.quizzes.insert_one(quiz_dict)
+    return quiz
+
+@api_router.get("/user/my-quizzes", response_model=List[Quiz])
+async def get_user_created_quizzes(current_user: User = Depends(get_current_user)):
+    """Get quizzes created by the current user"""
+    quizzes = await db.quizzes.find({
+        "created_by": current_user.id,
+        "quiz_owner_type": "user"
+    }).to_list(1000)
+    
+    valid_quizzes = []
+    for quiz in quizzes:
+        # Handle legacy quizzes and ensure required fields
+        if 'category' not in quiz:
+            quiz['category'] = 'Uncategorized'
+        if 'is_active' not in quiz:
+            quiz['is_active'] = True
+        if 'is_public' not in quiz:
+            quiz['is_public'] = False
+        if 'allowed_users' not in quiz:
+            quiz['allowed_users'] = []
+        if 'subject' not in quiz:
+            quiz['subject'] = 'General'
+        if 'subcategory' not in quiz:
+            quiz['subcategory'] = 'General'
+        if 'updated_at' not in quiz:
+            quiz['updated_at'] = quiz.get('created_at', datetime.utcnow())
+        if 'total_attempts' not in quiz:
+            quiz['total_attempts'] = 0
+        if 'average_score' not in quiz:
+            quiz['average_score'] = 0.0
+        
+        try:
+            valid_quizzes.append(Quiz(**quiz))
+        except Exception as e:
+            print(f"Skipping invalid user quiz: {quiz.get('id', 'unknown')} - {str(e)}")
+            continue
+    
+    # Sort by creation date (newest first)
+    valid_quizzes.sort(key=lambda x: x.created_at, reverse=True)
+    return valid_quizzes
+
+@api_router.put("/user/quiz/{quiz_id}", response_model=Quiz)
+async def update_user_quiz(
+    quiz_id: str, 
+    quiz_data: QuizUpdate, 
+    current_user: User = Depends(get_current_user)
+):
+    """Update quiz created by current user"""
+    # Check if quiz exists and user owns it
+    existing_quiz = await db.quizzes.find_one({
+        "id": quiz_id,
+        "created_by": current_user.id,
+        "quiz_owner_type": "user"
+    })
+    if not existing_quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found or you don't have permission to edit it")
+    
+    # Update fields
+    update_data = {k: v for k, v in quiz_data.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.utcnow()
+    
+    # Recalculate total questions if questions are updated
+    if "questions" in update_data:
+        update_data["total_questions"] = len(update_data["questions"])
+        update_data["total_points"] = sum(q.get("points", 1) for q in update_data["questions"])
+        
+        # If questions are updated, reset statistics
+        update_data["total_attempts"] = 0
+        update_data["average_score"] = 0.0
+    
+    await db.quizzes.update_one({"id": quiz_id}, {"$set": update_data})
+    
+    # Return updated quiz
+    updated_quiz = await db.quizzes.find_one({"id": quiz_id})
+    return Quiz(**updated_quiz)
+
+@api_router.delete("/user/quiz/{quiz_id}")
+async def delete_user_quiz(quiz_id: str, current_user: User = Depends(get_current_user)):
+    """Delete quiz created by current user"""
+    # Check if quiz exists and user owns it
+    existing_quiz = await db.quizzes.find_one({
+        "id": quiz_id,
+        "created_by": current_user.id,
+        "quiz_owner_type": "user"
+    })
+    if not existing_quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found or you don't have permission to delete it")
+    
+    result = await db.quizzes.delete_one({"id": quiz_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    return {"message": "Quiz deleted successfully"}
+
+@api_router.post("/user/quiz/{quiz_id}/publish")
+async def publish_user_quiz(quiz_id: str, current_user: User = Depends(get_current_user)):
+    """Publish user's quiz to make it publicly available"""
+    quiz = await db.quizzes.find_one({
+        "id": quiz_id,
+        "created_by": current_user.id,
+        "quiz_owner_type": "user"
+    })
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found or you don't have permission to publish it")
+    
+    # Re-validate quiz before publishing
+    try:
+        quiz_obj = Quiz(**quiz)
+        validation_errors = validate_quiz_data(QuizCreate(**quiz))
+        if validation_errors:
+            raise HTTPException(
+                status_code=400, 
+                detail="Cannot publish quiz with validation errors. Please fix the errors first."
+            )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Quiz validation failed: {str(e)}")
+    
+    # Publish quiz
+    await db.quizzes.update_one(
+        {"id": quiz_id},
+        {"$set": {
+            "is_draft": False,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    return {"message": "Quiz published successfully! It's now available for other users to take."}
+
 # Enhanced Folder Management for Admin
 @api_router.post("/admin/subject-folder", response_model=SubjectFolder)
 async def create_subject_folder(folder_data: SubjectFolderCreate, admin_user: User = Depends(get_admin_user)):
