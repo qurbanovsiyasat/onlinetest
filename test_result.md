@@ -401,8 +401,12 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
-  stuck_tasks: []
+  current_focus:
+    - "Draft Quiz Visibility Control"
+    - "User Access Filtering"
+  stuck_tasks:
+    - "Bulk Quiz Publishing Functionality"
+    - "Systematic Quiz Draft Issue Prevention"
   test_all: false
   test_priority: "high_first"
 
