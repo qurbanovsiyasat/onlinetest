@@ -3288,30 +3288,7 @@ function UserDashboard({ currentView, setCurrentView }) {
             >
               📊 My Results
             </button>
-            <button
-              onClick={() => setCurrentView('create-quiz')}
-              className={`px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm ${
-                currentView === 'create-quiz' ? 'bg-green-600 text-white' : 'bg-green-600 text-white hover:bg-green-700'
-              }`}
-            >
-              ➕ Create Quiz
-            </button>
-            <button
-              onClick={() => setCurrentView('my-quizzes')}
-              className={`px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm ${
-                currentView === 'my-quizzes' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              📝 My Quizzes
-            </button>
-            <button
-              onClick={() => setCurrentView('my-subjects')}
-              className={`px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm ${
-                currentView === 'my-subjects' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              👤 My Subjects
-            </button>
+            {/* User quiz and subject creation removed - admin-only functionality */}
             <button
               onClick={() => setShowPasswordChange(true)}
               className="text-gray-700 hover:bg-gray-100 px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm"
