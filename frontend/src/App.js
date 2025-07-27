@@ -2618,6 +2618,11 @@ function AdminCreateQuiz({ setCurrentView }) {
   const validateQuiz = () => {
     const errors = [];
     
+    // Check if subjects are available
+    if (Object.keys(predefinedSubjects).length === 0) {
+      errors.push('No subjects available. Please create subjects first in the Categories section.');
+    }
+    
     if (!quiz.title || quiz.title.length < 3) {
       errors.push('Title must be at least 3 characters long');
     }
@@ -2628,6 +2633,10 @@ function AdminCreateQuiz({ setCurrentView }) {
     
     if (!quiz.category || quiz.category.length < 2) {
       errors.push('Category is required');
+    }
+    
+    if (!quiz.subject) {
+      errors.push('Subject is required');
     }
     
     if (quiz.questions.length === 0) {
