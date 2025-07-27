@@ -2777,28 +2777,42 @@ function AdminCreateQuiz({ setCurrentView }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-gray-700 font-semibold mb-2">Subject *</label>
-            <select
-              value={quiz.subject}
-              onChange={(e) => setQuiz({ ...quiz, subject: e.target.value, subcategory: 'General' })}
-              className="w-full p-3 border border-gray-300 rounded-lg"
-            >
-              {Object.keys(predefinedSubjects).map(subject => (
-                <option key={subject} value={subject}>{subject}</option>
-              ))}
-            </select>
+            {Object.keys(predefinedSubjects).length > 0 ? (
+              <select
+                value={quiz.subject}
+                onChange={(e) => setQuiz({ ...quiz, subject: e.target.value, subcategory: 'General' })}
+                className="w-full p-3 border border-gray-300 rounded-lg"
+              >
+                {Object.keys(predefinedSubjects).map(subject => (
+                  <option key={subject} value={subject}>{subject}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="w-full p-3 border border-orange-300 bg-orange-50 rounded-lg">
+                <p className="text-orange-700 text-sm">
+                  ⚠️ No subjects available. Please create subjects first in the Categories section.
+                </p>
+              </div>
+            )}
           </div>
 
           <div>
             <label className="block text-gray-700 font-semibold mb-2">Subcategory</label>
-            <select
-              value={quiz.subcategory}
-              onChange={(e) => setQuiz({ ...quiz, subcategory: e.target.value })}
-              className="w-full p-3 border border-gray-300 rounded-lg"
-            >
-              {getSubcategories().map(subcategory => (
-                <option key={subcategory} value={subcategory}>{subcategory}</option>
-              ))}
-            </select>
+            {Object.keys(predefinedSubjects).length > 0 ? (
+              <select
+                value={quiz.subcategory}
+                onChange={(e) => setQuiz({ ...quiz, subcategory: e.target.value })}
+                className="w-full p-3 border border-gray-300 rounded-lg"
+              >
+                {getSubcategories().map(subcategory => (
+                  <option key={subcategory} value={subcategory}>{subcategory}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="w-full p-3 border border-gray-300 bg-gray-50 rounded-lg">
+                <p className="text-gray-500 text-sm">No subcategories available</p>
+              </div>
+            )}
           </div>
 
           <div>
