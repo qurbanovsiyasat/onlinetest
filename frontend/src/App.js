@@ -2902,27 +2902,21 @@ function UserDashboard({ currentView, setCurrentView }) {
       
       // Handle different types of errors
       if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-        errorMessage = 'Network error: Unable to reach the server. This might be due to:\n\n' +
-          '• Browser extensions blocking the request\n' +
-          '• Internet connection issues\n' +
-          '• Server temporarily unavailable\n\n' +
-          'Please try:\n' +
-          '1. Disable browser extensions (ad blockers)\n' +
-          '2. Use incognito/private mode\n' +
-          '3. Check your internet connection';
+        errorMessage = 'Network error: Unable to reach the server. Please check your internet connection and try again.';
       } else if (error.response?.status === 404) {
-        errorMessage = 'Quiz not found or no longer available';
+        errorMessage = 'Quiz not found or not published yet. Please contact the administrator.';
       } else if (error.response?.status === 403) {
-        errorMessage = 'You do not have permission to take this quiz';
+        errorMessage = 'You do not have permission to take this quiz.';
       } else if (error.response?.status === 401) {
-        errorMessage = 'Authentication failed. Please log in again';
+        errorMessage = 'Authentication failed. Please log in again.';
       } else if (error.response?.data?.detail) {
         errorMessage = error.response.data.detail;
       } else if (error.message) {
         errorMessage = error.message;
       }
       
-      alert('❌ Quiz Submission Failed\n\n' + errorMessage);
+      // Set error state instead of using alert (which is blocked)
+      setQuizError(errorMessage);
       
       // Do NOT proceed to results page on error
       console.log('🔄 Staying on quiz page due to submission error');
