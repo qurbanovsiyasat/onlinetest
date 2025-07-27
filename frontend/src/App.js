@@ -2801,6 +2801,8 @@ function UserDashboard({ currentView, setCurrentView }) {
     console.log('Quiz ID:', selectedQuiz.id);
     console.log('User answers:', userAnswers);
     
+    setIsSubmittingQuiz(true);
+    
     try {
       console.log('📡 Making API call to:', `/quiz/${selectedQuiz.id}/attempt`);
       
@@ -2853,6 +2855,8 @@ function UserDashboard({ currentView, setCurrentView }) {
       
       // Do NOT proceed to results page on error
       console.log('🔄 Staying on quiz page due to submission error');
+    } finally {
+      setIsSubmittingQuiz(false);
     }
   };
 
