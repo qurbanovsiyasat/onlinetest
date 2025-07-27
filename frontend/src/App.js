@@ -5143,4 +5143,241 @@ function UserMySubjects() {
   );
 }
 
+// User My Quizzes Management Component
+function UserMyQuizzes({ setCurrentView }) {
+  const [myQuizzes, setMyQuizzes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  useEffect(() => {
+    fetchMyQuizzes();
+  }, []);
+
+  const fetchMyQuizzes = async () => {
+    setLoading(true);
+    try {
+      const response = await apiCall('/user/my-quizzes');
+      setMyQuizzes(response.data);
+    } catch (error) {
+      console.error('Error fetching my quizzes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const publishQuiz = async (quizId) => {
+    try {
+      await apiCall(`/user/quiz/${quizId}/publish`, {
+        method: 'POST'
+      });
+      alert('Quiz published successfully! It is now visible to other users.');
+      fetchMyQuizzes();
+    } catch (error) {
+      alert('Error publishing quiz: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const deleteQuiz = async () => {
+    if (!selectedQuiz) return;
+
+    try {
+      await apiCall(`/user/quiz/${selectedQuiz.id}`, {
+        method: 'DELETE'
+      });
+      alert('Quiz deleted successfully!');
+      setShowDeleteModal(false);
+      setSelectedQuiz(null);
+      fetchMyQuizzes();
+    } catch (error) {
+      alert('Error deleting quiz: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const getOwnershipBadge = (quiz) => {
+    return quiz.quiz_owner_type === 'user' 
+      ? { color: 'bg-purple-100 text-purple-800', text: '👤 Your Quiz' }
+      : { color: 'bg-blue-100 text-blue-800', text: '👑 Admin Quiz' };
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your quizzes...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-gray-800">📝 My Created Quizzes</h2>
+        <button
+          onClick={() => setCurrentView('create-quiz')}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200"
+        >
+          ➕ Create New Quiz
+        </button>
+      </div>
+
+      <div className="mb-6 p-4 bg-green-50 rounded-lg">
+        <h3 className="font-semibold text-green-800 mb-2">📊 Quiz Statistics</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+          <div>
+            <p className="text-green-700 font-medium">Total Quizzes:</p>
+            <p className="text-green-800 text-lg font-bold">{myQuizzes.length}</p>
+          </div>
+          <div>
+            <p className="text-green-700 font-medium">Published:</p>
+            <p className="text-green-800 text-lg font-bold">
+              {myQuizzes.filter(q => !q.is_draft).length}
+            </p>
+          </div>
+          <div>
+            <p className="text-green-700 font-medium">Drafts:</p>
+            <p className="text-green-800 text-lg font-bold">
+              {myQuizzes.filter(q => q.is_draft).length}
+            </p>
+          </div>
+          <div>
+            <p className="text-green-700 font-medium">Total Attempts:</p>
+            <p className="text-green-800 text-lg font-bold">
+              {myQuizzes.reduce((sum, q) => sum + (q.total_attempts || 0), 0)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {myQuizzes.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500 text-lg mb-4">You haven't created any quizzes yet.</p>
+          <p className="text-gray-400 text-sm mb-6">
+            Create your first quiz to share knowledge and test others!
+          </p>
+          <button
+            onClick={() => setCurrentView('create-quiz')}
+            className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition duration-200"
+          >
+            Create Your First Quiz
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {myQuizzes.map((quiz) => {
+            const ownershipBadge = getOwnershipBadge(quiz);
+            return (
+              <div key={quiz.id} className="border rounded-lg p-4">
+                <div className="mb-2 flex flex-wrap gap-1">
+                  <span className={`inline-block px-2 py-1 rounded text-xs ${ownershipBadge.color}`}>
+                    {ownershipBadge.text}
+                  </span>
+                  <span className={`inline-block px-2 py-1 rounded text-xs ${
+                    quiz.is_draft ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
+                  }`}>
+                    {quiz.is_draft ? '📝 Draft' : '✅ Published'}
+                  </span>
+                  <span className="inline-block px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                    {quiz.subject || 'General'}
+                  </span>
+                </div>
+
+                {quiz.is_draft && (
+                  <div className="mb-3 p-2 bg-orange-50 border-l-4 border-orange-400 rounded">
+                    <p className="text-xs text-orange-700">
+                      ⚠️ This quiz is in draft mode. Publish it to make it available to other users.
+                    </p>
+                  </div>
+                )}
+
+                <h3 className="font-semibold text-gray-800 mb-2">{quiz.title}</h3>
+                <p className="text-gray-600 text-sm mb-2 line-clamp-2">{quiz.description}</p>
+                
+                <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
+                  <span>{quiz.category}</span>
+                  <span>{quiz.total_questions} questions</span>
+                </div>
+
+                <div className="flex justify-between items-center text-sm text-gray-500 mb-3">
+                  <span>{quiz.total_attempts || 0} attempts</span>
+                  <span className="font-medium">Avg: {quiz.average_score || 0}%</span>
+                </div>
+                
+                <div className="text-xs text-gray-400 mb-3">
+                  Created: {formatDate(quiz.created_at)}
+                  {quiz.updated_at !== quiz.created_at && (
+                    <div>Updated: {formatDate(quiz.updated_at)}</div>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-1 text-xs">
+                  {quiz.is_draft && (
+                    <button
+                      onClick={() => publishQuiz(quiz.id)}
+                      className="bg-green-600 text-white py-2 rounded hover:bg-green-700 transition duration-200"
+                    >
+                      🚀 Publish
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setSelectedQuiz(quiz);
+                      setShowDeleteModal(true);
+                    }}
+                    className="bg-red-600 text-white py-2 rounded hover:bg-red-700 transition duration-200"
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Delete Quiz Confirmation Modal */}
+      {showDeleteModal && selectedQuiz && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-4">🗑️</div>
+              <h3 className="text-lg font-semibold mb-2">Delete Quiz?</h3>
+              <p className="text-gray-600 text-sm">
+                Are you sure you want to delete "{selectedQuiz.title}"?
+              </p>
+              <p className="text-red-600 text-sm mt-2">
+                ⚠️ This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={deleteQuiz}
+                className="flex-1 bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition duration-200 font-semibold"
+              >
+                Yes, Delete
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setSelectedQuiz(null);
+                }}
+                className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default App;
