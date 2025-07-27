@@ -2821,6 +2821,7 @@ function UserDashboard({ currentView, setCurrentView }) {
   const [myAttempts, setMyAttempts] = useState([]);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
+  const [quizError, setQuizError] = useState(null);
 
   useEffect(() => {
     if (currentView === 'home') fetchQuizzes();
