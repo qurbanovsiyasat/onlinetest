@@ -2219,26 +2219,34 @@ async def get_folder_quiz_counts(admin_user: User = Depends(get_admin_user)):
 
 @api_router.get("/admin/predefined-subjects")
 async def get_predefined_subjects(admin_user: User = Depends(get_admin_user)):
-    """Get predefined subjects with their subcategories"""
-    predefined = {
-        "Mathematics": ["Algebra", "Geometry", "Triangles", "Calculus", "Statistics", "Probability"],
-        "Science": ["Physics", "Chemistry", "Biology", "Forces", "Atoms", "Genetics"],
-        "History": ["Ancient History", "Modern History", "World Wars", "Civilizations"],
-        "Language": ["Grammar", "Literature", "Vocabulary", "Reading Comprehension"],
-        "Geography": ["World Geography", "Physical Geography", "Countries", "Capitals"],
-        "Technology": ["Programming", "Computer Science", "Web Development", "Databases"],
-        "Art": ["Painting", "Sculpture", "Music Theory", "Art History"],
-        "General": ["Mixed Topics", "General Knowledge", "Trivia"]
-    }
+    """Get admin-created subjects with their subcategories (no hardcoded subjects)"""
+    admin_subjects = {}
     
-    # Also get custom subjects from database
-    custom_subjects = await db.subject_categories.find().to_list(1000)
-    for custom in custom_subjects:
-        # Handle both old and new field structures for backward compatibility
+    # Get admin-created global subjects from the global_subjects collection
+    global_subjects = await db.global_subjects.find().to_list(1000)
+    for subject in global_subjects:
+        subject_name = subject.get("name", "Unknown")
+        # Extract subfolder names from the subfolders array
+        subfolders = []
+        for subfolder in subject.get("subfolders", []):
+            if isinstance(subfolder, dict):
+                subfolders.append(subfolder.get("name", "General"))
+            else:
+                subfolders.append(str(subfolder))
+        
+        # If no subfolders, add "General" as default
+        if not subfolders:
+            subfolders = ["General"]
+            
+        admin_subjects[subject_name] = subfolders
+    
+    # Also get legacy custom subjects from subject_categories for backward compatibility
+    legacy_subjects = await db.subject_categories.find().to_list(1000)
+    for custom in legacy_subjects:
         subject_name = custom.get("name", custom.get("subject", "Unknown"))
-        predefined[subject_name] = custom["subcategories"]
+        admin_subjects[subject_name] = custom.get("subcategories", ["General"])
     
-    return predefined
+    return admin_subjects
 
 @api_router.get("/admin/user/{user_id}/details")
 async def get_user_details(user_id: str, admin_user: User = Depends(get_admin_user)):
