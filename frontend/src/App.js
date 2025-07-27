@@ -3164,6 +3164,14 @@ function UserDashboard({ currentView, setCurrentView }) {
     setCurrentView('take-quiz');
   };
 
+  const startRealTimeQuiz = (quiz) => {
+    setSelectedQuiz(quiz);
+    setCurrentQuestionIndex(0);
+    setUserAnswers([]);
+    setQuizResult(null);
+    setCurrentView('realtime-quiz');
+  };
+
   const selectAnswer = (optionText) => {
     const updatedAnswers = [...userAnswers];
     updatedAnswers[currentQuestionIndex] = optionText;
