@@ -4402,6 +4402,727 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
   );
 }
 
+// Real-time Quiz Session Component with Timer
+function RealTimeQuizSession({ quiz, setCurrentView, user }) {
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState([]);
+  const [timeRemaining, setTimeRemaining] = useState(null);
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sessionStatus, setSessionStatus] = useState('pending'); // pending, active, paused, completed, expired
+  const [autoSubmitWarning, setAutoSubmitWarning] = useState(false);
+  
+  // Timer ref for cleanup
+  const timerRef = useRef(null);
+
+  // Start new quiz session
+  const startSession = async (customTimeLimit = null) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API}/quiz-session/start`,
+        {
+          quiz_id: quiz.id,
+          time_limit_minutes: customTimeLimit
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      const newSession = response.data;
+      setSession(newSession);
+      setUserAnswers(new Array(newSession.total_questions).fill(''));
+      setTimeRemaining(newSession.time_remaining_seconds);
+      setSessionStatus(newSession.status);
+      
+      // Automatically activate session
+      if (newSession.status === 'pending') {
+        await activateSession(newSession.id);
+      }
+    } catch (error) {
+      setError(error.response?.data?.detail || 'Failed to start quiz session');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Activate pending session (start timer)
+  const activateSession = async (sessionId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API}/quiz-session/${sessionId}/activate`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      const activatedSession = response.data;
+      setSession(activatedSession);
+      setSessionStatus(activatedSession.status);
+      setTimeRemaining(activatedSession.time_remaining_seconds);
+      
+      // Start timer
+      if (activatedSession.time_remaining_seconds) {
+        startTimer();
+      }
+    } catch (error) {
+      setError(error.response?.data?.detail || 'Failed to activate session');
+    }
+  };
+
+  // Start countdown timer
+  const startTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    
+    timerRef.current = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          // Time expired - auto submit
+          clearInterval(timerRef.current);
+          setSessionStatus('expired');
+          setAutoSubmitWarning(true);
+          autoSubmitQuiz();
+          return 0;
+        }
+        
+        // Show warning when 5 minutes or 10% time remaining (whichever is less)
+        const warningThreshold = Math.min(300, session?.time_remaining_seconds * 0.1);
+        if (prev <= warningThreshold && prev > warningThreshold - 1) {
+          setAutoSubmitWarning(true);
+        }
+        
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  // Update session progress
+  const updateSession = async (updates) => {
+    if (!session) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `${API}/quiz-session/${session.id}/update`,
+        updates,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+    } catch (error) {
+      console.error('Failed to update session:', error);
+    }
+  };
+
+  // Handle answer selection
+  const selectAnswer = (answer) => {
+    const newAnswers = [...userAnswers];
+    newAnswers[currentQuestionIndex] = answer;
+    setUserAnswers(newAnswers);
+    
+    // Update session with current progress
+    updateSession({
+      current_question_index: currentQuestionIndex,
+      answers: newAnswers
+    });
+  };
+
+  // Move to next question
+  const nextQuestion = () => {
+    if (currentQuestionIndex < quiz.questions.length - 1) {
+      const newIndex = currentQuestionIndex + 1;
+      setCurrentQuestionIndex(newIndex);
+      updateSession({
+        current_question_index: newIndex,
+        answers: userAnswers
+      });
+    } else {
+      // Last question - show finish modal
+      setShowFinishModal(true);
+    }
+  };
+
+  // Auto-submit when time expires
+  const autoSubmitQuiz = async () => {
+    await submitQuizSession(true);
+  };
+
+  // Submit quiz session
+  const submitQuizSession = async (isAutoSubmit = false) => {
+    if (!session) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API}/quiz-session/${session.id}/submit`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      const result = response.data;
+      
+      // Clear timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      
+      // Navigate to results
+      setCurrentView('result');
+      // You might want to pass the result to a parent component here
+      
+    } catch (error) {
+      setError(error.response?.data?.detail || 'Failed to submit quiz');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Pause session
+  const pauseSession = async () => {
+    if (!session) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.get(
+        `${API}/quiz-session/${session.id}/pause`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      setSessionStatus('paused');
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    } catch (error) {
+      setError(error.response?.data?.detail || 'Failed to pause session');
+    }
+  };
+
+  // Resume session
+  const resumeSession = async () => {
+    if (!session) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.get(
+        `${API}/quiz-session/${session.id}/resume`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      setSessionStatus('active');
+      if (timeRemaining > 0) {
+        startTimer();
+      }
+    } catch (error) {
+      setError(error.response?.data?.detail || 'Failed to resume session');
+    }
+  };
+
+  // Format time display
+  const formatTime = (seconds) => {
+    if (!seconds) return '--:--';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Get timer color based on remaining time
+  const getTimerColor = () => {
+    if (!timeRemaining || !session?.time_remaining_seconds) return 'text-green-600';
+    
+    const percentage = (timeRemaining / session.time_remaining_seconds) * 100;
+    
+    if (percentage <= 10) return 'text-red-600 animate-pulse';
+    if (percentage <= 25) return 'text-orange-600';
+    if (percentage <= 50) return 'text-yellow-600';
+    return 'text-green-600';
+  };
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+
+  // Session not started - show start screen
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="container mx-auto px-4 py-8">
+          <button
+            onClick={() => setCurrentView('home')}
+            className="mb-6 text-indigo-600 hover:text-indigo-800 font-semibold"
+          >
+            ← Back to Home
+          </button>
+          
+          <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+            <div className="text-center mb-8">
+              <div className="text-6xl mb-4">⏱️</div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-4">Real-time Quiz Session</h1>
+              <h2 className="text-xl font-semibold text-indigo-600 mb-2">{quiz.title}</h2>
+              <p className="text-gray-600 mb-6">{quiz.description}</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="text-2xl mb-2">📝</div>
+                <h3 className="font-semibold text-blue-800">Questions</h3>
+                <p className="text-blue-600">{quiz.questions.length} questions</p>
+              </div>
+              
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="text-2xl mb-2">⭐</div>
+                <h3 className="font-semibold text-green-800">Points</h3>
+                <p className="text-green-600">{quiz.total_points} total points</p>
+              </div>
+              
+              {quiz.time_limit_minutes && (
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <div className="text-2xl mb-2">⏰</div>
+                  <h3 className="font-semibold text-orange-800">Time Limit</h3>
+                  <p className="text-orange-600">{quiz.time_limit_minutes} minutes</p>
+                </div>
+              )}
+              
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <div className="text-2xl mb-2">🎯</div>
+                <h3 className="font-semibold text-purple-800">Pass Mark</h3>
+                <p className="text-purple-600">{quiz.min_pass_percentage}%</p>
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+                <p className="text-red-700">{error}</p>
+              </div>
+            )}
+
+            <div className="text-center">
+              <button
+                onClick={() => startSession()}
+                disabled={loading}
+                className={`px-8 py-3 bg-indigo-600 text-white rounded-lg font-semibold text-lg transition duration-200 ${
+                  loading 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:bg-indigo-700 transform hover:scale-105'
+                }`}
+              >
+                {loading ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Starting Session...
+                  </div>
+                ) : (
+                  '🚀 Start Quiz Session'
+                )}
+              </button>
+              
+              <p className="text-sm text-gray-500 mt-4">
+                Once started, the timer will begin immediately
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Session started - show quiz interface
+  const currentQuestion = quiz.questions[currentQuestionIndex];
+  const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-100">
+      <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+        {/* Header with Timer */}
+        <header className="mb-4 sm:mb-8">
+          <div className="flex justify-between items-start mb-4">
+            <button
+              onClick={() => setCurrentView('home')}
+              className="text-indigo-600 hover:text-indigo-800 font-semibold text-sm sm:text-base"
+            >
+              ← Back to Home
+            </button>
+            
+            {/* Timer Display */}
+            {timeRemaining !== null && (
+              <div className="bg-white rounded-lg shadow-lg p-3 border-l-4 border-indigo-500">
+                <div className="flex items-center space-x-2">
+                  <span className="text-2xl">⏱️</span>
+                  <div>
+                    <div className={`text-2xl font-bold ${getTimerColor()}`}>
+                      {formatTime(timeRemaining)}
+                    </div>
+                    <div className="text-xs text-gray-500">Time Remaining</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <h1 className="text-2xl sm:text-4xl font-bold text-teal-900 mb-2">{quiz.title}</h1>
+          <p className="text-gray-600 mb-4 text-sm sm:text-base">{quiz.description}</p>
+          
+          {/* Session Status Indicator */}
+          <div className="flex items-center space-x-4 mb-4">
+            <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+              sessionStatus === 'active' ? 'bg-green-100 text-green-800' :
+              sessionStatus === 'paused' ? 'bg-yellow-100 text-yellow-800' :
+              sessionStatus === 'expired' ? 'bg-red-100 text-red-800' :
+              'bg-gray-100 text-gray-800'
+            }`}>
+              {sessionStatus === 'active' && '🟢 Active'}
+              {sessionStatus === 'paused' && '⏸️ Paused'}
+              {sessionStatus === 'expired' && '⏰ Expired'}
+              {sessionStatus === 'pending' && '⏳ Starting...'}
+            </div>
+            
+            {sessionStatus === 'active' && timeRemaining > 0 && (
+              <button
+                onClick={pauseSession}
+                className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 transition"
+              >
+                ⏸️ Pause
+              </button>
+            )}
+            
+            {sessionStatus === 'paused' && (
+              <button
+                onClick={resumeSession}
+                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition"
+              >
+                ▶️ Resume
+              </button>
+            )}
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3 mb-4">
+            <div
+              className="bg-teal-600 h-2 sm:h-3 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+          
+          <div className="flex justify-between items-center text-xs sm:text-sm text-gray-600">
+            <span>Question {currentQuestionIndex + 1} of {quiz.questions.length}</span>
+            <span>Answered: {userAnswers.filter(a => a && a.trim()).length}/{quiz.questions.length}</span>
+          </div>
+        </header>
+
+        {/* Auto-submit Warning */}
+        {autoSubmitWarning && (
+          <div className="max-w-4xl mx-auto mb-6">
+            <div className="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-r-lg">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <span className="text-orange-400 text-xl">⚠️</span>
+                </div>
+                <div className="ml-3 flex-1">
+                  <h3 className="text-sm font-medium text-orange-800">Time Warning</h3>
+                  <p className="mt-1 text-sm text-orange-700">
+                    {timeRemaining <= 60 
+                      ? 'Less than 1 minute remaining! Quiz will auto-submit when time expires.'
+                      : 'Time is running low. Quiz will auto-submit when timer reaches zero.'
+                    }
+                  </p>
+                  <div className="mt-3">
+                    <button
+                      onClick={() => setAutoSubmitWarning(false)}
+                      className="bg-orange-100 hover:bg-orange-200 text-orange-800 px-3 py-1 rounded text-sm transition duration-200"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <div className="max-w-4xl mx-auto mb-6">
+            <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <span className="text-red-400 text-xl">❌</span>
+                </div>
+                <div className="ml-3 flex-1">
+                  <h3 className="text-sm font-medium text-red-800">Session Error</h3>
+                  <p className="mt-1 text-sm text-red-700">{error}</p>
+                  <div className="mt-3">
+                    <button
+                      onClick={() => setError(null)}
+                      className="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded text-sm transition duration-200"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Question Content - Reuse existing UserTakeQuiz logic */}
+        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-4 sm:p-8">
+          {/* Question Header */}
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <span className="text-xl sm:text-2xl">
+                  {currentQuestion.question_type === 'multiple_choice' ? '📝' : '✏️'}
+                </span>
+                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                  currentQuestion.difficulty === 'easy' ? 'bg-green-100 text-green-800' :
+                  currentQuestion.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                  currentQuestion.difficulty === 'hard' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {currentQuestion.difficulty}
+                </span>
+                <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                  {currentQuestion.points} pts
+                </span>
+              </div>
+              <h2 className="text-lg sm:text-2xl font-semibold text-gray-800">
+                {renderMathContent(currentQuestion.question_text)}
+              </h2>
+            </div>
+          </div>
+
+          {/* Media Display */}
+          {currentQuestion.image_url && (
+            <div className="mb-4 sm:mb-6">
+              <img
+                src={currentQuestion.image_url}
+                alt="Question"
+                className="max-w-full h-auto rounded-lg shadow"
+                style={{ maxHeight: '300px' }}
+              />
+            </div>
+          )}
+
+          {/* Question Content Based on Type */}
+          <div className="mb-6 sm:mb-8">
+            {currentQuestion.question_type === 'multiple_choice' ? (
+              <div className="space-y-3 sm:space-y-4">
+                {currentQuestion.multiple_correct && (
+                  <div className="p-3 bg-blue-50 rounded-lg mb-4">
+                    <p className="text-blue-800 text-sm font-medium">
+                      📌 Multiple answers may be correct. Select all that apply.
+                    </p>
+                  </div>
+                )}
+                
+                {currentQuestion.options.map((option, index) => {
+                  const isSelected = currentQuestion.multiple_correct
+                    ? (userAnswers[currentQuestionIndex] || '').split(', ').includes(option.text)
+                    : userAnswers[currentQuestionIndex] === option.text;
+                    
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        if (sessionStatus !== 'active') return;
+                        
+                        if (currentQuestion.multiple_correct) {
+                          const currentAnswers = userAnswers[currentQuestionIndex] ? 
+                            userAnswers[currentQuestionIndex].split(', ').filter(a => a && a.trim() !== '') : [];
+                          
+                          if (currentAnswers.includes(option.text)) {
+                            const newAnswers = currentAnswers.filter(a => a !== option.text);
+                            selectAnswer(newAnswers.join(', '));
+                          } else {
+                            const newAnswers = [...currentAnswers, option.text];
+                            selectAnswer(newAnswers.join(', '));
+                          }
+                        } else {
+                          selectAnswer(option.text);
+                        }
+                      }}
+                      disabled={sessionStatus !== 'active'}
+                      className={`w-full p-3 sm:p-4 text-left rounded-lg border-2 transition duration-200 ${
+                        sessionStatus !== 'active' ? 'opacity-50 cursor-not-allowed' :
+                        isSelected
+                          ? 'border-teal-500 bg-teal-50 text-teal-800'
+                          : 'border-gray-200 hover:border-teal-300 hover:bg-teal-50'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        <div className={`w-4 h-4 mr-3 border-2 rounded ${
+                          currentQuestion.multiple_correct ? 'rounded-sm' : 'rounded-full'
+                        } ${
+                          isSelected
+                            ? 'bg-teal-500 border-teal-500'
+                            : 'border-gray-300'
+                        }`}>
+                          {isSelected && (
+                            <div className="text-white text-xs text-center leading-4">
+                              {currentQuestion.multiple_correct ? '✓' : '●'}
+                            </div>
+                          )}
+                        </div>
+                        <span className="font-semibold mr-3 text-sm sm:text-base">{String.fromCharCode(65 + index)}.</span>
+                        <span className="flex-1 text-sm sm:text-base">{renderMathContent(option.text)}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-3 bg-yellow-50 rounded-lg mb-4">
+                  <p className="text-yellow-800 text-sm font-medium">
+                    ✏️ Open-ended question. Type your answer in the text area below.
+                  </p>
+                </div>
+                
+                <textarea
+                  value={userAnswers[currentQuestionIndex] || ''}
+                  onChange={(e) => sessionStatus === 'active' && selectAnswer(e.target.value)}
+                  disabled={sessionStatus !== 'active'}
+                  className={`w-full p-3 sm:p-4 border-2 border-gray-300 rounded-lg focus:border-teal-500 focus:outline-none resize-y min-h-24 sm:min-h-32 text-sm sm:text-base ${
+                    sessionStatus !== 'active' ? 'opacity-50 bg-gray-100 cursor-not-allowed' : ''
+                  }`}
+                  placeholder={sessionStatus === 'active' ? "Type your answer here..." : "Session paused - resume to continue"}
+                  rows="4"
+                />
+                
+                <div className="text-xs sm:text-sm text-gray-500">
+                  {userAnswers[currentQuestionIndex]?.length || 0} characters
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0">
+            <button
+              onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
+              disabled={currentQuestionIndex === 0 || sessionStatus !== 'active'}
+              className="px-4 sm:px-6 py-2 sm:py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+            >
+              Previous
+            </button>
+            
+            <div className="flex gap-2 sm:gap-3">
+              <button
+                onClick={() => setShowFinishModal(true)}
+                disabled={sessionStatus !== 'active' && sessionStatus !== 'expired'}
+                className="px-3 sm:px-4 py-2 sm:py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition duration-200 font-semibold text-xs sm:text-sm disabled:opacity-50"
+              >
+                🏁 Finish Quiz
+              </button>
+              
+              <button
+                onClick={nextQuestion}
+                disabled={sessionStatus !== 'active' || !userAnswers[currentQuestionIndex] || 
+                         (userAnswers[currentQuestionIndex] && userAnswers[currentQuestionIndex].trim() === '')}
+                className="px-4 sm:px-6 py-2 sm:py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm sm:text-base"
+              >
+                {currentQuestionIndex === quiz.questions.length - 1 ? 'Submit Quiz' : 'Next Question'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Finish Quiz Confirmation Modal */}
+      {showFinishModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-4">
+                {sessionStatus === 'expired' ? '⏰' : '🏁'}
+              </div>
+              <h3 className="text-lg font-semibold mb-2">
+                {sessionStatus === 'expired' ? 'Time Expired!' : 'Finish Quiz?'}
+              </h3>
+              <p className="text-gray-600 text-sm">
+                You have answered {userAnswers.filter(a => a && a.trim()).length} out of {quiz.questions.length} questions.
+              </p>
+              {sessionStatus === 'expired' && (
+                <p className="text-red-600 text-sm mt-2">
+                  ⏰ Time has expired. The quiz will be submitted automatically.
+                </p>
+              )}
+              {userAnswers.filter(a => a && a.trim()).length < quiz.questions.length && sessionStatus !== 'expired' && (
+                <p className="text-orange-600 text-sm mt-2">
+                  ⚠️ {quiz.questions.length - userAnswers.filter(a => a && a.trim()).length} questions will be marked as unanswered.
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={() => submitQuizSession(sessionStatus === 'expired')}
+                disabled={isSubmitting}
+                className={`flex-1 py-3 rounded-lg font-semibold transition duration-200 ${
+                  isSubmitting 
+                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed' 
+                    : sessionStatus === 'expired'
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-orange-600 text-white hover:bg-orange-700'
+                }`}
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Submitting...
+                  </div>
+                ) : sessionStatus === 'expired' ? (
+                  'Submit Quiz'
+                ) : (
+                  'Yes, Finish'
+                )}
+              </button>
+              
+              {sessionStatus !== 'expired' && (
+                <button
+                  onClick={() => setShowFinishModal(false)}
+                  className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold"
+                >
+                  Continue Quiz
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UserResult({ result, quiz, setCurrentView, startQuiz }) {
   const [detailedResults, setDetailedResults] = useState(null);
   const [leaderboard, setLeaderboard] = useState(null);
