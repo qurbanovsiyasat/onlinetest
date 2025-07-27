@@ -1991,6 +1991,488 @@ class OnlineTestMakerAPITester:
         except Exception as e:
             return self.log_test("User Delete Quiz (Forbidden)", False, f"Error: {str(e)}")
 
+    def test_quiz_submission_and_results_flow(self):
+        """
+        MAIN TEST: Complete quiz submission and results recording flow
+        This tests the specific issue mentioned in the review request
+        """
+        print("\n" + "="*80)
+        print("🎯 TESTING QUIZ SUBMISSION AND RESULTS RECORDING FLOW")
+        print("="*80)
+        
+        # Step 1: Verify admin authentication
+        print("\n📋 Step 1: Admin Authentication")
+        if not self.test_admin_login():
+            print("❌ CRITICAL: Admin authentication failed - cannot proceed")
+            return False
+            
+        # Step 2: Create a test quiz with different question types
+        print("\n📋 Step 2: Create Test Quiz with Mixed Question Types")
+        if not self.test_create_mixed_quiz():
+            print("❌ CRITICAL: Quiz creation failed - cannot proceed")
+            return False
+            
+        # Step 3: Register and login test user
+        print("\n📋 Step 3: Register and Login Test User")
+        if not self.test_user_registration():
+            print("❌ CRITICAL: User registration failed - cannot proceed")
+            return False
+        if not self.test_user_login():
+            print("❌ CRITICAL: User login failed - cannot proceed")
+            return False
+            
+        # Step 4: User takes the quiz
+        print("\n📋 Step 4: User Takes Quiz and Submits")
+        if not self.test_user_submit_quiz():
+            print("❌ CRITICAL: Quiz submission failed - this is the main issue!")
+            return False
+            
+        # Step 5: Verify quiz attempt saved to database
+        print("\n📋 Step 5: Verify Quiz Attempt Saved to Database")
+        if not self.test_verify_quiz_attempt_saved():
+            print("❌ CRITICAL: Quiz attempt not saved to database!")
+            return False
+            
+        # Step 6: Verify admin can see results
+        print("\n📋 Step 6: Verify Admin Results View")
+        if not self.test_admin_view_results():
+            print("❌ CRITICAL: Admin cannot see quiz results!")
+            return False
+            
+        # Step 7: Test user results page
+        print("\n📋 Step 7: Test User Results Page")
+        if not self.test_user_results_page():
+            print("❌ CRITICAL: User results page not working!")
+            return False
+            
+        print("\n" + "="*80)
+        print("✅ QUIZ SUBMISSION AND RESULTS FLOW: ALL TESTS PASSED!")
+        print("="*80)
+        return True
+
+    def test_create_mixed_quiz(self):
+        """Create a quiz with different question types for testing"""
+        if not self.admin_token:
+            return self.log_test("Create Mixed Quiz", False, "No admin token available")
+            
+        quiz_data = {
+            "title": "Quiz Submission Test - Mixed Types",
+            "description": "Test quiz for verifying submission and results recording",
+            "category": "Testing",
+            "subject": "Computer Science",
+            "subcategory": "Testing",
+            "questions": [
+                {
+                    "question_text": "Which of the following are programming languages? (Select all that apply)",
+                    "question_type": "multiple_choice",
+                    "multiple_correct": True,
+                    "options": [
+                        {"text": "Python", "is_correct": True},
+                        {"text": "Java", "is_correct": True},
+                        {"text": "HTML", "is_correct": False},
+                        {"text": "JavaScript", "is_correct": True}
+                    ],
+                    "points": 3,
+                    "difficulty": "medium"
+                },
+                {
+                    "question_text": "What is the capital of France?",
+                    "question_type": "multiple_choice",
+                    "multiple_correct": False,
+                    "options": [
+                        {"text": "London", "is_correct": False},
+                        {"text": "Paris", "is_correct": True},
+                        {"text": "Berlin", "is_correct": False},
+                        {"text": "Madrid", "is_correct": False}
+                    ],
+                    "points": 2,
+                    "difficulty": "easy"
+                },
+                {
+                    "question_text": "Explain what is object-oriented programming.",
+                    "question_type": "open_ended",
+                    "open_ended_answer": {
+                        "expected_answers": [
+                            "Programming paradigm based on objects and classes",
+                            "A programming approach using objects that contain data and methods",
+                            "Programming methodology that uses objects and classes"
+                        ],
+                        "keywords": ["object", "class", "programming", "paradigm", "method", "data"],
+                        "case_sensitive": False,
+                        "partial_credit": True
+                    },
+                    "points": 5,
+                    "difficulty": "hard"
+                }
+            ],
+            "min_pass_percentage": 60.0,
+            "is_public": False,  # Make it accessible to all users
+            "is_draft": False    # Publish immediately
+        }
+
+        try:
+            response = requests.post(
+                f"{self.api_url}/admin/quiz",
+                json=quiz_data,
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=15
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                quiz = response.json()
+                self.created_quiz_id = quiz.get('id')
+                details += f", Quiz ID: {self.created_quiz_id}"
+                details += f", Total Points: {quiz.get('total_points', 0)}"
+                details += f", Questions: {quiz.get('total_questions', 0)}"
+                
+                # Publish the quiz
+                publish_response = requests.post(
+                    f"{self.api_url}/admin/quiz/{self.created_quiz_id}/publish",
+                    headers=self.get_auth_headers(self.admin_token),
+                    timeout=10
+                )
+                if publish_response.status_code == 200:
+                    details += ", Published: Yes"
+                else:
+                    details += f", Publish Failed: {publish_response.status_code}"
+            else:
+                details += f", Response: {response.text[:300]}"
+                
+            return self.log_test("Create Mixed Quiz", success, details)
+        except Exception as e:
+            return self.log_test("Create Mixed Quiz", False, f"Error: {str(e)}")
+
+    def test_user_submit_quiz(self):
+        """Test user submitting quiz answers"""
+        if not self.user_token or not self.created_quiz_id:
+            return self.log_test("User Submit Quiz", False, "No user token or quiz ID available")
+
+        # Provide mixed answers to test different grading scenarios
+        attempt_data = {
+            "quiz_id": self.created_quiz_id,
+            "answers": [
+                "Python,Java",  # Partial correct (missing JavaScript)
+                "Paris",        # Correct
+                "Object-oriented programming is a programming paradigm that uses objects and classes to organize code"  # Good answer with keywords
+            ]
+        }
+
+        try:
+            response = requests.post(
+                f"{self.api_url}/quiz/{self.created_quiz_id}/attempt",
+                json=attempt_data,
+                headers=self.get_auth_headers(self.user_token),
+                timeout=15
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                result = response.json()
+                self.quiz_attempt_id = result.get('id')
+                details += f", Attempt ID: {self.quiz_attempt_id}"
+                details += f", Score: {result.get('score', 0)}/{result.get('total_questions', 0)}"
+                details += f", Points: {result.get('earned_points', 0)}/{result.get('total_possible_points', 0)}"
+                details += f", Percentage: {result.get('percentage', 0):.1f}%"
+                details += f", Passed: {result.get('passed', False)}"
+                
+                # Verify all expected fields are present
+                expected_fields = ['id', 'quiz_id', 'user_id', 'answers', 'score', 'percentage', 
+                                 'earned_points', 'total_possible_points', 'question_results']
+                missing_fields = [field for field in expected_fields if field not in result]
+                if missing_fields:
+                    details += f", Missing Fields: {missing_fields}"
+                else:
+                    details += ", All Fields Present"
+                    
+            else:
+                details += f", Response: {response.text[:300]}"
+                
+            return self.log_test("User Submit Quiz", success, details)
+        except Exception as e:
+            return self.log_test("User Submit Quiz", False, f"Error: {str(e)}")
+
+    def test_verify_quiz_attempt_saved(self):
+        """Verify the quiz attempt was saved to the database"""
+        if not self.user_token:
+            return self.log_test("Verify Quiz Attempt Saved", False, "No user token available")
+            
+        try:
+            # Get user's attempts to verify the attempt was saved
+            response = requests.get(
+                f"{self.api_url}/my-attempts",
+                headers=self.get_auth_headers(self.user_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                attempts = response.json()
+                details += f", Total Attempts: {len(attempts)}"
+                
+                # Find our specific attempt
+                our_attempt = None
+                for attempt in attempts:
+                    if attempt.get('quiz_id') == self.created_quiz_id:
+                        our_attempt = attempt
+                        break
+                
+                if our_attempt:
+                    details += f", Found Attempt: {our_attempt.get('id')}"
+                    details += f", Score: {our_attempt.get('score', 0)}"
+                    details += f", Percentage: {our_attempt.get('percentage', 0):.1f}%"
+                    
+                    # Verify attempt has all required data
+                    required_fields = ['id', 'quiz_id', 'user_id', 'score', 'percentage', 'attempted_at']
+                    missing_fields = [field for field in required_fields if field not in required_fields]
+                    if missing_fields:
+                        details += f", Missing Required Fields: {missing_fields}"
+                        success = False
+                    else:
+                        details += ", All Required Fields Present"
+                else:
+                    details += ", Attempt NOT FOUND in database!"
+                    success = False
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Verify Quiz Attempt Saved", success, details)
+        except Exception as e:
+            return self.log_test("Verify Quiz Attempt Saved", False, f"Error: {str(e)}")
+
+    def test_admin_view_results(self):
+        """Test admin viewing quiz results"""
+        if not self.admin_token:
+            return self.log_test("Admin View Results", False, "No admin token available")
+            
+        try:
+            # Test GET /api/admin/quiz-results
+            response = requests.get(
+                f"{self.api_url}/admin/quiz-results",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                results = response.json()
+                details += f", Total Results: {len(results)}"
+                
+                # Find our specific quiz result
+                our_result = None
+                for result in results:
+                    if result.get('quiz', {}).get('title') == "Quiz Submission Test - Mixed Types":
+                        our_result = result
+                        break
+                
+                if our_result:
+                    details += f", Found Our Result: Yes"
+                    details += f", User: {our_result.get('user', {}).get('name', 'Unknown')}"
+                    details += f", Score: {our_result.get('score', 0)}/{our_result.get('total_questions', 0)}"
+                    details += f", Percentage: {our_result.get('percentage', 0):.1f}%"
+                    
+                    # Verify result has all expected fields
+                    expected_fields = ['attempt_id', 'user', 'quiz', 'score', 'total_questions', 'percentage', 'attempted_at']
+                    missing_fields = [field for field in expected_fields if field not in our_result]
+                    if missing_fields:
+                        details += f", Missing Fields: {missing_fields}"
+                        success = False
+                    else:
+                        details += ", All Fields Present"
+                else:
+                    details += ", Our Result NOT FOUND!"
+                    success = False
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Admin View Results", success, details)
+        except Exception as e:
+            return self.log_test("Admin View Results", False, f"Error: {str(e)}")
+
+    def test_user_results_page(self):
+        """Test user results page functionality"""
+        if not self.user_token or not self.created_quiz_id:
+            return self.log_test("User Results Page", False, "No user token or quiz ID available")
+            
+        try:
+            # Test quiz results ranking (user results page)
+            response = requests.get(
+                f"{self.api_url}/quiz/{self.created_quiz_id}/results-ranking",
+                headers=self.get_auth_headers(self.user_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                data = response.json()
+                details += f", Quiz Title: {data.get('quiz_title', 'Unknown')}"
+                details += f", Total Participants: {data.get('total_participants', 0)}"
+                
+                user_position = data.get('user_position')
+                if user_position and user_position.get('rank'):
+                    details += f", User Rank: {user_position.get('rank')}"
+                    details += f", User Score: {user_position.get('entry', {}).get('percentage', 0):.1f}%"
+                else:
+                    details += ", User Position: Not Found"
+                    success = False
+                    
+                quiz_stats = data.get('quiz_stats', {})
+                details += f", Total Attempts: {quiz_stats.get('total_attempts', 0)}"
+                details += f", Average Score: {quiz_stats.get('average_score', 0):.1f}%"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("User Results Page", success, details)
+        except Exception as e:
+            return self.log_test("User Results Page", False, f"Error: {str(e)}")
+
+    def test_quiz_statistics_update(self):
+        """Test that quiz statistics are updated after submission"""
+        if not self.admin_token or not self.created_quiz_id:
+            return self.log_test("Quiz Statistics Update", False, "No admin token or quiz ID available")
+            
+        try:
+            # Get quiz details to check if statistics were updated
+            response = requests.get(
+                f"{self.api_url}/admin/quizzes",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                quizzes = response.json()
+                our_quiz = None
+                for quiz in quizzes:
+                    if quiz.get('id') == self.created_quiz_id:
+                        our_quiz = quiz
+                        break
+                
+                if our_quiz:
+                    total_attempts = our_quiz.get('total_attempts', 0)
+                    average_score = our_quiz.get('average_score', 0)
+                    details += f", Total Attempts: {total_attempts}"
+                    details += f", Average Score: {average_score:.1f}%"
+                    
+                    if total_attempts > 0:
+                        details += ", Statistics Updated: Yes"
+                    else:
+                        details += ", Statistics Updated: No"
+                        success = False
+                else:
+                    details += ", Quiz Not Found"
+                    success = False
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Quiz Statistics Update", success, details)
+        except Exception as e:
+            return self.log_test("Quiz Statistics Update", False, f"Error: {str(e)}")
+
+    def test_detailed_question_results(self):
+        """Test that detailed question results are properly recorded"""
+        if not self.user_token:
+            return self.log_test("Detailed Question Results", False, "No user token available")
+            
+        try:
+            # Get user's attempts to check detailed results
+            response = requests.get(
+                f"{self.api_url}/my-attempts",
+                headers=self.get_auth_headers(self.user_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                attempts = response.json()
+                our_attempt = None
+                for attempt in attempts:
+                    if attempt.get('quiz_id') == self.created_quiz_id:
+                        our_attempt = attempt
+                        break
+                
+                if our_attempt:
+                    question_results = our_attempt.get('question_results', [])
+                    details += f", Question Results Count: {len(question_results)}"
+                    
+                    if len(question_results) > 0:
+                        # Check first question result details
+                        q1_result = question_results[0]
+                        expected_q1_fields = ['question_number', 'question_text', 'user_answer', 
+                                            'correct_answer', 'is_correct', 'points_earned', 'points_possible']
+                        missing_fields = [field for field in expected_q1_fields if field not in q1_result]
+                        
+                        if missing_fields:
+                            details += f", Missing Q1 Fields: {missing_fields}"
+                            success = False
+                        else:
+                            details += f", Q1 Points: {q1_result.get('points_earned', 0)}/{q1_result.get('points_possible', 0)}"
+                            details += f", Q1 Correct: {q1_result.get('is_correct', False)}"
+                            
+                        # Check if we have results for all questions
+                        if len(question_results) == 3:  # We created 3 questions
+                            details += ", All Question Results Present"
+                        else:
+                            details += f", Expected 3 Question Results, Got {len(question_results)}"
+                            success = False
+                    else:
+                        details += ", No Question Results Found"
+                        success = False
+                else:
+                    details += ", Attempt Not Found"
+                    success = False
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Detailed Question Results", success, details)
+        except Exception as e:
+            return self.log_test("Detailed Question Results", False, f"Error: {str(e)}")
+
+    def run_quiz_submission_tests(self):
+        """Run the complete quiz submission and results recording test suite"""
+        print(f"\n🚀 Starting Quiz Submission and Results Recording Tests")
+        print(f"🌐 Backend URL: {self.base_url}")
+        print(f"📡 API URL: {self.api_url}")
+        
+        # Initialize admin if needed
+        self.test_init_admin()
+        
+        # Run the main flow test
+        main_flow_success = self.test_quiz_submission_and_results_flow()
+        
+        # Run additional detailed tests
+        print("\n" + "="*80)
+        print("🔍 ADDITIONAL DETAILED TESTS")
+        print("="*80)
+        
+        self.test_quiz_statistics_update()
+        self.test_detailed_question_results()
+        
+        # Summary
+        print(f"\n" + "="*80)
+        print(f"📊 FINAL TEST SUMMARY")
+        print(f"="*80)
+        print(f"✅ Tests Passed: {self.tests_passed}")
+        print(f"❌ Tests Failed: {self.tests_run - self.tests_passed}")
+        print(f"📈 Total Tests: {self.tests_run}")
+        print(f"🎯 Success Rate: {(self.tests_passed/self.tests_run*100):.1f}%" if self.tests_run > 0 else "0%")
+        
+        if main_flow_success:
+            print(f"\n🎉 MAIN FLOW TEST: ✅ PASSED")
+            print(f"✅ Quiz submission and results recording is working correctly!")
+        else:
+            print(f"\n💥 MAIN FLOW TEST: ❌ FAILED")
+            print(f"❌ There are issues with quiz submission and results recording!")
+        
+        return main_flow_success
+
     def run_all_tests(self):
         """Run all API tests"""
         print("🚀 Starting OnlineTestMaker API Tests - Self-hosted Backend Verification")
