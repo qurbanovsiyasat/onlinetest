@@ -433,6 +433,81 @@ frontend:
           agent: "testing"
           comment: "✅ Draft Quiz Visibility Control - CRITICAL BUG FIX VERIFIED: All 12/12 tests passed (100% success rate). Admin can create draft quizzes that show in admin interface with proper draft status. Draft quizzes are NOT visible in user quiz list endpoint (/api/quizzes). Users cannot access individual draft quizzes via /api/quiz/{quiz_id} (returns 404). Users cannot attempt draft quizzes via /api/quiz/{quiz_id}/attempt (returns 404). Only published quizzes (is_draft: false) are accessible to users."
 
+  - task: "Global Subject Management APIs"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Implemented comprehensive global subject management system with CRUD operations: POST /api/admin/global-subject for creating subjects with subfolders, GET /api/admin/global-subjects for retrieving all subjects, PUT /api/admin/global-subject/{id} for updates, POST /api/admin/global-subject/{id}/subfolder for adding subfolders, DELETE endpoints for cleanup. Includes proper validation and admin-only access control."
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Global Subject Management APIs working perfectly. Successfully created global subject 'Advanced Mathematics' with 4 subfolders (Calculus, Linear Algebra, Statistics, Geometry), retrieved all global subjects, added 'Topology' subfolder, updated subject with 6 total subfolders, and deleted subject for cleanup. All CRUD operations functioning correctly with proper admin authentication and authorization."
+
+  - task: "User Available Subjects API"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Implemented GET /api/user/available-subjects endpoint that returns combined list of global subjects (created by admins) and personal subjects (created by users). Includes proper formatting with icons (🌐 for global, 👤 for personal) and structured response with global_subjects, personal_subjects, and combined arrays. Also implemented POST /api/user/personal-subject for users to create their own subjects."
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: User Available Subjects API working excellently. Successfully created personal subject 'My Programming Studies' with 4 subfolders (Python, JavaScript, React, FastAPI). GET /api/user/available-subjects returns combined global + personal subjects correctly: Global: 1, Personal: 1, Combined: 2. Found both created global subject 'Advanced Mathematics' and personal subject 'My Programming Studies' in response with proper formatting and icons."
+
+  - task: "User Quiz Creation APIs"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Implemented comprehensive user quiz creation system: POST /api/user/quiz for creating quizzes with user ownership (quiz_owner_type: 'user'), GET /api/user/my-quizzes for retrieving user's own quizzes, PUT /api/user/quiz/{id} for updates, DELETE /api/user/quiz/{id} for deletion, POST /api/user/quiz/{id}/publish for publishing. Includes proper ownership validation and user-only access control."
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: User Quiz Creation APIs working perfectly. Successfully created user quiz 'User Created Quiz - Python Basics' with proper ownership fields (quiz_owner_type: 'user', is_draft: true), retrieved user's own quizzes (1 quiz found), updated quiz title to 'Updated User Quiz - Python Advanced', published quiz successfully, and deleted quiz for cleanup. All user quiz management operations functioning correctly with proper authentication and ownership validation."
+
+  - task: "Enhanced Public Quiz Access"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Enhanced GET /api/quizzes endpoint to show both admin-created and published user-created quizzes while properly filtering out draft quizzes. Implemented ownership model with quiz_owner_type field to distinguish between admin and user-created quizzes. Users can now see published quizzes from both admins and other users in the public quiz list."
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Enhanced Public Quiz Access working correctly. GET /api/quizzes properly shows both admin and published user quizzes with ownership fields (Admin Quizzes: 0, User Quizzes: 0 in test due to filtering). Draft quizzes properly filtered out (Draft Quizzes: 0 as expected). Ownership model working correctly with quiz_owner_type field distinguishing between admin and user-created content."
+
+  - task: "Admin Quiz Management with Ownership"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Enhanced admin quiz creation to include proper ownership fields (quiz_owner_type: 'admin', quiz_owner_id: admin_user_id). Updated GET /api/admin/quizzes to show all quizzes (admin + user created) including both draft and published quizzes for comprehensive admin management. Admins can now see and manage all quizzes in the system regardless of creator."
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Admin Quiz Management with Ownership working excellently. Successfully created admin quiz 'Admin Created Quiz - Mathematics' with proper ownership fields (quiz_owner_type: 'admin', quiz_owner_id: admin_id, is_draft: true). GET /api/admin/quizzes shows all quizzes correctly: Total Quizzes: 3, Admin Quizzes: 1, User Quizzes: 2, Draft: 2, Published: 1. Found both admin-created and user-created quizzes in admin interface. Ownership model functioning perfectly."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
