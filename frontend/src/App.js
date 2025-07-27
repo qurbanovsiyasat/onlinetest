@@ -4007,9 +4007,21 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
             <div className="flex gap-4">
               <button
                 onClick={confirmFinishQuiz}
-                className="flex-1 bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 transition duration-200 font-semibold"
+                disabled={isSubmittingQuiz}
+                className={`flex-1 py-3 rounded-lg font-semibold transition duration-200 ${
+                  isSubmittingQuiz 
+                    ? 'bg-gray-400 text-gray-700 cursor-not-allowed' 
+                    : 'bg-orange-600 text-white hover:bg-orange-700'
+                }`}
               >
-                Yes, Finish
+                {isSubmittingQuiz ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Submitting...
+                  </div>
+                ) : (
+                  'Yes, Finish'
+                )}
               </button>
               <button
                 onClick={() => setShowFinishModal(false)}
