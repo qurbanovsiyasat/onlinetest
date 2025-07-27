@@ -2102,12 +2102,14 @@ async def get_user_details(user_id: str, admin_user: User = Depends(get_admin_us
 # Include router
 app.include_router(api_router)
 
-# CORS Configuration for Self-Hosted Deployment
+# CORS Configuration for Self-Hosted and Cloud Deployment
 def get_cors_origins():
     """Get allowed CORS origins from environment or use secure defaults"""
+    # Get environment-specific origins
     allowed_origins = os.environ.get('ALLOWED_ORIGINS', '').split(',')
+    frontend_url = os.environ.get('FRONTEND_URL', '')
     
-    # Default origins for self-hosted deployment
+    # Default origins for development
     default_origins = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
@@ -2115,7 +2117,20 @@ def get_cors_origins():
         "http://127.0.0.1",
     ]
     
-    # Add server IP addresses
+    # Add production frontend URL if provided
+    if frontend_url:
+        default_origins.append(frontend_url)
+        default_origins.append(frontend_url.replace('http://', 'https://'))
+    
+    # Add Render.com patterns for production
+    render_patterns = [
+        "https://*.onrender.com",
+        "https://squiz-frontend.onrender.com",
+        "https://squiz-backend.onrender.com"
+    ]
+    default_origins.extend(render_patterns)
+    
+    # Add server IP addresses for self-hosted
     try:
         import socket
         hostname = socket.gethostname()
