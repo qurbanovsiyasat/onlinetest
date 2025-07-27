@@ -2624,30 +2624,10 @@ function AdminCreateQuiz({ setCurrentView }) {
       
       const createdQuiz = response.data;
       
-      // Show success message with publish option (defaulting to publish)
-      const shouldPublish = confirm(
-        `🎉 Quiz "${quiz.title}" created successfully!\n\n` +
-        `⚠️  IMPORTANT: Quiz is currently in DRAFT mode\n` +
-        `📝 Users CANNOT take this quiz until it's published\n\n` +
-        `🚀 PUBLISH NOW to make it available immediately?\n\n` +
-        `✅ Click OK to PUBLISH and make quiz available to users\n` +
-        `❌ Click Cancel to keep as draft (you can publish later)`
-      );
+      // Show enhanced publish modal instead of basic confirm
+      setCreatedQuizData(createdQuiz);
+      setShowPublishModal(true);
       
-      if (shouldPublish) {
-        try {
-          await apiCall(`/admin/quiz/${createdQuiz.id}/publish`, {
-            method: 'POST'
-          });
-          alert('🎉 SUCCESS! Quiz published and ready for users!');
-        } catch (publishError) {
-          alert('⚠️ Quiz created but failed to publish: ' + (publishError.response?.data?.detail || 'Unknown error') + '\n\nYou can publish it from the Quiz Management page.');
-        }
-      } else {
-        alert('📝 Quiz saved as DRAFT. Remember to publish it from the Quiz Management page when ready!');
-      }
-      
-      setCurrentView('quizzes');
     } catch (error) {
       if (error.response?.status === 400) {
         const errorData = error.response.data;
@@ -2661,6 +2641,30 @@ function AdminCreateQuiz({ setCurrentView }) {
         alert('Error creating quiz: ' + (error.response?.data?.detail || 'Unknown error'));
       }
     }
+  };
+
+  // Enhanced publish handlers
+  const handlePublishQuiz = async () => {
+    setPublishingQuiz(true);
+    try {
+      await apiCall(`/admin/quiz/${createdQuizData.id}/publish`, {
+        method: 'POST'
+      });
+      setShowPublishModal(false);
+      setPublishingQuiz(false);
+      alert('🎉 SUCCESS! Quiz published and ready for users!');
+      setCurrentView('quizzes');
+    } catch (publishError) {
+      setPublishingQuiz(false);
+      alert('⚠️ Quiz created but failed to publish: ' + (publishError.response?.data?.detail || 'Unknown error') + '\n\nYou can publish it from the Quiz Management page.');
+      setCurrentView('quizzes');
+    }
+  };
+
+  const handleKeepAsDraft = () => {
+    setShowPublishModal(false);
+    alert('📝 Quiz saved as DRAFT. Remember to publish it from the Quiz Management page when ready!');
+    setCurrentView('quizzes');
   };
 
   const toggleUserAccess = (userId) => {
