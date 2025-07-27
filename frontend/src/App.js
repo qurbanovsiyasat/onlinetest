@@ -2874,6 +2874,7 @@ function UserDashboard({ currentView, setCurrentView }) {
     console.log('User answers:', userAnswers);
     
     setIsSubmittingQuiz(true);
+    setQuizError(null); // Clear any previous errors
     
     try {
       console.log('📡 Making API call to:', `/quiz/${selectedQuiz.id}/attempt`);
