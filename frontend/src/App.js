@@ -3751,17 +3751,21 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
   };
 
   const confirmFinishQuiz = () => {
-    // Fill unanswered questions with empty strings
-    const filledAnswers = [...userAnswers];
-    for (let i = 0; i < quiz.questions.length; i++) {
-      if (!filledAnswers[i]) {
-        filledAnswers[i] = '';
+    setShowFinishModal(false);
+    // Force submit the quiz by calling nextQuestion when on last question
+    // or by calling submitQuiz directly
+    if (typeof nextQuestion === 'function') {
+      // If we're not on the last question, we need to trigger submit
+      // Let's check if this is the last question
+      if (currentQuestionIndex === quiz.questions.length - 1) {
+        nextQuestion(); // This will call submitQuiz
+      } else {
+        // If not on last question, we need to navigate to last question and submit
+        // For now, let's set to last question and then call nextQuestion
+        setCurrentQuestionIndex(quiz.questions.length - 1);
+        setTimeout(() => nextQuestion(), 100); // Small delay to ensure state update
       }
     }
-    // Submit with filled answers
-    const submitEvent = { target: { value: filledAnswers } };
-    nextQuestion(submitEvent, true); // force submit
-    setShowFinishModal(false);
   };
 
   return (
