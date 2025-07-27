@@ -1506,7 +1506,7 @@ function QuizEditModal({ quiz, onClose, onUpdate }) {
     title: quiz.title,
     description: quiz.description,
     category: quiz.category,
-    subject: quiz.subject || 'Mathematics',
+    subject: quiz.subject || '',
     subcategory: quiz.subcategory || 'General',
     is_public: quiz.is_public,
     is_active: quiz.is_active,
