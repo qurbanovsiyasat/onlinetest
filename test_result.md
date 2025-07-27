@@ -381,15 +381,18 @@ frontend:
 
   - task: "Systematic Quiz Draft Issue Prevention"
     implemented: true
-    working: true
+    working: false
     file: "App.js"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "main"
           comment: "Implemented systematic solution to prevent recurring quiz draft issues. Enhanced quiz creation flow with prominent publish modal, bulk publish for accumulated drafts, and improved user guidance throughout the publishing process."
+        - working: false
+          agent: "testing"
+          comment: "❌ SYSTEMATIC DRAFT ISSUE NOT RESOLVED: Despite implementing draft prevention measures in the admin interface, the core issue persists - draft quizzes are still visible and accessible to regular users. The system is not properly filtering quizzes based on their draft/published status when displaying them to users. This indicates a backend filtering issue or frontend query problem that needs immediate attention."
 
 metadata:
   created_by: "main_agent"
