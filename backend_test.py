@@ -2477,6 +2477,48 @@ class OnlineTestMakerAPITester:
         except Exception as e:
             return self.log_test("Detailed Question Results", False, f"Error: {str(e)}")
 
+    def run_login_focused_tests(self):
+        """Run focused login tests based on user report"""
+        print(f"🔐 FOCUSED LOGIN TESTING - OnlineTestMaker Backend API")
+        print(f"📍 Base URL: {self.base_url}")
+        print(f"📍 API URL: {self.api_url}")
+        print("🎯 Focus: Testing complete login flow as reported by user")
+        print("=" * 80)
+        
+        # Core Infrastructure Tests
+        self.test_health_check()
+        self.test_cors_info()
+        self.test_api_root()
+        
+        # Authentication Tests - MAIN FOCUS
+        self.test_init_admin()
+        self.test_admin_login()
+        self.test_auth_me_admin()  # Test /auth/me endpoint
+        
+        # Test user registration and login flow
+        self.test_user_registration()
+        self.test_user_login()
+        self.test_auth_me_user()  # Test /auth/me endpoint for user
+        
+        # Test authentication validation
+        self.test_admin_get_users()  # Requires admin auth
+        self.test_user_access_admin_endpoint()  # Should fail with 403
+        
+        # Test basic quiz flow to ensure login works end-to-end
+        self.test_admin_create_quiz()
+        self.test_user_get_quizzes()
+        
+        print("=" * 80)
+        print(f"🏁 Login Tests completed: {self.tests_passed}/{self.tests_run} passed")
+        
+        if self.tests_passed == self.tests_run:
+            print("🎉 All login tests passed!")
+            return True
+        else:
+            failed_count = self.tests_run - self.tests_passed
+            print(f"❌ {failed_count} login test(s) failed")
+            return False
+
     def run_quiz_submission_tests(self):
         """Run the complete quiz submission and results recording test suite"""
         print(f"\n🚀 Starting Quiz Submission and Results Recording Tests")
