@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: Complete the frontend implementation for flexible question types (multiple choice with multiple correct answers, open-ended questions with expected answers/keywords), admin folder visibility controls, quiz player enhancements, moving quizzes between folders, and comprehensive client-side validation. The backend already supports these features extensively.
+user_problem_statement: Category-Based Folder System (Admin Side) - Admins should be able to create folders (categories) such as Math, Physics, Chemistry, etc. When creating a quiz, the admin should be able to assign it to one of these folders. Category Navigation for Users - On the user dashboard (Home page), users should see all available quiz categories (folders) as clickable elements. When the user clicks a category, only the quizzes belonging to that category should be displayed. Button Design - All category and quiz navigation buttons should use the provided CSS style for visual consistency. Additional functionality: Subject and Subcategory Management, Branding Cleanup, User Dashboard Structure with hierarchical organization (Subject → Subcategory → Quiz).
 
 backend:
   - task: "JWT Authentication System"
