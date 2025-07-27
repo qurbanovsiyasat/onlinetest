@@ -2870,6 +2870,7 @@ function UserDashboard({ currentView, setCurrentView }) {
       nextQuestion={nextQuestion}
       submitQuiz={submitQuiz}
       setCurrentView={setCurrentView}
+      isSubmittingQuiz={isSubmittingQuiz}
     />;
   }
 
