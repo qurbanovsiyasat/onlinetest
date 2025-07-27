@@ -226,7 +226,11 @@ def test_admin_quiz_results():
     if leaderboard_response.status_code == 200:
         leaderboard = leaderboard_response.json()
         print(f"✅ Leaderboard retrieved")
+        print(f"   Quiz ID being checked: {quiz_id}")
         print(f"   Total Entries: {len(leaderboard.get('ranking', []))}")
+        
+        # Debug: Show full leaderboard response
+        print(f"   Raw leaderboard response: {leaderboard}")
         
         if leaderboard.get('ranking'):
             for idx, entry in enumerate(leaderboard['ranking'][:3]):
@@ -245,6 +249,7 @@ def test_admin_quiz_results():
             print("   ❌ Admin position not found in leaderboard")
     else:
         print(f"❌ Could not retrieve leaderboard: {leaderboard_response.status_code}")
+        print(f"   Response: {leaderboard_response.text}")
     
     print("\n" + "=" * 50)
     print("🔍 Test Complete")
