@@ -948,7 +948,7 @@ async def get_public_quiz_leaderboard(quiz_id: str, current_user: User = Depends
 @api_router.get("/quiz/{quiz_id}", response_model=Quiz)
 async def get_quiz(quiz_id: str, current_user: User = Depends(get_current_user)):
     """Get specific quiz"""
-    quiz = await db.quizzes.find_one({"id": quiz_id, "is_active": True})
+    quiz = await db.quizzes.find_one({"id": quiz_id, "is_active": True, "is_draft": False})
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
     return Quiz(**quiz)
