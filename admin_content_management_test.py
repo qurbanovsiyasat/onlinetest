@@ -576,8 +576,8 @@ class AdminContentManagementTester:
         # Test 10: Delete global subject (cleanup)
         self.test_delete_global_subject()
         
-        # Test 11: Verify predefined-subjects is empty after deletion
-        self.test_predefined_subjects_empty_after_deletion()
+        # Test 11: Verify predefined-subjects shows remaining subjects after deletion
+        self.test_predefined_subjects_shows_created_subject_after_deletion()
         
         print("\n" + "=" * 80)
         print(f"🏁 ADMIN CONTENT MANAGEMENT TESTING COMPLETE")
