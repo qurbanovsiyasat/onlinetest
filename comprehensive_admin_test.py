@@ -202,10 +202,17 @@ class ComprehensiveAdminTester:
         # Create a quiz and take it
         quiz_data = {
             "title": "Leaderboard Test Quiz",
-            "description": "Testing leaderboard access",
+            "description": "Testing leaderboard access for admin users",
             "category": "Test", "subject": "Math", "subcategory": "General",
             "is_public": True, "allowed_users": [],
-            "questions": [{"question_text": "Test?", "options": [{"text": "A", "is_correct": True}]}]
+            "questions": [{
+                "question_text": "What is 4 + 4?", 
+                "options": [
+                    {"text": "7", "is_correct": False}, 
+                    {"text": "8", "is_correct": True},
+                    {"text": "9", "is_correct": False}
+                ]
+            }]
         }
         
         response = requests.post(f"{self.api_url}/admin/quiz", json=quiz_data, 
