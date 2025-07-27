@@ -1004,7 +1004,7 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
   const moveQuiz = (quiz) => {
     setMovingQuiz(quiz);
     setMoveDestination({ 
-      subject: quiz.subject || 'Mathematics', 
+      subject: quiz.subject || Object.keys(predefinedSubjects)[0] || '', 
       subcategory: quiz.subcategory || 'General' 
     });
     setShowMoveModal(true);
