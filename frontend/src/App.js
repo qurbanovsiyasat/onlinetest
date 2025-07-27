@@ -245,14 +245,40 @@ function MainApp() {
         }
         
         // Try to load MathJax locally
-        const { MathJax } = await import('mathjax/es5/tex-mml-chtml.js');
-        window.MathJax = MathJax;
+        const mathjaxModule = await import('mathjax/es5/tex-mml-chtml.js');
+        const MathJax = mathjaxModule.MathJax || mathjaxModule.default;
         
-        // Configure MathJax
-        await MathJax.startup.defaultReady();
-        console.log('✅ MathJax initialized locally (self-hosted)');
+        // Ensure MathJax object exists and has startup property
+        if (MathJax && MathJax.startup && typeof MathJax.startup.defaultReady === 'function') {
+          window.MathJax = MathJax;
+          
+          // Configure MathJax
+          await MathJax.startup.defaultReady();
+          console.log('✅ MathJax initialized locally (self-hosted)');
+        } else {
+          throw new Error('MathJax startup property not available');
+        }
       } catch (error) {
         console.warn('⚠️ MathJax local loading failed, using window fallback:', error);
+        
+        // Try to initialize from CDN as fallback
+        try {
+          if (!window.MathJax) {
+            // Load MathJax from CDN
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+            script.async = true;
+            script.onload = () => {
+              console.log('✅ MathJax loaded from CDN fallback');
+            };
+            script.onerror = () => {
+              console.error('❌ Failed to load MathJax from CDN');
+            };
+            document.head.appendChild(script);
+          }
+        } catch (fallbackError) {
+          console.error('❌ MathJax fallback also failed:', fallbackError);
+        }
       }
     };
     
