@@ -16,7 +16,9 @@
     "start": "craco start",
     "build": "craco build",
     "test": "craco test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "build:production": "GENERATE_SOURCEMAP=false craco build",
+    "postbuild": "echo 'Build completed. Build folder ready for deployment.'"
   },
   "browserslist": {
     "production": [
