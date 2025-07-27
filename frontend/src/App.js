@@ -3226,49 +3226,7 @@ function UserDashboard({ currentView, setCurrentView }) {
 
       <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
         {currentView === 'home' && (
-          <div>
-            <h2 className="text-3xl font-bold text-gray-800 mb-6">Available Quizzes</h2>
-            {quizzes.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">No quizzes available yet.</p>
-              </div>
-            ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {quizzes.map((quiz) => (
-                  <div key={quiz.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition duration-200">
-                    <div className="mb-2 flex flex-wrap gap-1">
-                      <span className="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded">
-                        {quiz.subject || 'General'}
-                      </span>
-                      <span className="inline-block bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">
-                        {quiz.subcategory || 'General'}
-                      </span>
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-800 mb-2">{quiz.title}</h3>
-                    <p className="text-gray-600 mb-4">{quiz.description}</p>
-                    <div className="flex justify-between items-center mb-4 text-sm text-gray-500">
-                      <span>{quiz.total_questions} questions</span>
-                      <span>{quiz.total_attempts || 0} attempts</span>
-                    </div>
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="text-sm text-gray-500">
-                        Category: {quiz.category}
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        Avg: {quiz.average_score || 0}%
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => startQuiz(quiz)}
-                      className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-200 font-semibold"
-                    >
-                      🎯 Take Quiz
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <UserHome quizzes={quizzes} startQuiz={startQuiz} />
         )}
 
         {currentView === 'my-attempts' && (
