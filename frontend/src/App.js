@@ -2971,6 +2971,78 @@ function AdminCreateQuiz({ setCurrentView }) {
           </div>
         </div>
       )}
+
+      {/* Enhanced Publish Modal - Defaults to Publish */}
+      {showPublishModal && createdQuizData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-4">🎉</div>
+              <h3 className="text-xl font-semibold mb-2 text-green-600">Quiz Created Successfully!</h3>
+              <p className="text-gray-800 font-medium mb-2">
+                "{createdQuizData.title}"
+              </p>
+            </div>
+
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-orange-600">⚠️</span>
+                <span className="font-semibold text-orange-800">IMPORTANT: Quiz Publishing</span>
+              </div>
+              <p className="text-sm text-orange-700 mb-2">
+                Your quiz is currently in <strong>DRAFT MODE</strong>. Users cannot take this quiz until it's published.
+              </p>
+              <div className="bg-orange-100 p-2 rounded text-xs text-orange-800">
+                📝 Draft Mode: Quiz is saved but not accessible to users<br />
+                🚀 Published: Quiz is live and available for users to take
+              </div>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-green-600">🚀</span>
+                <span className="font-semibold text-green-800">Recommended Action</span>
+              </div>
+              <p className="text-sm text-green-700">
+                <strong>Publish Now</strong> to make your quiz available immediately. This is the most common choice.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handlePublishQuiz}
+                disabled={publishingQuiz}
+                className="flex-1 bg-green-600 text-white py-4 rounded-lg hover:bg-green-700 transition duration-200 font-semibold text-center disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {publishingQuiz ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="animate-spin">⏳</span>
+                    Publishing...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    🚀 Publish Quiz Now
+                    <span className="text-xs bg-green-500 px-2 py-1 rounded">RECOMMENDED</span>
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={handleKeepAsDraft}
+                disabled={publishingQuiz}
+                className="flex-1 bg-gray-600 text-white py-4 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                📝 Keep as Draft
+              </button>
+            </div>
+
+            <div className="text-center mt-4">
+              <p className="text-xs text-gray-500">
+                💡 You can always publish draft quizzes later from the Quiz Management page
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
