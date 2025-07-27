@@ -2358,7 +2358,7 @@ function AdminCreateQuiz({ setCurrentView }) {
     title: '',
     description: '',
     category: '',
-    subject: 'Mathematics',
+    subject: '', // Will be set dynamically when subjects are loaded
     subcategory: 'General',
     is_public: false,
     allowed_users: [],
