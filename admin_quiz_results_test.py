@@ -236,7 +236,11 @@ def test_admin_quiz_results():
         user_position = leaderboard.get('user_position')
         if user_position:
             print(f"   Admin Position: #{user_position.get('position', 'N/A')}")
-            print(f"   Admin Score: {user_position.get('percentage', 'N/A'):.1f}%")
+            percentage = user_position.get('percentage', 'N/A')
+            if percentage != 'N/A':
+                print(f"   Admin Score: {percentage:.1f}%")
+            else:
+                print(f"   Admin Score: {percentage}")
         else:
             print("   ❌ Admin position not found in leaderboard")
     else:
