@@ -4896,4 +4896,251 @@ function UserHome({ quizzes, startQuiz }) {
   );
 }
 
+// User Personal Subjects Management Component
+function UserMySubjects() {
+  const [personalSubjects, setPersonalSubjects] = useState([]);
+  const [availableSubjects, setAvailableSubjects] = useState({ global_subjects: [], personal_subjects: [], combined: [] });
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newSubject, setNewSubject] = useState({
+    name: '',
+    description: '',
+    subfolders: ['General']
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchAvailableSubjects();
+  }, []);
+
+  const fetchAvailableSubjects = async () => {
+    try {
+      const response = await apiCall('/user/available-subjects');
+      setAvailableSubjects(response.data);
+      setPersonalSubjects(response.data.personal_subjects || []);
+    } catch (error) {
+      console.error('Error fetching available subjects:', error);
+    }
+  };
+
+  const createPersonalSubject = async () => {
+    if (!newSubject.name.trim()) {
+      alert('Subject name is required');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await apiCall('/user/personal-subject', {
+        method: 'POST',
+        data: {
+          name: newSubject.name,
+          description: newSubject.description,
+          subfolders: newSubject.subfolders
+        }
+      });
+
+      alert('Personal subject created successfully!');
+      setShowCreateModal(false);
+      setNewSubject({ name: '', description: '', subfolders: ['General'] });
+      fetchAvailableSubjects();
+    } catch (error) {
+      alert('Error creating personal subject: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addSubfolder = () => {
+    setNewSubject({
+      ...newSubject,
+      subfolders: [...newSubject.subfolders, '']
+    });
+  };
+
+  const updateSubfolder = (index, value) => {
+    const updatedSubfolders = [...newSubject.subfolders];
+    updatedSubfolders[index] = value;
+    setNewSubject({ ...newSubject, subfolders: updatedSubfolders });
+  };
+
+  const removeSubfolder = (index) => {
+    if (newSubject.subfolders.length > 1) {
+      const updatedSubfolders = newSubject.subfolders.filter((_, i) => i !== index);
+      setNewSubject({ ...newSubject, subfolders: updatedSubfolders });
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-gray-800">👤 My Personal Subjects</h2>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200"
+        >
+          ➕ Create Personal Subject
+        </button>
+      </div>
+
+      <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+        <h3 className="font-semibold text-blue-800 mb-2">📚 Available Subjects Overview</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div>
+            <p className="text-blue-700 font-medium">🌐 Global Subjects (Available to All):</p>
+            <p className="text-blue-600">{availableSubjects.global_subjects.length} subjects</p>
+            {availableSubjects.global_subjects.map(subject => (
+              <div key={subject.id} className="ml-4 text-blue-600">
+                • {subject.name} ({subject.subfolders.length} subfolders)
+              </div>
+            ))}
+          </div>
+          <div>
+            <p className="text-blue-700 font-medium">👤 Your Personal Subjects:</p>
+            <p className="text-blue-600">{availableSubjects.personal_subjects.length} subjects</p>
+            {availableSubjects.personal_subjects.map(subject => (
+              <div key={subject.id} className="ml-4 text-blue-600">
+                • {subject.name} ({subject.subfolders.length} subfolders)
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {personalSubjects.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500 text-lg mb-4">You haven't created any personal subjects yet.</p>
+          <p className="text-gray-400 text-sm mb-6">
+            Personal subjects allow you to organize your quizzes with custom categories that are only visible to you.
+          </p>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition duration-200"
+          >
+            Create Your First Personal Subject
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {personalSubjects.map((subject) => (
+            <div key={subject.id} className="border rounded-lg p-4">
+              <div className="mb-2">
+                <span className="inline-block px-2 py-1 rounded text-xs bg-purple-100 text-purple-800">
+                  👤 Personal
+                </span>
+              </div>
+              <h3 className="font-semibold text-gray-800 mb-2">{subject.name}</h3>
+              {subject.description && (
+                <p className="text-gray-600 text-sm mb-3">{subject.description}</p>
+              )}
+              
+              <div className="mb-3">
+                <p className="text-sm font-medium text-gray-700 mb-1">Subfolders:</p>
+                <div className="flex flex-wrap gap-1">
+                  {subject.subfolders.map((subfolder, index) => (
+                    <span key={index} className="inline-block px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">
+                      📁 {subfolder}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="text-xs text-gray-400 mb-3">
+                Created: {new Date(subject.created_at).toLocaleDateString()}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Create Personal Subject Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">Create Personal Subject</h3>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Subject Name *</label>
+                <input
+                  type="text"
+                  value={newSubject.name}
+                  onChange={(e) => setNewSubject({ ...newSubject, name: e.target.value })}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., My Programming Studies"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Description (Optional)</label>
+                <textarea
+                  value={newSubject.description}
+                  onChange={(e) => setNewSubject({ ...newSubject, description: e.target.value })}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  rows="3"
+                  placeholder="Describe what this subject covers..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Subfolders</label>
+                {newSubject.subfolders.map((subfolder, index) => (
+                  <div key={index} className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={subfolder}
+                      onChange={(e) => updateSubfolder(index, e.target.value)}
+                      className="flex-1 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                      placeholder="Subfolder name"
+                    />
+                    {newSubject.subfolders.length > 1 && (
+                      <button
+                        onClick={() => removeSubfolder(index)}
+                        className="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  onClick={addSubfolder}
+                  className="text-blue-600 hover:text-blue-800 text-sm"
+                >
+                  + Add Subfolder
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-4 pt-6">
+              <button
+                onClick={createPersonalSubject}
+                disabled={loading}
+                className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition duration-200 font-semibold disabled:opacity-50"
+              >
+                {loading ? '⏳ Creating...' : '👤 Create Personal Subject'}
+              </button>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                disabled={loading}
+                className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default App;
