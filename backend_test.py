@@ -201,12 +201,54 @@ class OnlineTestMakerAPITester:
             return self.log_test("User Login", False, f"Error: {str(e)}")
 
     def test_auth_me_admin(self):
-        """Test /auth/me endpoint with admin token - SKIPPED (endpoint not implemented)"""
-        return self.log_test("Auth Me (Admin)", True, "SKIPPED - endpoint not implemented")
+        """Test /auth/me endpoint with admin token"""
+        if not self.admin_token:
+            return self.log_test("Auth Me (Admin)", False, "No admin token available")
+            
+        try:
+            response = requests.get(
+                f"{self.api_url}/auth/me",
+                headers=self.get_auth_headers(self.admin_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                data = response.json()
+                details += f", User: {data.get('name', 'Unknown')}, Role: {data.get('role', 'Unknown')}"
+                details += f", Email: {data.get('email', 'Unknown')}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Auth Me (Admin)", success, details)
+        except Exception as e:
+            return self.log_test("Auth Me (Admin)", False, f"Error: {str(e)}")
 
     def test_auth_me_user(self):
-        """Test /auth/me endpoint with user token - SKIPPED (endpoint not implemented)"""
-        return self.log_test("Auth Me (User)", True, "SKIPPED - endpoint not implemented")
+        """Test /auth/me endpoint with user token"""
+        if not self.user_token:
+            return self.log_test("Auth Me (User)", False, "No user token available")
+            
+        try:
+            response = requests.get(
+                f"{self.api_url}/auth/me",
+                headers=self.get_auth_headers(self.user_token),
+                timeout=10
+            )
+            success = response.status_code == 200
+            details = f"Status: {response.status_code}"
+            
+            if success:
+                data = response.json()
+                details += f", User: {data.get('name', 'Unknown')}, Role: {data.get('role', 'Unknown')}"
+                details += f", Email: {data.get('email', 'Unknown')}"
+            else:
+                details += f", Response: {response.text[:200]}"
+                
+            return self.log_test("Auth Me (User)", success, details)
+        except Exception as e:
+            return self.log_test("Auth Me (User)", False, f"Error: {str(e)}")
 
     def test_admin_get_users(self):
         """Test admin getting all users"""
