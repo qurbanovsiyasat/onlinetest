@@ -1467,7 +1467,7 @@ async def initialize_admin():
 # General Routes
 @api_router.get("/")
 async def root():
-    return {"message": "OnlineTestMaker API - Admin Centered Version"}
+    return {"message": "Squiz API - Admin Centered Version"}
 
 # Admin Results Viewing Routes
 @api_router.get("/admin/quiz-results")
