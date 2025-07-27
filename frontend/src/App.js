@@ -244,41 +244,38 @@ function MainApp() {
           return;
         }
         
-        // Try to load MathJax locally
-        const mathjaxModule = await import('mathjax/es5/tex-mml-chtml.js');
-        const MathJax = mathjaxModule.MathJax || mathjaxModule.default;
-        
-        // Ensure MathJax object exists and has startup property
-        if (MathJax && MathJax.startup && typeof MathJax.startup.defaultReady === 'function') {
-          window.MathJax = MathJax;
-          
-          // Configure MathJax
-          await MathJax.startup.defaultReady();
-          console.log('✅ MathJax initialized locally (self-hosted)');
-        } else {
-          throw new Error('MathJax startup property not available');
-        }
-      } catch (error) {
-        console.warn('⚠️ MathJax local loading failed, using window fallback:', error);
-        
-        // Try to initialize from CDN as fallback
-        try {
-          if (!window.MathJax) {
-            // Load MathJax from CDN
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
-            script.async = true;
-            script.onload = () => {
-              console.log('✅ MathJax loaded from CDN fallback');
-            };
-            script.onerror = () => {
-              console.error('❌ Failed to load MathJax from CDN');
-            };
-            document.head.appendChild(script);
+        // Configure MathJax before loading
+        window.MathJax = {
+          tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']]
+          },
+          svg: {
+            fontCache: 'global'
+          },
+          startup: {
+            ready: () => {
+              console.log('✅ MathJax initialized successfully');
+              window.MathJax.startup.defaultReady();
+            }
           }
-        } catch (fallbackError) {
-          console.error('❌ MathJax fallback also failed:', fallbackError);
-        }
+        };
+        
+        // Load MathJax from CDN with proper initialization
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+        script.async = true;
+        script.onload = () => {
+          console.log('✅ MathJax loaded from CDN successfully');
+        };
+        script.onerror = () => {
+          console.error('❌ Failed to load MathJax from CDN');
+          // Silent fallback - continue without MathJax
+        };
+        
+        document.head.appendChild(script);
+      } catch (error) {
+        console.warn('⚠️ MathJax initialization failed, continuing without mathematical expressions:', error);
       }
     };
     
