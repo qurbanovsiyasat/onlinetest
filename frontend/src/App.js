@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, useRef } from "react";
+import React, { useState, useEffect, createContext, useContext, useRef } from "react";
 import "./App.css";
 import axios from "axios";
 import ReactCrop from 'react-image-crop';
