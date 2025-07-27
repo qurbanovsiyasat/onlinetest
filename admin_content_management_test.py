@@ -443,14 +443,9 @@ class AdminContentManagementTester:
         if not self.admin_token or not self.created_global_subject_id:
             return self.log_test("Add Subfolder to Global Subject", False, "No admin token or global subject ID available")
             
-        subfolder_data = {
-            "subfolder_name": "Number Theory"
-        }
-        
         try:
             response = requests.post(
-                f"{self.api_url}/admin/global-subject/{self.created_global_subject_id}/subfolder",
-                json=subfolder_data,
+                f"{self.api_url}/admin/global-subject/{self.created_global_subject_id}/subfolder?subfolder_name=Number Theory",
                 headers=self.get_auth_headers(self.admin_token),
                 timeout=10
             )
