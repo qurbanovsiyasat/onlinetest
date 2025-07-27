@@ -905,7 +905,7 @@ async def get_public_quizzes(current_user: User = Depends(get_current_user)):
 async def get_public_quiz_leaderboard(quiz_id: str, current_user: User = Depends(get_current_user)):
     """Get top 3 performers for a quiz (public view)"""
     # Check if user can access this quiz
-    quiz = await db.quizzes.find_one({"id": quiz_id, "is_active": True})
+    quiz = await db.quizzes.find_one({"id": quiz_id, "is_active": True, "is_draft": False})
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
     
