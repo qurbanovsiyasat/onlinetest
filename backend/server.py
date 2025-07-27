@@ -1895,45 +1895,7 @@ async def get_available_subjects_for_user(current_user: User = Depends(get_curre
         "combined": global_formatted  # Only global subjects
     }
 
-@api_router.post("/user/quiz", response_model=Quiz)
-async def create_user_quiz(quiz_data: QuizCreate, current_user: User = Depends(get_current_user)):
-    """Create quiz by regular user"""
-    # Validate quiz data
-    validation_errors = validate_quiz_data(quiz_data)
-    if validation_errors:
-        error_messages = []
-        for error in validation_errors:
-            if error.question_index is not None:
-                error_messages.append(f"Question {error.question_index + 1}: {error.message}")
-            else:
-                error_messages.append(f"{error.field}: {error.message}")
-        
-        raise HTTPException(
-            status_code=400, 
-            detail={
-                "message": "Quiz validation failed",
-                "errors": error_messages,
-                "validation_errors": [error.dict() for error in validation_errors]
-            }
-        )
-    
-    # Calculate total points
-    total_points = sum(question.points for question in quiz_data.questions)
-    
-    # Create quiz with user ownership
-    quiz = Quiz(**quiz_data.dict(), created_by=current_user.id)
-    quiz.total_questions = len(quiz.questions)
-    quiz.total_points = total_points
-    quiz.updated_at = datetime.utcnow()
-    quiz.is_draft = True  # Start as draft
-    
-    # Add user ownership fields
-    quiz_dict = quiz.dict()
-    quiz_dict["quiz_owner_type"] = "user"
-    quiz_dict["quiz_owner_id"] = current_user.id
-    
-    await db.quizzes.insert_one(quiz_dict)
-    return quiz
+# User quiz creation removed - admin-only functionality
 
 @api_router.get("/user/my-quizzes", response_model=List[Quiz])
 async def get_user_created_quizzes(current_user: User = Depends(get_current_user)):
