@@ -355,11 +355,14 @@ frontend:
     file: "App.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "main"
           comment: "Implemented enhanced quiz creation workflow with prominent publish modal that defaults to 'Publish Now' instead of basic confirm dialog. Added professional modal with clear explanations, recommended actions, and better user experience."
+        - working: true
+          agent: "testing"
+          comment: "✅ COMPREHENSIVE SQUIZ FRONTEND TESTING COMPLETED: Successfully verified all core functionality. Key findings: 1) ✅ Squiz Branding: Page title shows 'Squiz | Quiz Platform', main heading shows '📝 Squiz', no OnlineTestMaker or Emergent AI references found 2) ✅ Admin Login: admin@squiz.com/admin123 works perfectly, dashboard loads correctly 3) ✅ Draft Quiz Management: Found 2 draft quiz indicators with '📝 Draft' badges, 5 publish buttons available, clear warning messages 4) ✅ Folder Organization: Folder view working with Mathematics, Physics, Science subjects and subcategories 5) ✅ Mobile Responsive: All components adapt properly to 390x844 mobile viewport, navigation and quiz interface fully functional 6) ❌ CRITICAL BUG DISCOVERED: Draft quizzes ('Draft Quiz - Should Not Be Accessible', 'Draft Mode Test Quiz') are visible to regular users with 'Take Quiz' buttons - this violates the core requirement that only published quizzes should be accessible to users. This is a high-priority security/functionality issue that needs immediate fixing."
   
   - task: "Bulk Quiz Publishing Functionality"
     implemented: true
