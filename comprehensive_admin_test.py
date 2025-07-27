@@ -117,10 +117,17 @@ class ComprehensiveAdminTester:
         """Test Scenario 2: Public quiz with specific allowed_users"""
         quiz_data = {
             "title": "Scenario 2: Public Quiz With Allowed Users",
-            "description": "Testing public quiz with specific allowed_users",
+            "description": "Testing public quiz with specific allowed_users list",
             "category": "Test", "subject": "Math", "subcategory": "General",
             "is_public": True, "allowed_users": [self.user_id],
-            "questions": [{"question_text": "Test?", "options": [{"text": "A", "is_correct": True}]}]
+            "questions": [{
+                "question_text": "What is 2 + 2?", 
+                "options": [
+                    {"text": "3", "is_correct": False}, 
+                    {"text": "4", "is_correct": True},
+                    {"text": "5", "is_correct": False}
+                ]
+            }]
         }
         
         # Create and publish quiz
