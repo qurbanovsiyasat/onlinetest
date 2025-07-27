@@ -867,8 +867,8 @@ async def get_categories(admin_user: User = Depends(get_admin_user)):
 # User Routes (Quiz Taking)
 @api_router.get("/quizzes", response_model=List[Quiz])
 async def get_public_quizzes(current_user: User = Depends(get_current_user)):
-    """Get all accessible quizzes for users - includes admin and published user quizzes"""
-    # Get all active, published quizzes from both admin and users
+    """Get all accessible admin-created quizzes only"""
+    # Get all active, published quizzes from admin only
     all_quizzes = await db.quizzes.find({"is_active": True}).to_list(1000)
     
     accessible_quizzes = []
@@ -905,7 +905,7 @@ async def get_public_quizzes(current_user: User = Depends(get_current_user)):
             quiz['quiz_owner_id'] = quiz['created_by']
         
         try:
-            # Include quiz based on ownership and access rules
+            # Only include admin-created quizzes
             quiz_owner_type = quiz.get('quiz_owner_type', 'admin')
             
             if quiz_owner_type == 'admin':
@@ -915,11 +915,7 @@ async def get_public_quizzes(current_user: User = Depends(get_current_user)):
                 elif not quiz.get("is_public", False):
                     # For backward compatibility, include non-public admin quizzes (legacy behavior)
                     accessible_quizzes.append(Quiz(**quiz))
-            elif quiz_owner_type == 'user':
-                # User quizzes: Only include if published (not draft) and not the current user's own quiz (they see it in "My Quizzes")
-                if not quiz.get('is_draft', True) and quiz['created_by'] != current_user.id:
-                    accessible_quizzes.append(Quiz(**quiz))
-                    
+            # User-created quizzes are no longer included - admin-only content
         except Exception as e:
             # Skip invalid quiz records
             print(f"Skipping invalid quiz: {quiz.get('id', 'unknown')} - {str(e)}")
