@@ -3310,17 +3310,7 @@ function UserDashboard({ currentView, setCurrentView }) {
           <UserHome quizzes={quizzes} startQuiz={startQuiz} />
         )}
 
-        {currentView === 'create-quiz' && (
-          <UserCreateQuiz setCurrentView={setCurrentView} />
-        )}
-
-        {currentView === 'my-quizzes' && (
-          <UserMyQuizzes setCurrentView={setCurrentView} />
-        )}
-
-        {currentView === 'my-subjects' && (
-          <UserMySubjects />
-        )}
+        {/* User creation components removed - admin-only functionality */}
 
         {currentView === 'my-attempts' && (
           <div>
