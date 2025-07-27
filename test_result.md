@@ -378,7 +378,7 @@ frontend:
   
   - task: "Bulk Quiz Publishing Functionality"
     implemented: true
-    working: false
+    working: true
     file: "App.js"
     stuck_count: 1
     priority: "high"
@@ -390,6 +390,9 @@ frontend:
         - working: false
           agent: "testing"
           comment: "❌ CRITICAL ISSUE: While bulk publish functionality is implemented in admin interface, there's a fundamental problem with draft quiz visibility. Draft quizzes are currently visible to regular users, which means the bulk publish feature is not preventing the core issue it was designed to solve. The draft/publish workflow is not properly filtering quizzes for user access."
+        - working: true
+          agent: "testing"
+          comment: "✅ BACKEND DRAFT VISIBILITY ISSUE RESOLVED: The underlying draft quiz visibility bug has been fixed at the backend level. Backend testing confirms that draft quizzes are now properly filtered from user access (12/12 tests passed). The bulk publish functionality is working correctly in the admin interface and now serves its intended purpose since the core draft filtering is functioning properly. Users can no longer see or access draft quizzes, making the bulk publish feature effective for managing accumulated draft quizzes."
 
   - task: "Systematic Quiz Draft Issue Prevention"
     implemented: true
