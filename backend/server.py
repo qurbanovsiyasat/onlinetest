@@ -857,8 +857,8 @@ async def get_categories(admin_user: User = Depends(get_admin_user)):
 @api_router.get("/quizzes", response_model=List[Quiz])
 async def get_public_quizzes(current_user: User = Depends(get_current_user)):
     """Get all accessible quizzes for users (sorted by creation date)"""
-    # Get all active quizzes
-    all_quizzes = await db.quizzes.find({"is_active": True}).to_list(1000)
+    # Get all active and published quizzes (exclude drafts)
+    all_quizzes = await db.quizzes.find({"is_active": True, "is_draft": False}).to_list(1000)
     
     accessible_quizzes = []
     for quiz in all_quizzes:
