@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend API Testing for OnlineTestMaker - Quiz Submission and Results Recording Focus
-Tests the specific flow: admin auth -> create quiz -> user takes quiz -> verify results
+Backend API Testing for OnlineTestMaker - CORS Verification Focus
+Tests CORS headers are present for cross-origin requests and all core functionality works after CORS changes
 """
 
 import requests
