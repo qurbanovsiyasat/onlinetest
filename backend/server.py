@@ -2176,6 +2176,40 @@ app.add_middleware(
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Startup event - Initialize admin user
+@app.on_event("startup")
+async def startup_initialize():
+    """Initialize application on startup"""
+    logger.info("🚀 Starting Squiz application...")
+    
+    # Create admin user if it doesn't exist
+    admin_email = "admin@squiz.com"
+    existing_admin = await db.users.find_one({"email": admin_email})
+    
+    if not existing_admin:
+        logger.info("📝 Creating default admin user...")
+        admin_user = User(
+            email=admin_email,
+            name="Squiz Administrator",
+            role=UserRole.ADMIN
+        )
+        admin_dict = admin_user.dict()
+        admin_dict["password"] = hash_password("admin123")
+        
+        await db.users.insert_one(admin_dict)
+        logger.info(f"✅ Admin user created: {admin_email}")
+    else:
+        logger.info(f"✅ Admin user already exists: {admin_email}")
+    
+    # Log deployment information
+    is_production = os.environ.get('RENDER', False) or os.environ.get('NODE_ENV') == 'production'
+    env_type = "PRODUCTION" if is_production else "DEVELOPMENT"
+    
+    logger.info(f"🌍 Environment: {env_type}")
+    logger.info(f"🔐 JWT Secret: {'[CONFIGURED]' if os.environ.get('JWT_SECRET') else '[USING DEFAULT - UPDATE FOR PRODUCTION]'}")
+    logger.info(f"🗄️  Database: {os.environ.get('DB_NAME', 'test_database')}")
+    logger.info("🎯 Squiz application ready!")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
