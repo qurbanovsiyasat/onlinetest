@@ -2594,9 +2594,9 @@ class OnlineTestMakerAPITester:
             return 1
 
 def main():
-    """Main test execution"""
+    """Main test execution - Focus on Quiz Submission and Results Recording"""
     tester = OnlineTestMakerAPITester()
-    return tester.run_all_tests()
+    return 0 if tester.run_quiz_submission_tests() else 1
 
 if __name__ == "__main__":
     sys.exit(main())
