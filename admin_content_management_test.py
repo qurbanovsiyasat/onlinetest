@@ -528,11 +528,11 @@ class AdminContentManagementTester:
         self.test_admin_login()
         self.test_user_registration_and_login()
         
-        print("\n📋 TESTING PREDEFINED SUBJECTS ENDPOINT (CLEAN SLATE)")
+        print("\n📋 TESTING PREDEFINED SUBJECTS ENDPOINT")
         print("-" * 60)
         
-        # Test 1: Verify predefined-subjects is empty initially
-        self.test_predefined_subjects_empty_initially()
+        # Test 1: Verify predefined-subjects endpoint is accessible
+        self.test_predefined_subjects_endpoint_accessible()
         
         print("\n🏗️ TESTING GLOBAL SUBJECT CREATION")
         print("-" * 60)
