@@ -51,7 +51,7 @@ async def health_check():
         await db.command("ping")
         return {
             "status": "healthy",
-            "message": "OnlineTestMaker backend is running (self-hosted)",
+            "message": "Squiz backend is running (self-hosted)",
             "database": "connected",
             "timestamp": datetime.utcnow().isoformat(),
             "version": "1.0.0",
