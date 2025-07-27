@@ -955,16 +955,18 @@ async def get_quiz(quiz_id: str, current_user: User = Depends(get_current_user))
 
 @api_router.post("/quiz/{quiz_id}/attempt", response_model=QuizAttempt)
 async def submit_quiz_attempt(quiz_id: str, attempt_data: QuizAttemptCreate, current_user: User = Depends(get_current_user)):
-    """Submit quiz attempt with enhanced question type support (users only)"""
-    if current_user.role == UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Admins cannot take quizzes")
-    
-    # Get quiz
+    """Submit quiz attempt with enhanced question type support"""
+    # Get quiz first to check ownership
     quiz = await db.quizzes.find_one({"id": quiz_id, "is_active": True, "is_draft": False})
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found or not published")
     
-    # Check access permissions for public quizzes
+    # Allow admins to complete quizzes they created, but restrict access to other quizzes
+    if current_user.role == UserRole.ADMIN:
+        if quiz.get("created_by") != current_user.id:
+            raise HTTPException(status_code=403, detail="Admins can only complete quizzes they created")
+    
+    # Check access permissions for public quizzes (for regular users)
     if quiz.get("is_public", False) and current_user.id not in quiz.get("allowed_users", []):
         raise HTTPException(status_code=403, detail="You don't have access to this quiz")
     
