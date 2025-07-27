@@ -227,20 +227,18 @@ def test_admin_quiz_results():
         leaderboard = leaderboard_response.json()
         print(f"✅ Leaderboard retrieved")
         print(f"   Quiz ID being checked: {quiz_id}")
-        print(f"   Total Entries: {len(leaderboard.get('ranking', []))}")
+        print(f"   Total Entries: {len(leaderboard.get('full_ranking', []))}")
         
-        # Debug: Show full leaderboard response
-        print(f"   Raw leaderboard response: {leaderboard}")
-        
-        if leaderboard.get('ranking'):
-            for idx, entry in enumerate(leaderboard['ranking'][:3]):
+        if leaderboard.get('full_ranking'):
+            for idx, entry in enumerate(leaderboard['full_ranking'][:3]):
                 print(f"   #{idx+1}: {entry.get('user_name', 'N/A')} - {entry.get('percentage', 'N/A'):.1f}%")
         
         # Check user's position
         user_position = leaderboard.get('user_position')
         if user_position:
-            print(f"   Admin Position: #{user_position.get('position', 'N/A')}")
-            percentage = user_position.get('percentage', 'N/A')
+            print(f"   Admin Position: #{user_position.get('rank', 'N/A')}")
+            entry = user_position.get('entry', {})
+            percentage = entry.get('percentage', 'N/A')
             if percentage != 'N/A':
                 print(f"   Admin Score: {percentage:.1f}%")
             else:
