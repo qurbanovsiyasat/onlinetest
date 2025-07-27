@@ -3677,7 +3677,7 @@ function PasswordChangeModal({ onClose, userName }) {
 }
 
 // User Quiz Taking Components
-function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, userAnswers, selectAnswer, nextQuestion, setCurrentView }) {
+function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, userAnswers, selectAnswer, nextQuestion, submitQuiz, setCurrentView }) {
   const [showFinishModal, setShowFinishModal] = useState(false);
   
   if (!quiz) return null;
