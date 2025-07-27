@@ -225,7 +225,7 @@ class ComprehensiveAdminTester:
                      headers=self.get_auth_headers(self.admin_token), timeout=10)
         
         # Admin takes quiz
-        attempt_data = {"quiz_id": quiz_id, "answers": ["A"]}
+        attempt_data = {"quiz_id": quiz_id, "answers": ["8"]}
         requests.post(f"{self.api_url}/quiz/{quiz_id}/attempt", json=attempt_data,
                      headers=self.get_auth_headers(self.admin_token), timeout=10)
         
