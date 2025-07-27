@@ -320,6 +320,7 @@ function AuthScreen() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('🔐 Form submitted', formData);
     setLoading(true);
     setError('');
 
