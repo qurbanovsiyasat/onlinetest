@@ -65,6 +65,7 @@ def test_admin_quiz_results():
             }
         ],
         "category": "Test",
+        "subject": "Test",
         "subcategory": "Debug",
         "time_limit": 60,
         "is_public": True,
