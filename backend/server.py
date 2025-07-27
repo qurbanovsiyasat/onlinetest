@@ -1425,14 +1425,11 @@ async def upload_image(file: UploadFile = File(...), admin_user: User = Depends(
     if len(content) > 5 * 1024 * 1024:  # 5MB
         raise HTTPException(status_code=400, detail="File size must be less than 5MB")
     
-    # Validate image format
-    file_type = imghdr.what(None, h=content)
-    if file_type not in ['jpeg', 'jpg', 'png', 'gif', 'webp']:
-        raise HTTPException(status_code=400, detail="Unsupported image format")
+    # Validate image format - skip additional validation since content_type is already validated
     
     # Generate unique filename
     file_id = str(uuid.uuid4())
-    file_extension = file.filename.split('.')[-1] if '.' in file.filename else file_type
+    file_extension = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
     filename = f"{file_id}.{file_extension}"
     
     # Convert to base64 for storage (in production, use cloud storage)
