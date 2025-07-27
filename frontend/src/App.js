@@ -343,7 +343,7 @@ function AuthScreen() {
   const initializeAdmin = async () => {
     try {
       const response = await axios.post(`${API}/init-admin`);
-      alert(`Admin created successfully!\nEmail: admin@onlinetestmaker.com\nPassword: admin123`);
+      alert(`Admin created successfully!\nEmail: admin@squiz.com\nPassword: admin123`);
     } catch (error) {
       alert(error.response?.data?.detail || 'Admin already exists or error occurred');
     }
