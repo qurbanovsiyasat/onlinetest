@@ -7,7 +7,7 @@ import requests
 import json
 
 # Configuration
-BACKEND_URL = "https://107f15dd-a281-4a7c-9f3c-785d2a7cee3f.preview.emergentagent.com"
+BACKEND_URL = "https://6801ea8c-1ba4-4fd0-84c7-297e1bd68990.preview.emergentagent.com"
 ADMIN_EMAIL = "admin@onlinetestmaker.com"
 ADMIN_PASSWORD = "admin123"
 

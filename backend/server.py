@@ -1903,8 +1903,8 @@ def get_cors_origins():
         "http://localhost",
         "http://127.0.0.1",
         # Add the specific frontend and backend URLs for this deployment
-        "https://107f15dd-a281-4a7c-9f3c-785d2a7cee3f.preview.emergentagent.com",
-        "https://107f15dd-a281-4a7c-9f3c-785d2a7cee3f.preview.emergentagent.com"
+        "https://6801ea8c-1ba4-4fd0-84c7-297e1bd68990.preview.emergentagent.com",
+        "https://6801ea8c-1ba4-4fd0-84c7-297e1bd68990.preview.emergentagent.com"
     ]
     
     # Add server IP addresses

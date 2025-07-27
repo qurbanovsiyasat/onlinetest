@@ -92,7 +92,7 @@ class CORSVerificationTester:
             options_response = requests.options(
                 f"{self.api_url}/auth/login",
                 headers={
-                    'Origin': 'https://107f15dd-a281-4a7c-9f3c-785d2a7cee3f.preview.emergentagent.com',
+                    'Origin': 'https://6801ea8c-1ba4-4fd0-84c7-297e1bd68990.preview.emergentagent.com',
                     'Access-Control-Request-Method': 'POST',
                     'Access-Control-Request-Headers': 'Content-Type,Authorization'
                 },
@@ -109,7 +109,7 @@ class CORSVerificationTester:
                 json=login_data,
                 headers={
                     'Content-Type': 'application/json',
-                    'Origin': 'https://107f15dd-a281-4a7c-9f3c-785d2a7cee3f.preview.emergentagent.com'
+                    'Origin': 'https://6801ea8c-1ba4-4fd0-84c7-297e1bd68990.preview.emergentagent.com'
                 },
                 timeout=10
             )
@@ -143,7 +143,7 @@ class CORSVerificationTester:
             options_response = requests.options(
                 f"{self.api_url}/admin/quiz",
                 headers={
-                    'Origin': 'https://107f15dd-a281-4a7c-9f3c-785d2a7cee3f.preview.emergentagent.com',
+                    'Origin': 'https://6801ea8c-1ba4-4fd0-84c7-297e1bd68990.preview.emergentagent.com',
                     'Access-Control-Request-Method': 'POST',
                     'Access-Control-Request-Headers': 'Content-Type,Authorization'
                 },
@@ -174,7 +174,7 @@ class CORSVerificationTester:
                 headers={
                     'Content-Type': 'application/json',
                     'Authorization': f'Bearer {self.admin_token}',
-                    'Origin': 'https://107f15dd-a281-4a7c-9f3c-785d2a7cee3f.preview.emergentagent.com'
+                    'Origin': 'https://6801ea8c-1ba4-4fd0-84c7-297e1bd68990.preview.emergentagent.com'
                 },
                 timeout=10
             )
@@ -220,7 +220,7 @@ class CORSVerificationTester:
                 json=user_data,
                 headers={
                     'Content-Type': 'application/json',
-                    'Origin': 'https://107f15dd-a281-4a7c-9f3c-785d2a7cee3f.preview.emergentagent.com'
+                    'Origin': 'https://6801ea8c-1ba4-4fd0-84c7-297e1bd68990.preview.emergentagent.com'
                 },
                 timeout=10
             )
@@ -250,7 +250,7 @@ class CORSVerificationTester:
                 json=login_data,
                 headers={
                     'Content-Type': 'application/json',
-                    'Origin': 'https://107f15dd-a281-4a7c-9f3c-785d2a7cee3f.preview.emergentagent.com'
+                    'Origin': 'https://6801ea8c-1ba4-4fd0-84c7-297e1bd68990.preview.emergentagent.com'
                 },
                 timeout=10
             )
@@ -279,7 +279,7 @@ class CORSVerificationTester:
             options_response = requests.options(
                 f"{self.api_url}/quiz/{self.cors_test_quiz_id}/attempt",
                 headers={
-                    'Origin': 'https://107f15dd-a281-4a7c-9f3c-785d2a7cee3f.preview.emergentagent.com',
+                    'Origin': 'https://6801ea8c-1ba4-4fd0-84c7-297e1bd68990.preview.emergentagent.com',
                     'Access-Control-Request-Method': 'POST',
                     'Access-Control-Request-Headers': 'Content-Type,Authorization'
                 },
@@ -298,7 +298,7 @@ class CORSVerificationTester:
                 headers={
                     'Content-Type': 'application/json',
                     'Authorization': f'Bearer {self.user_token}',
-                    'Origin': 'https://107f15dd-a281-4a7c-9f3c-785d2a7cee3f.preview.emergentagent.com'
+                    'Origin': 'https://6801ea8c-1ba4-4fd0-84c7-297e1bd68990.preview.emergentagent.com'
                 },
                 timeout=10
             )
@@ -332,7 +332,7 @@ class CORSVerificationTester:
                 f"{self.api_url}/quizzes",
                 headers={
                     'Authorization': f'Bearer {self.user_token}',
-                    'Origin': 'https://107f15dd-a281-4a7c-9f3c-785d2a7cee3f.preview.emergentagent.com'
+                    'Origin': 'https://6801ea8c-1ba4-4fd0-84c7-297e1bd68990.preview.emergentagent.com'
                 },
                 timeout=10
             )
@@ -372,7 +372,7 @@ class CORSVerificationTester:
                     response = requests.options(
                         f"{self.api_url}{endpoint}",
                         headers={
-                            'Origin': 'https://107f15dd-a281-4a7c-9f3c-785d2a7cee3f.preview.emergentagent.com',
+                            'Origin': 'https://6801ea8c-1ba4-4fd0-84c7-297e1bd68990.preview.emergentagent.com',
                             'Access-Control-Request-Method': 'POST' if endpoint != '/quizzes' else 'GET',
                             'Access-Control-Request-Headers': 'Content-Type,Authorization'
                         },
@@ -396,7 +396,7 @@ class CORSVerificationTester:
         """Test CORS with different allowed origins"""
         try:
             # Test with the configured origin
-            allowed_origin = 'https://107f15dd-a281-4a7c-9f3c-785d2a7cee3f.preview.emergentagent.com'
+            allowed_origin = 'https://6801ea8c-1ba4-4fd0-84c7-297e1bd68990.preview.emergentagent.com'
             response1 = requests.get(
                 f"{self.api_url}/health",
                 headers={'Origin': allowed_origin},
