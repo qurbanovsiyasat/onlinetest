@@ -2000,319 +2000,347 @@ function QuizEditModal({ quiz, onClose, onUpdate }) {
   );
 }
 
+// Admin Categories View with Global Subject Management
 function AdminCategoriesView({ categories, fetchCategories }) {
-  const [newCategory, setNewCategory] = useState({ name: '', description: '' });
-  const [subjectFolders, setSubjectFolders] = useState([]);
-  const [newFolder, setNewFolder] = useState({ 
-    name: '', 
-    description: '', 
-    is_visible: true, 
-    allowed_users: [] 
-  });
-  const [allUsers, setAllUsers] = useState([]);
-  const [activeTab, setActiveTab] = useState('categories'); // 'categories' or 'folders'
-  const [deleteFolderConfirm, setDeleteFolderConfirm] = useState({ show: false, folderId: null, folderName: '' });
+  const [activeTab, setActiveTab] = useState('global-subjects');
+  const [globalSubjects, setGlobalSubjects] = useState([]);
+  const [showCreateGlobalModal, setShowCreateGlobalModal] = useState(false);
+  const [newGlobalSubject, setNewGlobalSubject] = useState({ name: '', description: '', subfolders: [''] });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState({ show: false, subjectId: null, subjectName: '' });
 
   useEffect(() => {
-    if (activeTab === 'folders') {
-      fetchSubjectFolders();
-      fetchAllUsers();
+    if (activeTab === 'global-subjects') {
+      fetchGlobalSubjects();
     }
   }, [activeTab]);
 
-  const fetchSubjectFolders = async () => {
+  const fetchGlobalSubjects = async () => {
     try {
-      const response = await apiCall('/admin/subject-folders');
-      setSubjectFolders(response.data);
+      const response = await apiCall('/admin/global-subjects');
+      setGlobalSubjects(response.data);
     } catch (error) {
-      console.error('Error fetching subject folders:', error);
+      console.error('Error fetching global subjects:', error);
     }
   };
 
-  const fetchAllUsers = async () => {
-    try {
-      const response = await apiCall('/admin/users');
-      setAllUsers(response.data.filter(user => user.role === 'user'));
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
-
-  const createCategory = async () => {
-    if (!newCategory.name) return;
-    
-    try {
-      await apiCall('/admin/category', {
-        method: 'POST',
-        params: { category_name: newCategory.name, description: newCategory.description }
-      });
-      setNewCategory({ name: '', description: '' });
-      fetchCategories();
-    } catch (error) {
-      alert('Error creating category');
-    }
-  };
-
-  const createSubjectFolder = async () => {
-    if (!newFolder.name) {
-      alert('Folder name is required');
+  const createGlobalSubject = async () => {
+    if (!newGlobalSubject.name.trim()) {
+      alert('Subject name is required');
       return;
     }
-    
+
+    const subjectData = {
+      name: newGlobalSubject.name.trim(),
+      description: newGlobalSubject.description.trim(),
+      subfolders: newGlobalSubject.subfolders.filter(sf => sf.trim()).map(sf => sf.trim())
+    };
+
     try {
-      await apiCall('/admin/subject-folder', {
+      await apiCall('/admin/global-subject', {
         method: 'POST',
-        data: newFolder
+        data: subjectData
       });
-      setNewFolder({ name: '', description: '', is_visible: true, allowed_users: [] });
-      fetchSubjectFolders();
-      alert('Subject folder created successfully!');
+      setShowCreateGlobalModal(false);
+      setNewGlobalSubject({ name: '', description: '', subfolders: [''] });
+      fetchGlobalSubjects();
+      alert('Global subject created successfully!');
     } catch (error) {
-      alert('Error creating subject folder: ' + (error.response?.data?.detail || 'Unknown error'));
+      alert('Error creating global subject: ' + (error.response?.data?.detail || error.message));
     }
   };
 
-  const toggleFolderVisibility = async (folderId, currentVisibility) => {
-    try {
-      await apiCall(`/admin/subject-folder/${folderId}`, {
-        method: 'PUT',
-        data: { is_visible: !currentVisibility }
-      });
-      fetchSubjectFolders();
-    } catch (error) {
-      alert('Error updating folder visibility');
-    }
+  const deleteGlobalSubject = (subjectId, subjectName) => {
+    setShowDeleteConfirm({ show: true, subjectId, subjectName });
   };
 
-  const deleteFolder = async (folderId, folderName) => {
-    setDeleteFolderConfirm({ show: true, folderId, folderName });
-  };
-
-  const confirmDeleteFolder = async () => {
-    const { folderId, folderName } = deleteFolderConfirm;
+  const confirmDeleteGlobalSubject = async () => {
     try {
-      await apiCall(`/admin/subject-folder/${folderId}`, {
+      await apiCall(`/admin/global-subject/${showDeleteConfirm.subjectId}`, {
         method: 'DELETE'
       });
-      fetchSubjectFolders();
-      alert('Folder deleted successfully!');
-      setDeleteFolderConfirm({ show: false, folderId: null, folderName: '' });
+      setShowDeleteConfirm({ show: false, subjectId: null, subjectName: '' });
+      fetchGlobalSubjects();
+      alert('Global subject deleted successfully!');
     } catch (error) {
-      alert('Error deleting folder: ' + (error.response?.data?.detail || 'Unknown error'));
-      setDeleteFolderConfirm({ show: false, folderId: null, folderName: '' });
+      alert('Error deleting global subject: ' + (error.response?.data?.detail || error.message));
     }
   };
 
-  const toggleUserAccessForFolder = (userId) => {
-    setNewFolder({
-      ...newFolder,
-      allowed_users: newFolder.allowed_users.includes(userId)
-        ? newFolder.allowed_users.filter(id => id !== userId)
-        : [...newFolder.allowed_users, userId]
+  const addSubfolder = () => {
+    setNewGlobalSubject({
+      ...newGlobalSubject,
+      subfolders: [...newGlobalSubject.subfolders, '']
     });
+  };
+
+  const updateSubfolder = (index, value) => {
+    const updatedSubfolders = [...newGlobalSubject.subfolders];
+    updatedSubfolders[index] = value;
+    setNewGlobalSubject({
+      ...newGlobalSubject,
+      subfolders: updatedSubfolders
+    });
+  };
+
+  const removeSubfolder = (index) => {
+    if (newGlobalSubject.subfolders.length > 1) {
+      const updatedSubfolders = newGlobalSubject.subfolders.filter((_, i) => i !== index);
+      setNewGlobalSubject({
+        ...newGlobalSubject,
+        subfolders: updatedSubfolders
+      });
+    }
   };
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      {/* Tabs */}
-      <div className="flex mb-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-gray-800">Subject & Category Management</h2>
+        {activeTab === 'global-subjects' && (
+          <button
+            onClick={() => setShowCreateGlobalModal(true)}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200"
+          >
+            ➕ Create Global Subject
+          </button>
+        )}
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="flex space-x-1 mb-6 border-b">
         <button
-          onClick={() => setActiveTab('categories')}
-          className={`px-4 py-2 rounded-l-lg transition duration-200 ${
-            activeTab === 'categories' 
-              ? 'bg-indigo-600 text-white' 
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          onClick={() => setActiveTab('global-subjects')}
+          className={`px-4 py-2 font-semibold transition duration-200 border-b-2 ${
+            activeTab === 'global-subjects'
+              ? 'text-indigo-600 border-indigo-600'
+              : 'text-gray-500 border-transparent hover:text-gray-700'
           }`}
         >
-          📝 Quiz Categories
+          🌐 Global Subjects & Subfolders
         </button>
         <button
-          onClick={() => setActiveTab('folders')}
-          className={`px-4 py-2 rounded-r-lg transition duration-200 ${
-            activeTab === 'folders' 
-              ? 'bg-indigo-600 text-white' 
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          onClick={() => setActiveTab('quiz-categories')}
+          className={`px-4 py-2 font-semibold transition duration-200 border-b-2 ${
+            activeTab === 'quiz-categories'
+              ? 'text-indigo-600 border-indigo-600'
+              : 'text-gray-500 border-transparent hover:text-gray-700'
           }`}
         >
-          📁 Subject Folders
+          📂 Legacy Quiz Categories
         </button>
       </div>
 
-      {activeTab === 'categories' ? (
+      {/* Global Subjects Tab */}
+      {activeTab === 'global-subjects' && (
         <div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Quiz Categories</h2>
-          
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <h3 className="font-semibold mb-3">Create New Category</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="Category name"
-                value={newCategory.name}
-                onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                className="p-2 border border-gray-300 rounded"
-              />
-              <input
-                type="text"
-                placeholder="Description (optional)"
-                value={newCategory.description}
-                onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-                className="p-2 border border-gray-300 rounded"
-              />
+          <div className="mb-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded">
+            <p className="text-blue-800 text-sm">
+              <strong>Global Subjects & Subfolders:</strong> These will be available to all users (admin and regular users) when creating quizzes. 
+              They serve as the standardized category system for the entire platform.
+            </p>
+          </div>
+
+          {globalSubjects.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg mb-4">No global subjects created yet.</p>
+              <button
+                onClick={() => setShowCreateGlobalModal(true)}
+                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition duration-200"
+              >
+                Create Your First Global Subject
+              </button>
             </div>
-            <button
-              onClick={createCategory}
-              className="mt-3 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-200"
-            >
-              Create Category
-            </button>
-          </div>
+          ) : (
+            <div className="space-y-6">
+              {globalSubjects.map((subject) => (
+                <div key={subject.id} className="border rounded-lg p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-800 flex items-center">
+                        🌐 {subject.name}
+                      </h3>
+                      {subject.description && (
+                        <p className="text-gray-600 mt-1">{subject.description}</p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-2">
+                        Created: {new Date(subject.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => deleteGlobalSubject(subject.id, subject.name)}
+                      className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition duration-200"
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {categories.map((category) => (
-              <div key={category.id} className="border rounded-lg p-4">
-                <h3 className="font-semibold text-gray-800">{category.name}</h3>
-                <p className="text-gray-600 text-sm">{category.description || 'No description'}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Subject Folder Management</h2>
-          
-          {/* Create New Folder */}
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <h3 className="font-semibold mb-3">Create New Subject Folder</h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="Folder name (e.g., Mathematics)"
-                  value={newFolder.name}
-                  onChange={(e) => setNewFolder({ ...newFolder, name: e.target.value })}
-                  className="p-2 border border-gray-300 rounded"
-                />
-                <input
-                  type="text"
-                  placeholder="Description (optional)"
-                  value={newFolder.description}
-                  onChange={(e) => setNewFolder({ ...newFolder, description: e.target.value })}
-                  className="p-2 border border-gray-300 rounded"
-                />
-              </div>
-              
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={newFolder.is_visible}
-                  onChange={(e) => setNewFolder({ ...newFolder, is_visible: e.target.checked })}
-                  className="mr-2"
-                />
-                <label>Visible to Users</label>
-              </div>
-
-              {newFolder.is_visible && (
-                <div>
-                  <label className="block text-gray-700 font-semibold mb-2">
-                    Select Users with Access ({newFolder.allowed_users.length} selected)
-                  </label>
-                  <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-3">
-                    {allUsers.map((user) => (
-                      <div key={user.id} className="flex items-center mb-2">
-                        <input
-                          type="checkbox"
-                          checked={newFolder.allowed_users.includes(user.id)}
-                          onChange={() => toggleUserAccessForFolder(user.id)}
-                          className="mr-3"
-                        />
-                        <span className="text-sm">{user.name} ({user.email})</span>
-                      </div>
-                    ))}
+                  <div>
+                    <h4 className="font-semibold text-gray-700 mb-2">
+                      📁 Subfolders ({subject.subfolders?.length || 0}):
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                      {subject.subfolders?.map((subfolder) => (
+                        <div
+                          key={subfolder.id}
+                          className="bg-white border rounded-lg p-3 text-center shadow-sm"
+                        >
+                          <span className="text-sm font-medium text-gray-700">
+                            {subfolder.name}
+                          </span>
+                        </div>
+                      )) || <p className="text-gray-500 text-sm">No subfolders</p>}
+                    </div>
                   </div>
                 </div>
-              )}
+              ))}
             </div>
-            
-            <button
-              onClick={createSubjectFolder}
-              className="mt-3 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition duration-200"
-            >
-              ➕ Create Subject Folder
-            </button>
-          </div>
+          )}
+        </div>
+      )}
 
-          {/* Existing Folders */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {subjectFolders.map((folder) => (
-              <div key={folder.id} className="border rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-gray-800">{folder.name}</h3>
-                  <span className={`px-2 py-1 rounded text-xs ${
-                    folder.is_visible ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {folder.is_visible ? 'Visible' : 'Hidden'}
-                  </span>
-                </div>
-                
-                <p className="text-gray-600 text-sm mb-3">
-                  {folder.description || 'No description'}
-                </p>
-                
-                {folder.allowed_users && folder.allowed_users.length > 0 && (
-                  <p className="text-xs text-blue-600 mb-3">
-                    {folder.allowed_users.length} users have access
+      {/* Legacy Quiz Categories Tab */}
+      {activeTab === 'quiz-categories' && (
+        <div>
+          <div className="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+            <p className="text-yellow-800 text-sm">
+              <strong>Legacy Categories:</strong> These are the old category system. Consider migrating to the new Global Subjects system for better organization.
+            </p>
+          </div>
+          
+          {categories.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg">No legacy categories found.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {categories.map((category) => (
+                <div key={category.id} className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-gray-800">{category.name}</h3>
+                  {category.description && (
+                    <p className="text-gray-600 text-sm mt-2">{category.description}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-2">
+                    Created: {new Date(category.created_at).toLocaleDateString()}
                   </p>
-                )}
-                
-                <div className="flex gap-2">
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Create Global Subject Modal */}
+      {showCreateGlobalModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-screen overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold">Create Global Subject</h3>
+              <button
+                onClick={() => setShowCreateGlobalModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Subject Name *</label>
+                <input
+                  type="text"
+                  value={newGlobalSubject.name}
+                  onChange={(e) => setNewGlobalSubject({ ...newGlobalSubject, name: e.target.value })}
+                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  placeholder="e.g., Advanced Mathematics"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Description</label>
+                <textarea
+                  value={newGlobalSubject.description}
+                  onChange={(e) => setNewGlobalSubject({ ...newGlobalSubject, description: e.target.value })}
+                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  rows="3"
+                  placeholder="Brief description of this subject area"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Subfolders</label>
+                <div className="space-y-2">
+                  {newGlobalSubject.subfolders.map((subfolder, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={subfolder}
+                        onChange={(e) => updateSubfolder(index, e.target.value)}
+                        className="flex-1 p-2 border border-gray-300 rounded"
+                        placeholder={`Subfolder ${index + 1}`}
+                      />
+                      {newGlobalSubject.subfolders.length > 1 && (
+                        <button
+                          onClick={() => removeSubfolder(index)}
+                          className="bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
                   <button
-                    onClick={() => toggleFolderVisibility(folder.id, folder.is_visible)}
-                    className={`flex-1 py-1 px-2 rounded text-xs transition duration-200 ${
-                      folder.is_visible 
-                        ? 'bg-yellow-600 text-white hover:bg-yellow-700' 
-                        : 'bg-green-600 text-white hover:bg-green-700'
-                    }`}
+                    onClick={addSubfolder}
+                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm"
                   >
-                    {folder.is_visible ? '👁️ Hide' : '👀 Show'}
-                  </button>
-                  <button
-                    onClick={() => deleteFolder(folder.id, folder.name)}
-                    className="flex-1 py-1 px-2 rounded text-xs bg-red-600 text-white hover:bg-red-700 transition duration-200"
-                  >
-                    🗑️ Delete
+                    + Add Subfolder
                   </button>
                 </div>
               </div>
-            ))}
+            </div>
+
+            <div className="flex gap-4 pt-6">
+              <button
+                onClick={createGlobalSubject}
+                className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition duration-200 font-semibold"
+              >
+                🌐 Create Global Subject
+              </button>
+              <button
+                onClick={() => setShowCreateGlobalModal(false)}
+                className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Folder Deletion Confirmation Modal */}
-      {deleteFolderConfirm.show && (
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm.show && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
             <div className="text-center mb-6">
               <div className="text-4xl mb-4">🗑️</div>
-              <h3 className="text-lg font-semibold mb-2">Delete Folder?</h3>
+              <h3 className="text-lg font-semibold mb-2">Delete Global Subject?</h3>
               <p className="text-gray-600 text-sm">
-                Are you sure you want to delete the folder "{deleteFolderConfirm.folderName}"?
+                Are you sure you want to delete "{showDeleteConfirm.subjectName}"?
               </p>
               <p className="text-red-600 text-sm mt-2">
-                ⚠️ This action cannot be undone and will affect all quizzes in this folder.
+                ⚠️ This action cannot be undone and will affect all users.
               </p>
             </div>
 
             <div className="flex gap-4">
               <button
-                onClick={confirmDeleteFolder}
+                onClick={confirmDeleteGlobalSubject}
                 className="flex-1 bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition duration-200 font-semibold"
               >
                 Yes, Delete
               </button>
               <button
-                onClick={() => setDeleteFolderConfirm({ show: false, folderId: null, folderName: '' })}
+                onClick={() => setShowDeleteConfirm({ show: false, subjectId: null, subjectName: '' })}
                 className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold"
               >
                 Cancel
