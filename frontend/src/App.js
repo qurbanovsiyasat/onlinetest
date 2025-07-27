@@ -1048,6 +1048,52 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
     return predefinedSubjects[moveDestination.subject] || ['General'];
   };
 
+  // Bulk publish functionality
+  const handleBulkPublish = async () => {
+    setBulkPublishingQuizzes(true);
+    let successCount = 0;
+    let errorCount = 0;
+    const errors = [];
+
+    try {
+      for (const quizId of selectedQuizzes) {
+        try {
+          await apiCall(`/admin/quiz/${quizId}/publish`, {
+            method: 'POST'
+          });
+          successCount++;
+        } catch (error) {
+          errorCount++;
+          errors.push(`Quiz ${quizId}: ${error.response?.data?.detail || 'Unknown error'}`);
+        }
+      }
+
+      if (successCount > 0) {
+        alert(`✅ Successfully published ${successCount} quiz${successCount > 1 ? 'es' : ''}!`);
+      }
+      if (errorCount > 0) {
+        alert(`⚠️ Failed to publish ${errorCount} quiz${errorCount > 1 ? 'es' : ''}:\n${errors.join('\n')}`);
+      }
+
+      // Refresh the quiz list and clear selection
+      await fetchQuizzes();
+      setSelectedQuizzes(new Set());
+      setShowBulkPublishModal(false);
+    } catch (error) {
+      alert('Error during bulk publish: ' + (error.message || 'Unknown error'));
+    } finally {
+      setBulkPublishingQuizzes(false);
+    }
+  };
+
+  const getDraftQuizzesCount = () => {
+    return quizzes.filter(q => q.is_draft).length;
+  };
+
+  const getSelectedDraftQuizzes = () => {
+    return quizzes.filter(q => selectedQuizzes.has(q.id) && q.is_draft);
+  };
+
   const QuizCard = ({ quiz, showSubject = true }) => {
     const isSelected = selectedQuizzes.has(quiz.id);
     const isDraft = quiz.is_draft;
