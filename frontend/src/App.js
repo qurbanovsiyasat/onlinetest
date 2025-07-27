@@ -1458,6 +1458,52 @@ function AdminQuizzesView({ quizzes, fetchQuizzes }) {
           </div>
         </div>
       )}
+
+      {/* Bulk Publish Modal */}
+      {showBulkPublishModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-4">🚀</div>
+              <h3 className="text-lg font-semibold mb-2">Bulk Publish Quizzes</h3>
+              <p className="text-gray-600 text-sm">
+                Are you sure you want to publish {selectedQuizzes.size} selected quiz{selectedQuizzes.size > 1 ? 'es' : ''}?
+              </p>
+              <p className="text-blue-600 text-sm mt-2">
+                ✅ Published quizzes will be available for users to take immediately.
+              </p>
+            </div>
+
+            <div className="bg-gray-50 p-3 rounded-lg mb-4">
+              <p className="text-sm text-gray-700 font-medium mb-2">Selected Quizzes:</p>
+              <div className="max-h-32 overflow-y-auto">
+                {getSelectedDraftQuizzes().map(quiz => (
+                  <div key={quiz.id} className="text-xs text-gray-600 py-1 border-b border-gray-200">
+                    📝 {quiz.title}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={handleBulkPublish}
+                disabled={bulkPublishingQuizzes}
+                className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition duration-200 font-semibold disabled:opacity-50"
+              >
+                {bulkPublishingQuizzes ? '⏳ Publishing...' : '🚀 Publish All'}
+              </button>
+              <button
+                onClick={() => setShowBulkPublishModal(false)}
+                disabled={bulkPublishingQuizzes}
+                className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
