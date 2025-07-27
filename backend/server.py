@@ -608,12 +608,14 @@ async def create_quiz(quiz_data: QuizCreate, admin_user: User = Depends(get_admi
     # Calculate total points
     total_points = sum(question.points for question in quiz_data.questions)
     
-    # Create quiz
+    # Create quiz with admin ownership
     quiz = Quiz(**quiz_data.dict(), created_by=admin_user.id)
     quiz.total_questions = len(quiz.questions)
     quiz.total_points = total_points
     quiz.updated_at = datetime.utcnow()
     quiz.is_draft = True  # Start as draft
+    quiz.quiz_owner_type = "admin"
+    quiz.quiz_owner_id = admin_user.id
     
     await db.quizzes.insert_one(quiz.dict())
     return quiz
