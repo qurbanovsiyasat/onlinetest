@@ -1200,8 +1200,21 @@ async def get_quiz_results_ranking(quiz_id: str, current_user: User = Depends(ge
         raise HTTPException(status_code=404, detail="Quiz not found")
     
     # Check access permissions
-    if quiz.get("is_public", False) and current_user.id not in quiz.get("allowed_users", []):
-        raise HTTPException(status_code=403, detail="You don't have access to this quiz")
+    if current_user.role == UserRole.ADMIN:
+        # Admin can access leaderboard for quizzes they created
+        if quiz.get("created_by") != current_user.id:
+            raise HTTPException(status_code=403, detail="You don't have access to this quiz")
+    else:
+        # For regular users, check public quiz access
+        if quiz.get("is_public", False):
+            # If allowed_users list is empty, allow all users for public quizzes
+            # If allowed_users list is not empty, check if user is in the list
+            if len(quiz.get("allowed_users", [])) > 0 and current_user.id not in quiz.get("allowed_users", []):
+                raise HTTPException(status_code=403, detail="You don't have access to this quiz")
+        else:
+            # For non-public quizzes, deny access unless it's the creator
+            if quiz.get("created_by") != current_user.id:
+                raise HTTPException(status_code=403, detail="You don't have access to this quiz")
     
     # Get all attempts for this quiz
     attempts = await db.quiz_attempts.find({"quiz_id": quiz_id}).to_list(1000)
