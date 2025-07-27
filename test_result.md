@@ -102,7 +102,23 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "User is reporting 'login failed' but investigation shows backend authentication is working perfectly. The issue appears to be with frontend login form not making network requests to the backend when clicking login button."
+user_problem_statement: "User is reporting that 'admin hesabda yaradilan quizler islenende bu neticeler gelmir' (when quizzes created in admin account are processed, these results do not come/appear). Investigation shows this is due to access control logic issues preventing admins from taking their own quizzes and viewing results."
+
+backend:
+  - task: "Fix Admin Quiz Access Control"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "user"
+          comment: "User reported that quiz results are not appearing when admin-created quizzes are processed"
+        - working: true
+          agent: "main"
+          comment: "Fixed access control logic in quiz submission endpoint (lines 964-982) and leaderboard endpoints (lines 1190-1217 and 1202-1217). Issue was that public quizzes with empty allowed_users lists were blocking admin access. Now admins can access quizzes they created regardless of allowed_users list, and public quizzes with empty allowed_users allow all users."
 
 backend:
   - task: "JWT Authentication System"
