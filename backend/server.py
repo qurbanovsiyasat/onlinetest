@@ -3490,6 +3490,9 @@ class NotificationType(str, Enum):
     LEADERBOARD_UPDATE = "leaderboard_update"
     QUESTION_VOTE = "question_vote"
     ANSWER_VOTE = "answer_vote"
+    NEW_FOLLOWER = "new_follower"
+    FOLLOWED_USER_QUESTION = "followed_user_question"
+    FOLLOWED_USER_QUIZ = "followed_user_quiz"
 
 class Notification(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
