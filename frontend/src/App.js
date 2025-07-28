@@ -672,31 +672,34 @@ function AuthScreen() {
             </motion.div>
           )}
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition duration-200 font-semibold disabled:opacity-50"
+            className="w-full bg-indigo-600 dark:bg-indigo-500 text-white py-3 rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition duration-200 font-semibold disabled:opacity-50"
           >
             {loading ? 'Processing...' : (isLogin ? 'Giriş' : 'Qeydiyyat')}
-          </button>
+          </motion.button>
         </form>
 
         <div className="mt-6 text-center">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
             onClick={() => {
               setIsLogin(!isLogin);
               setError('');
               setFormData({ name: '', email: '', password: '' });
             }}
-            className="text-indigo-600 hover:text-indigo-800 font-semibold"
+            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-semibold transition-colors"
           >
             {isLogin ? "Yeni hesab yarat" : "Giriş yerinə qayıt"}
-          </button>
+          </motion.button>
         </div>
 
         {/* Initialize admin automatically on backend if needed */}
-      </div>
-    </div>
+      </motion.div>
+    </PageTransition>
   );
 }
 
