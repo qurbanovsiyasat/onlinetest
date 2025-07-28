@@ -1253,7 +1253,7 @@ async def update_quiz_statistics(quiz_id: str):
 
 @api_router.get("/quiz/{quiz_id}/results-ranking")
 async def get_quiz_results_ranking(quiz_id: str, current_user: User = Depends(get_current_user)):
-    """Get ranked results for a quiz with top performers and user's position"""
+    """Get ranked results for a quiz with top performers and user's position - based on FIRST attempts only"""
     # Check if user can access this quiz
     quiz = await db.quizzes.find_one({"id": quiz_id, "is_active": True, "is_draft": False})
     if not quiz:
@@ -1266,16 +1266,16 @@ async def get_quiz_results_ranking(quiz_id: str, current_user: User = Depends(ge
     # Get all attempts for this quiz
     attempts = await db.quiz_attempts.find({"quiz_id": quiz_id}).to_list(1000)
     
-    # Group by user and get best attempt for each user
-    user_best_attempts = {}
+    # Group by user and get FIRST attempt for each user (not best)
+    user_first_attempts = {}
     for attempt in attempts:
         user_id = attempt["user_id"]
-        if user_id not in user_best_attempts or attempt["percentage"] > user_best_attempts[user_id]["percentage"]:
-            user_best_attempts[user_id] = attempt
+        if user_id not in user_first_attempts or attempt["attempted_at"] < user_first_attempts[user_id]["attempted_at"]:
+            user_first_attempts[user_id] = attempt
     
     # Create ranking list
     ranking = []
-    for attempt in user_best_attempts.values():
+    for attempt in user_first_attempts.values():
         user = await db.users.find_one({"id": attempt["user_id"]})
         if user:
             ranking.append({
@@ -1285,7 +1285,8 @@ async def get_quiz_results_ranking(quiz_id: str, current_user: User = Depends(ge
                 "score": attempt["score"],
                 "total_questions": attempt["total_questions"],
                 "percentage": attempt["percentage"],
-                "attempted_at": attempt["attempted_at"]
+                "attempted_at": attempt["attempted_at"],
+                "is_first_attempt": True  # Indicator that this is user's first attempt
             })
     
     # Sort by percentage (highest first), then by date (earliest first for same percentage)
@@ -1295,7 +1296,7 @@ async def get_quiz_results_ranking(quiz_id: str, current_user: User = Depends(ge
     for i, entry in enumerate(ranking):
         entry["rank"] = i + 1
     
-    # Find current user's position
+    # Find current user's position (based on their first attempt)
     user_rank = None
     user_entry = None
     for entry in ranking:
@@ -1316,7 +1317,8 @@ async def get_quiz_results_ranking(quiz_id: str, current_user: User = Depends(ge
         "quiz_stats": {
             "total_attempts": quiz.get("total_attempts", 0),
             "average_score": quiz.get("average_score", 0.0)
-        }
+        },
+        "ranking_note": "Rankings based on users' first quiz attempts only"
     }
 
 @api_router.get("/my-attempts", response_model=List[QuizAttempt])
