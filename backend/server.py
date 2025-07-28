@@ -843,6 +843,9 @@ async def publish_quiz(quiz_id: str, admin_user: User = Depends(get_admin_user))
         }}
     )
     
+    # Notify followers when admin publishes a new quiz
+    await notify_followers_of_new_quiz(admin_user.id, quiz["title"], quiz_id)
+    
     return {"message": "Quiz published successfully"}
 
 @api_router.post("/admin/quiz/{quiz_id}/preview-token")
