@@ -801,6 +801,8 @@ class QADiscussionAPITester:
                 details += f", Response: {response.text[:200]}"
                 
             return self.log_test("Subjects Available Endpoint", success, details)
+        except requests.exceptions.RequestException as e:
+            return self.log_test("Subjects Available Endpoint", False, f"Request Error: {str(e)}")
         except Exception as e:
             return self.log_test("Subjects Available Endpoint", False, f"Error: {str(e)}")
 
