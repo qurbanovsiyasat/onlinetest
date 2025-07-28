@@ -7876,7 +7876,7 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
             <div className="flex items-center text-sm text-gray-500 space-x-4">
               <span className="flex items-center space-x-1">
                 <span>👤</span>
-                <span>{question.user.name}</span>
+                <span>{question.user ? question.user.name : 'Unknown User'}</span>
               </span>
               <span>Asked {new Date(question.created_at).toLocaleDateString()}</span>
             </div>
