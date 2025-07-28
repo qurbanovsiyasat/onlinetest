@@ -47,18 +47,19 @@ class BookmarksFollowingTester:
         
         try:
             if method == "GET":
-                response = requests.get(url, headers=headers, params=params)
+                response = requests.get(url, headers=headers, params=params, timeout=10)
             elif method == "POST":
-                response = requests.post(url, headers=headers, json=data)
+                response = requests.post(url, headers=headers, json=data, timeout=10)
             elif method == "PUT":
-                response = requests.put(url, headers=headers, json=data)
+                response = requests.put(url, headers=headers, json=data, timeout=10)
             elif method == "DELETE":
-                response = requests.delete(url, headers=headers, params=params)
+                response = requests.delete(url, headers=headers, params=params, timeout=10)
             else:
                 raise ValueError(f"Unsupported method: {method}")
             
             return response
         except requests.exceptions.RequestException as e:
+            print(f"Request failed: {method} {url} - {str(e)}")
             return None
     
     def test_admin_authentication(self):
