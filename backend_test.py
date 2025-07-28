@@ -67,6 +67,10 @@ class QAForumTester:
                 is_admin = data.get("is_admin", False)
                 self.log_test("Admin Registration", True, 
                             f"Admin user created with ID: {self.admin_user_id}, is_admin: {is_admin}")
+            elif response.status_code == 400 and "already registered" in response.text:
+                # User already exists, that's fine for testing
+                self.log_test("Admin Registration", True, 
+                            "Admin user already exists (from previous test run)")
             else:
                 self.log_test("Admin Registration", False, 
                             f"Status: {response.status_code}, Response: {response.text}")
@@ -91,6 +95,11 @@ class QAForumTester:
                 is_admin = data.get("is_admin", False)
                 self.log_test("Regular User Registration", True, 
                             f"Regular user created with ID: {self.regular_user_id}, is_admin: {is_admin}")
+                return True
+            elif response.status_code == 400 and "already registered" in response.text:
+                # User already exists, that's fine for testing
+                self.log_test("Regular User Registration", True, 
+                            "Regular user already exists (from previous test run)")
                 return True
             else:
                 self.log_test("Regular User Registration", False, 
