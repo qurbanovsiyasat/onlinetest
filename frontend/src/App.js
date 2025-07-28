@@ -9235,12 +9235,17 @@ const UserProfile = ({ user }) => {
                           İzləmə tarixi: {new Date(follow.followed_at).toLocaleDateString()}
                         </p>
                       </div>
-                      <div className="text-right text-sm text-gray-500">
+                      <div className="flex items-center space-x-2">
                         <span className={`px-2 py-1 rounded-full text-xs ${
                           follow.user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
                         }`}>
                           {follow.user.role === 'admin' ? 'Admin' : 'İstifadəçi'}
                         </span>
+                        <FollowButton 
+                          userId={follow.user.id}
+                          onFollowChange={() => fetchUserActivity('following')}
+                          className="text-xs px-3 py-1"
+                        />
                       </div>
                     </div>
                   </div>
@@ -9275,12 +9280,20 @@ const UserProfile = ({ user }) => {
                           İzləmə tarixi: {new Date(follower.followed_at).toLocaleDateString()}
                         </p>
                       </div>
-                      <div className="text-right text-sm text-gray-500">
+                      <div className="flex items-center space-x-2">
                         <span className={`px-2 py-1 rounded-full text-xs ${
                           follower.user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
                         }`}>
                           {follower.user.role === 'admin' ? 'Admin' : 'İstifadəçi'}
                         </span>
+                        <FollowButton 
+                          userId={follower.user.id}
+                          onFollowChange={() => {
+                            fetchUserActivity('followers');
+                            fetchFollowStats();
+                          }}
+                          className="text-xs px-3 py-1"
+                        />
                       </div>
                     </div>
                   </div>
