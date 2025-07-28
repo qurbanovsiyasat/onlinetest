@@ -3680,28 +3680,31 @@ function UserDashboard({ currentView, setCurrentView }) {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setCurrentView('my-attempts')}
-              className={`px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm ${
+              className={`px-2 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm whitespace-nowrap ${
                 currentView === 'my-attempts' ? 'bg-indigo-600 dark:bg-indigo-500 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
-              📊 Mənim nəticələrim
+              <span className="sm:hidden">📊</span>
+              <span className="hidden sm:inline">📊 Results</span>
             </motion.button>
             {/* User quiz and subject creation removed - admin-only functionality */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setShowPasswordChange(true)}
-              className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm"
+              className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm whitespace-nowrap"
             >
-              🔑 Şifrə
+              <span className="sm:hidden">🔑</span>
+              <span className="hidden sm:inline">🔑 Password</span>
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={logout}
-              className="bg-red-600 dark:bg-red-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition duration-200 text-xs sm:text-sm"
+              className="bg-red-600 dark:bg-red-500 text-white px-2 sm:px-4 py-2 rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition duration-200 text-xs sm:text-sm whitespace-nowrap"
             >
-              🚪 Çıxış
+              <span className="sm:hidden">🚪</span>
+              <span className="hidden sm:inline">🚪 Logout</span>
             </motion.button>
           </div>
         </div>
