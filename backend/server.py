@@ -3941,6 +3941,102 @@ async def get_user_following(user_id: str, skip: int = 0, limit: int = 20, curre
         "can_view": True
     }
 
+@api_router.get("/users/{user_id}/activity")
+async def get_user_activity(user_id: str, skip: int = 0, limit: int = 20, current_user: User = Depends(get_current_user)):
+    """Get user's recent activity (questions, answers, quiz attempts) - respects privacy settings"""
+    # Check if user exists
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if current user can view this user's activity
+    is_admin = current_user.role == UserRole.ADMIN
+    is_own_profile = current_user.id == user_id
+    is_target_private = user.get("is_private", False)
+    
+    can_view_activity = is_admin or is_own_profile or not is_target_private
+    
+    # For private profiles, check follow relationship
+    if is_target_private and not is_admin and not is_own_profile:
+        follow_relation = await db.user_follows.find_one({
+            "follower_id": current_user.id,
+            "following_id": user_id,
+            "status": "approved"
+        })
+        can_view_activity = bool(follow_relation)
+    
+    if not can_view_activity:
+        return {
+            "activities": [],
+            "message": "This user's activity is private",
+            "can_view": False
+        }
+    
+    activities = []
+    
+    # Get recent questions
+    recent_questions = await db.questions.find({"user_id": user_id}).sort("created_at", -1).limit(10).to_list(10)
+    for question in recent_questions:
+        activities.append({
+            "type": "question_posted",
+            "title": f"Posted a question: {question['title']}",
+            "content": question.get("content", "")[:200] + "..." if len(question.get("content", "")) > 200 else question.get("content", ""),
+            "created_at": question["created_at"],
+            "link": f"/questions/{question['id']}",
+            "subject": question.get("subject"),
+            "upvotes": question.get("upvotes", 0)
+        })
+    
+    # Get recent answers
+    recent_answers = await db.answers.find({"user_id": user_id}).sort("created_at", -1).limit(10).to_list(10)
+    for answer in recent_answers:
+        # Get question title
+        question = await db.questions.find_one({"id": answer["question_id"]})
+        question_title = question["title"] if question else "Unknown Question"
+        
+        activities.append({
+            "type": "answer_posted",
+            "title": f"Answered: {question_title}",
+            "content": answer.get("content", "")[:200] + "..." if len(answer.get("content", "")) > 200 else answer.get("content", ""),
+            "created_at": answer["created_at"],
+            "link": f"/questions/{answer['question_id']}",
+            "is_accepted": answer.get("is_accepted", False),
+            "upvotes": answer.get("upvotes", 0)
+        })
+    
+    # Get recent quiz attempts (high scores only)
+    recent_quiz_attempts = await db.quiz_attempts.find({
+        "user_id": user_id,
+        "percentage": {"$gte": 80}  # Only show high score attempts
+    }).sort("attempted_at", -1).limit(5).to_list(5)
+    
+    for attempt in recent_quiz_attempts:
+        # Get quiz title
+        quiz = await db.quizzes.find_one({"id": attempt["quiz_id"]})
+        quiz_title = quiz["title"] if quiz else "Unknown Quiz"
+        
+        activities.append({
+            "type": "quiz_completed",
+            "title": f"Completed quiz: {quiz_title}",
+            "content": f"Score: {attempt['percentage']:.1f}% ({attempt['score']}/{attempt['total_questions']})",
+            "created_at": attempt["attempted_at"],
+            "link": f"/quiz/{attempt['quiz_id']}/results",
+            "score": attempt["percentage"],
+            "subject": quiz.get("subject") if quiz else None
+        })
+    
+    # Sort all activities by date
+    activities.sort(key=lambda x: x["created_at"], reverse=True)
+    
+    # Apply pagination
+    paginated_activities = activities[skip:skip + limit]
+    
+    return {
+        "activities": paginated_activities,
+        "total": len(activities),
+        "can_view": True
+    }
+
 @api_router.get("/users/{user_id}/quiz-attempts")
 async def get_user_quiz_attempts(user_id: str, skip: int = 0, limit: int = 20):
     """Get quiz attempts by a specific user"""
