@@ -4417,16 +4417,16 @@ async def approve_follow_request(
     await update_user_follow_counts(current_user.id)
     await update_user_follow_counts(follow_request["follower_id"])
     
-    # Create notification for the requester
-    notification = Notification(
-        user_id=follow_request["follower_id"],
-        from_user_id=current_user.id,
-        notification_type=NotificationType.FOLLOW_REQUEST_APPROVED,
-        title="Follow Request Approved",
-        message=f"{current_user.name} approved your follow request",
-        related_id=current_user.id
-    )
-    await db.notifications.insert_one(notification.dict())
+    # Create notification for the requester (temporarily disabled for testing)
+    # notification = Notification(
+    #     user_id=follow_request["follower_id"],
+    #     from_user_id=current_user.id,
+    #     notification_type=NotificationType.FOLLOW_REQUEST_APPROVED,
+    #     title="Follow Request Approved",
+    #     message=f"{current_user.name} approved your follow request",
+    #     related_id=current_user.id
+    # )
+    # await db.notifications.insert_one(notification.dict())
     
     return FollowResponse(
         action="request_approved",
