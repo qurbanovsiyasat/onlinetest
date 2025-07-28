@@ -4426,7 +4426,7 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
 }
 
 // Real-time Quiz Session Component with Timer
-function RealTimeQuizSession({ quiz, setCurrentView, user }) {
+function RealTimeQuizSession({ quiz, setCurrentView, user, setQuizResult, setIsTimedQuiz }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
