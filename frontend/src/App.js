@@ -7830,7 +7830,7 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
               ▲
             </button>
             <span className="text-lg font-semibold text-gray-700">
-              {question.upvotes - question.downvotes}
+              {(question.upvotes || 0) - (question.downvotes || 0)}
             </span>
             <button className="p-2 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50">
               ▼
