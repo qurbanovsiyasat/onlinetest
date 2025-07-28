@@ -85,8 +85,10 @@ class BookmarksFollowingTester:
         print("\n👥 Testing User Registration and Login...")
         
         # Register User 1
+        import time
+        timestamp = int(time.time())
         user1_data = {
-            "email": "bookmarkuser1@test.com",
+            "email": f"bookmarkuser1_{timestamp}@test.com",
             "name": "Bookmark Test User 1",
             "password": "testpass123"
         }
