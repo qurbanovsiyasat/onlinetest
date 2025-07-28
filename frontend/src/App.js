@@ -968,22 +968,27 @@ function AdminDashboardHome({ analytics }) {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600 dark:text-gray-400">Platform Status:</span>
-              <span className="text-green-600 font-medium">Active</span>
+              <span className="text-green-600 dark:text-green-400 font-medium">Active</span>
             </div>
           </div>
-        </div>
+        </motion.div>
         
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">🚀 Quick Actions</h3>
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.6 }}
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow"
+        >
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">🚀 Quick Actions</h3>
           <div className="space-y-2">
-            <p className="text-gray-600">• Create new quizzes and manage content</p>
-            <p className="text-gray-600">• View detailed user test results</p>
-            <p className="text-gray-600">• Manage user accounts and permissions</p>
-            <p className="text-gray-600">• Organize quizzes by categories</p>
+            <p className="text-gray-600 dark:text-gray-400">• Create new quizzes and manage content</p>
+            <p className="text-gray-600 dark:text-gray-400">• View detailed user test results</p>
+            <p className="text-gray-600 dark:text-gray-400">• Manage user accounts and permissions</p>
+            <p className="text-gray-600 dark:text-gray-400">• Organize quizzes by categories</p>
           </div>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
