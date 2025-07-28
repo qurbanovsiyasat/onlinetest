@@ -7342,7 +7342,7 @@ function QuestionCard({ question, onClick, currentUser }) {
     return date.toLocaleDateString();
   };
 
-  const isOwnQuestion = currentUser && question.user.id === currentUser.id;
+  const isOwnQuestion = currentUser && question.user && question.user.id === currentUser.id;
   const hasUpvoted = currentUser && question.upvoted_by && question.upvoted_by.includes(currentUser.id);
   const hasDownvoted = currentUser && question.downvoted_by && question.downvoted_by.includes(currentUser.id);
 
