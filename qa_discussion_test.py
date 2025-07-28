@@ -779,13 +779,9 @@ class QADiscussionAPITester:
 
     def test_subjects_available_endpoint(self):
         """Test subjects available endpoint for Q&A filtering"""
-        if not self.user_token:
-            return self.log_test("Subjects Available Endpoint", False, "No user token available")
-        
         try:
             response = requests.get(
                 f"{self.api_url}/subjects-available",
-                headers=self.get_auth_headers(self.user_token),
                 timeout=10
             )
             success = response.status_code == 200
