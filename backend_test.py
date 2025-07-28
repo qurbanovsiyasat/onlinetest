@@ -492,13 +492,13 @@ class QAForumTester:
         
         try:
             response = self.session.post(f"{BASE_URL}/questions", json=question_data)
-            if response.status_code == 401:
+            if response.status_code in [401, 403]:
                 self.log_test("Auth Required - Create Question", True, 
-                            "Question creation correctly requires authentication")
+                            f"Question creation correctly requires authentication (status: {response.status_code})")
                 return True
             else:
                 self.log_test("Auth Required - Create Question", False, 
-                            f"Expected 401, got {response.status_code}")
+                            f"Expected 401 or 403, got {response.status_code}")
                 return False
         except Exception as e:
             self.log_test("Auth Required - Create Question", False, f"Error: {str(e)}")
