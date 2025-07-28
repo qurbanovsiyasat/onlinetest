@@ -3860,13 +3860,16 @@ class BookmarkCreate(BaseModel):
     item_type: BookmarkType
 
 # =====================================
-# FOLLOWING SYSTEM
+# ENHANCED FOLLOWING SYSTEM WITH PRIVACY CONTROLS
 # =====================================
 
 class Follow(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     follower_id: str  # User who follows
     following_id: str  # User being followed
+    status: FollowStatus = FollowStatus.APPROVED  # Follow status (pending/approved/rejected)
+    requested_at: datetime = Field(default_factory=datetime.utcnow)
+    approved_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class FollowCreate(BaseModel):
@@ -3875,8 +3878,10 @@ class FollowCreate(BaseModel):
 class UserFollowStats(BaseModel):
     followers_count: int = 0
     following_count: int = 0
+    pending_requests_count: int = 0  # Number of pending follow requests
     is_following: bool = False  # Whether current user follows this user
     is_followed_by: bool = False  # Whether this user follows current user
+    is_pending_approval: bool = False  # Whether current user has pending follow request
 
 # =====================================
 # BOOKMARKS ENDPOINTS
