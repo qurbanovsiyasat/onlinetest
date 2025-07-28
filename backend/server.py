@@ -127,6 +127,11 @@ class UserResponse(BaseModel):
     role: UserRole
     is_active: bool
     created_at: datetime
+    
+    # Privacy and social settings
+    is_private: bool = False
+    follower_count: int = 0
+    following_count: int = 0
 
 class Token(BaseModel):
     access_token: str
