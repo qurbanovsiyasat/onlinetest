@@ -4072,7 +4072,7 @@ async def notify_followers_of_new_question(user_id: str, question_title: str, qu
     for follow in follows:
         notification = NotificationCreate(
             user_id=follow["follower_id"],
-            type=NotificationType.NEW_ANSWER,  # We'll add specific types later
+            type=NotificationType.FOLLOWED_USER_QUESTION,
             title="New Question from Followed User",
             message=f"{user_info['name']} posted a new question: {question_title[:50]}...",
             related_id=question_id
