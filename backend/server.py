@@ -3992,6 +3992,120 @@ async def check_bookmark_status(
     return {"is_bookmarked": bookmark is not None}
 
 # =====================================
+# PRIVACY AND SOCIAL UTILITY FUNCTIONS
+# =====================================
+
+async def can_view_user_activity(viewer_user_id: str, target_user_id: str) -> bool:
+    """Check if viewer can see target user's activity (questions, answers, etc.)"""
+    # Same user can always view their own content
+    if viewer_user_id == target_user_id:
+        return True
+    
+    # Get target user's privacy settings
+    target_user = await db.users.find_one({"id": target_user_id})
+    if not target_user:
+        return False
+    
+    # Check if viewer is admin - admins can see everything
+    viewer_user = await db.users.find_one({"id": viewer_user_id})
+    if viewer_user and viewer_user.get("role") == UserRole.ADMIN:
+        return True
+    
+    # If target user has private profile
+    if target_user.get("is_private", False):
+        # Check if viewer is an approved follower
+        follow_relationship = await db.follows.find_one({
+            "follower_id": viewer_user_id,
+            "following_id": target_user_id,
+            "status": FollowStatus.APPROVED
+        })
+        return follow_relationship is not None
+    
+    # Public profile - everyone can see
+    return True
+
+async def get_user_profile_for_viewer(user_id: str, viewer_id: str) -> UserProfile:
+    """Get user profile with appropriate privacy filtering"""
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    viewer = await db.users.find_one({"id": viewer_id})
+    is_admin_viewer = viewer and viewer.get("role") == UserRole.ADMIN
+    can_view_activity = await can_view_user_activity(viewer_id, user_id)
+    
+    # Get follow relationship status
+    follow_relationship = await db.follows.find_one({
+        "follower_id": viewer_id,
+        "following_id": user_id
+    })
+    is_following = follow_relationship is not None and follow_relationship.get("status") == FollowStatus.APPROVED
+    is_pending_approval = follow_relationship is not None and follow_relationship.get("status") == FollowStatus.PENDING
+    
+    # Get activity stats if viewer can see them
+    activity_stats = {
+        "total_questions": 0,
+        "total_answers": 0,
+        "total_quiz_attempts": 0,
+        "average_quiz_score": 0.0
+    }
+    
+    if can_view_activity:
+        # Get actual activity stats
+        questions_count = await db.questions.count_documents({"user_id": user_id})
+        answers_count = await db.answers.count_documents({"user_id": user_id})
+        attempts_count = await db.quiz_attempts.count_documents({"user_id": user_id})
+        
+        # Calculate average quiz score
+        attempts = await db.quiz_attempts.find({"user_id": user_id}).to_list(1000)
+        avg_score = sum(a.get("percentage", 0) for a in attempts) / len(attempts) if attempts else 0.0
+        
+        activity_stats = {
+            "total_questions": questions_count,
+            "total_answers": answers_count,
+            "total_quiz_attempts": attempts_count,
+            "average_quiz_score": round(avg_score, 1)
+        }
+    
+    return UserProfile(
+        id=user["id"],
+        name=user["name"],
+        email=user["email"] if (can_view_activity or is_admin_viewer) else None,
+        role=user["role"],
+        is_active=user.get("is_active", True),
+        created_at=user["created_at"],
+        is_private=user.get("is_private", False),
+        follower_count=user.get("follower_count", 0),
+        following_count=user.get("following_count", 0),
+        total_questions=activity_stats["total_questions"] if can_view_activity else None,
+        total_answers=activity_stats["total_answers"] if can_view_activity else None,
+        total_quiz_attempts=activity_stats["total_quiz_attempts"] if can_view_activity else None,
+        average_quiz_score=activity_stats["average_quiz_score"] if can_view_activity else None,
+        is_following=is_following,
+        is_pending_approval=is_pending_approval,
+        can_view_activity=can_view_activity
+    )
+
+async def update_user_follow_counts(user_id: str):
+    """Update user's follower and following counts"""
+    follower_count = await db.follows.count_documents({
+        "following_id": user_id,
+        "status": FollowStatus.APPROVED
+    })
+    following_count = await db.follows.count_documents({
+        "follower_id": user_id,
+        "status": FollowStatus.APPROVED
+    })
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "follower_count": follower_count,
+            "following_count": following_count
+        }}
+    )
+
+# =====================================
 # FOLLOWING ENDPOINTS
 # =====================================
 
