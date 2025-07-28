@@ -4359,6 +4359,214 @@ async def get_user_following(
     return {"following": following_users}
 
 # =====================================
+# FOLLOW REQUEST MANAGEMENT
+# =====================================
+
+@api_router.get("/follow-requests")
+async def get_pending_follow_requests(
+    current_user: User = Depends(get_current_user)
+):
+    """Get pending follow requests for current user"""
+    requests = await db.follows.find({
+        "following_id": current_user.id,
+        "status": FollowStatus.PENDING
+    }).sort("requested_at", -1).to_list(100)
+    
+    request_list = []
+    for request in requests:
+        requester = await db.users.find_one({"id": request["follower_id"]})
+        if requester:
+            request_list.append({
+                "request_id": request["id"],
+                "user": {
+                    "id": requester["id"],
+                    "name": requester["name"],
+                    "email": requester["email"],
+                    "role": requester["role"]
+                },
+                "requested_at": request["requested_at"]
+            })
+    
+    return {"requests": request_list}
+
+@api_router.post("/follow-requests/{request_id}/approve", response_model=FollowResponse)
+async def approve_follow_request(
+    request_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Approve a follow request"""
+    follow_request = await db.follows.find_one({
+        "id": request_id,
+        "following_id": current_user.id,
+        "status": FollowStatus.PENDING
+    })
+    
+    if not follow_request:
+        raise HTTPException(status_code=404, detail="Follow request not found")
+    
+    # Update follow status to approved
+    await db.follows.update_one(
+        {"id": request_id},
+        {"$set": {
+            "status": FollowStatus.APPROVED,
+            "approved_at": datetime.utcnow()
+        }}
+    )
+    
+    # Update follow counts
+    await update_user_follow_counts(current_user.id)
+    await update_user_follow_counts(follow_request["follower_id"])
+    
+    # Create notification for the requester
+    notification = Notification(
+        user_id=follow_request["follower_id"],
+        from_user_id=current_user.id,
+        notification_type=NotificationType.FOLLOW_REQUEST_APPROVED,
+        title="Follow Request Approved",
+        message=f"{current_user.name} approved your follow request",
+        related_id=current_user.id
+    )
+    await db.notifications.insert_one(notification.dict())
+    
+    return FollowResponse(
+        action="request_approved",
+        message="Follow request approved",
+        is_following=True,
+        is_pending=False
+    )
+
+@api_router.post("/follow-requests/{request_id}/reject", response_model=FollowResponse)
+async def reject_follow_request(
+    request_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Reject a follow request"""
+    follow_request = await db.follows.find_one({
+        "id": request_id,
+        "following_id": current_user.id,
+        "status": FollowStatus.PENDING
+    })
+    
+    if not follow_request:
+        raise HTTPException(status_code=404, detail="Follow request not found")
+    
+    # Update follow status to rejected
+    await db.follows.update_one(
+        {"id": request_id},
+        {"$set": {"status": FollowStatus.REJECTED}}
+    )
+    
+    return FollowResponse(
+        action="request_rejected",
+        message="Follow request rejected",
+        is_following=False,
+        is_pending=False
+    )
+
+# =====================================
+# PRIVACY SETTINGS MANAGEMENT
+# =====================================
+
+@api_router.get("/privacy-settings")
+async def get_privacy_settings(
+    current_user: User = Depends(get_current_user)
+):
+    """Get current user's privacy settings"""
+    return {
+        "is_private": current_user.is_private,
+        "follower_count": current_user.follower_count,
+        "following_count": current_user.following_count
+    }
+
+@api_router.put("/privacy-settings")
+async def update_privacy_settings(
+    settings: PrivacySettingsUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Update privacy settings for current user"""
+    update_data = {}
+    
+    if settings.is_private is not None:
+        update_data["is_private"] = settings.is_private
+        
+        # If changing to public, approve all pending follow requests
+        if not settings.is_private:
+            await db.follows.update_many(
+                {"following_id": current_user.id, "status": FollowStatus.PENDING},
+                {"$set": {
+                    "status": FollowStatus.APPROVED,
+                    "approved_at": datetime.utcnow()
+                }}
+            )
+            
+            # Update follow counts
+            await update_user_follow_counts(current_user.id)
+    
+    if update_data:
+        await db.users.update_one(
+            {"id": current_user.id},
+            {"$set": update_data}
+        )
+    
+    return {"message": "Privacy settings updated successfully"}
+
+@api_router.get("/users/{user_id}/profile", response_model=UserProfile)
+async def get_user_profile(
+    user_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get user profile with privacy filtering"""
+    return await get_user_profile_for_viewer(user_id, current_user.id)
+
+# =====================================
+# ENHANCED ADMIN CONTROLS FOR SOCIAL FEATURES
+# =====================================
+
+@api_router.get("/admin/social-overview")
+async def get_social_overview(
+    admin_user: User = Depends(get_admin_user)
+):
+    """Get overview of social features for admin"""
+    total_follows = await db.follows.count_documents({"status": FollowStatus.APPROVED})
+    pending_requests = await db.follows.count_documents({"status": FollowStatus.PENDING})
+    private_accounts = await db.users.count_documents({"is_private": True})
+    public_accounts = await db.users.count_documents({"is_private": False})
+    
+    return {
+        "total_approved_follows": total_follows,
+        "pending_follow_requests": pending_requests,
+        "private_accounts": private_accounts,
+        "public_accounts": public_accounts,
+        "total_notifications": await db.notifications.count_documents({})
+    }
+
+@api_router.get("/admin/users/{user_id}/followers")
+async def admin_get_user_followers(
+    user_id: str,
+    admin_user: User = Depends(get_admin_user)
+):
+    """Admin endpoint to view any user's followers (including private accounts)"""
+    follows = await db.follows.find({"following_id": user_id}).to_list(1000)
+    
+    followers = []
+    for follow in follows:
+        user_info = await db.users.find_one({"id": follow["follower_id"]})
+        if user_info:
+            followers.append({
+                "user": {
+                    "id": user_info["id"],
+                    "name": user_info["name"],
+                    "email": user_info["email"],
+                    "role": user_info["role"],
+                    "is_private": user_info.get("is_private", False)
+                },
+                "status": follow.get("status", FollowStatus.APPROVED),
+                "followed_at": follow["created_at"]
+            })
+    
+    return {"followers": followers}
+
+# =====================================
 # ENHANCED NOTIFICATION TRIGGERS FOR FOLLOWING
 # =====================================
 
