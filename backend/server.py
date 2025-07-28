@@ -3380,8 +3380,7 @@ async def get_available_subjects():
 # END Q&A DISCUSSION SYSTEM API ENDPOINTS
 # ====================================================================
 
-# Include router
-app.include_router(api_router)
+# Router will be included at the end after all endpoints are defined
 
 # CORS Configuration for Self-Hosted and Cloud Deployment
 def get_cors_origins():
