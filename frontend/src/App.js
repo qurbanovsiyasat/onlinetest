@@ -3702,6 +3702,14 @@ function UserDashboard({ currentView, setCurrentView }) {
           <QAForum user={user} />
         )}
 
+        {currentView === 'profile' && (
+          <UserProfile user={user} />
+        )}
+
+        {currentView === 'notifications' && (
+          <NotificationCenter user={user} />
+        )}
+
         {/* User creation components removed - admin-only functionality */}
 
         {currentView === 'my-attempts' && (
