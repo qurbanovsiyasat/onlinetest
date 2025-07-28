@@ -7661,6 +7661,47 @@ function QAForum({ user }) {
 // Question Card Component
 function QuestionCard({ question, onClick, currentUser }) {
   const [voting, setVoting] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarking, setBookmarking] = useState(false);
+
+  // Check bookmark status when component mounts
+  useEffect(() => {
+    if (currentUser) {
+      checkBookmarkStatus();
+    }
+  }, [question.id, currentUser]);
+
+  const checkBookmarkStatus = async () => {
+    try {
+      const response = await apiCall(`/bookmarks/check/${question.id}?item_type=question`);
+      setIsBookmarked(response.data.is_bookmarked);
+    } catch (error) {
+      console.error('Error checking bookmark status:', error);
+    }
+  };
+
+  const handleBookmark = async (e) => {
+    e.stopPropagation(); // Prevent opening question detail
+    if (bookmarking || !currentUser) return;
+    
+    setBookmarking(true);
+    try {
+      if (isBookmarked) {
+        await apiCall(`/bookmarks/${question.id}?item_type=question`, { method: 'DELETE' });
+        setIsBookmarked(false);
+      } else {
+        await apiCall('/bookmarks', {
+          method: 'POST',
+          data: { item_id: question.id, item_type: 'question' }
+        });
+        setIsBookmarked(true);
+      }
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
+      alert('Failed to bookmark: ' + (error.response?.data?.detail || 'Unknown error'));
+    }
+    setBookmarking(false);
+  };
 
   const handleVote = async (voteType, e) => {
     e.stopPropagation(); // Prevent opening question detail
