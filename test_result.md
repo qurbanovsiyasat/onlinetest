@@ -101,3 +101,121 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+# user_problem_statement: |
+#   Implement a Q&A forum system with admin social profiles:
+#   1. Admin Social Profile System - Admins will have full profile pages with tabs for Questions, Answers, Followers, Activity
+#   2. User Visibility Rules - Regular users can only view public profiles, private profiles show message "This profile is private"
+#   3. Mobile Optimization - All pages should be responsive
+#   4. Admin Distinction - Admins should have badges/icons to distinguish them
+
+# backend:
+#   - task: "User Authentication System"
+#     implemented: false
+#     working: "NA"
+#     file: "server.py"
+#     stuck_count: 0
+#     priority: "high"
+#     needs_retesting: false
+#     status_history: []
+#   
+#   - task: "User Profile Management"
+#     implemented: false
+#     working: "NA"
+#     file: "server.py"
+#     stuck_count: 0
+#     priority: "high"
+#     needs_retesting: false
+#     status_history: []
+#   
+#   - task: "Question and Answer System"
+#     implemented: false
+#     working: "NA"
+#     file: "server.py"
+#     stuck_count: 0
+#     priority: "high"
+#     needs_retesting: false
+#     status_history: []
+#   
+#   - task: "Admin System"
+#     implemented: false
+#     working: "NA"
+#     file: "server.py"
+#     stuck_count: 0
+#     priority: "high"
+#     needs_retesting: false
+#     status_history: []
+#   
+#   - task: "Follow System"
+#     implemented: false
+#     working: "NA"
+#     file: "server.py"
+#     stuck_count: 0
+#     priority: "medium"
+#     needs_retesting: false
+#     status_history: []
+
+# frontend:
+#   - task: "Profile Pages UI"
+#     implemented: false
+#     working: "NA"
+#     file: "App.js"
+#     stuck_count: 0
+#     priority: "high"
+#     needs_retesting: false
+#     status_history: []
+#   
+#   - task: "Q&A Forum UI"
+#     implemented: false
+#     working: "NA"
+#     file: "App.js"
+#     stuck_count: 0
+#     priority: "high"
+#     needs_retesting: false
+#     status_history: []
+#   
+#   - task: "Admin Badge System"
+#     implemented: false
+#     working: "NA"
+#     file: "App.js"
+#     stuck_count: 0
+#     priority: "medium"
+#     needs_retesting: false
+#     status_history: []
+#   
+#   - task: "Mobile Responsive Design"
+#     implemented: false
+#     working: "NA"
+#     file: "App.js"
+#     stuck_count: 0
+#     priority: "medium"
+#     needs_retesting: false
+#     status_history: []
+#   
+#   - task: "Private Profile Restrictions"
+#     implemented: false
+#     working: "NA"
+#     file: "App.js"
+#     stuck_count: 0
+#     priority: "medium"
+#     needs_retesting: false
+#     status_history: []
+
+# metadata:
+#   created_by: "main_agent"
+#   version: "1.0"
+#   test_sequence: 0
+#   run_ui: false
+
+# test_plan:
+#   current_focus:
+#     - "User Authentication System"
+#     - "User Profile Management"
+#     - "Question and Answer System"
+#   stuck_tasks: []
+#   test_all: false
+#   test_priority: "high_first"
+
+# agent_communication:
+#   - agent: "main"
+#     message: "Starting implementation of Q&A forum system with admin social profiles. Frontend is now running successfully after restart."
