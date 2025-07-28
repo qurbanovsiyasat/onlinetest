@@ -6844,6 +6844,266 @@ function UserCreateQuiz({ setCurrentView }) {
   );
 }
 
+// Admin Q&A Management Component
+function AdminQAManagement() {
+  const [qaStats, setQAStats] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentTab, setCurrentTab] = useState('stats');
+
+  useEffect(() => {
+    fetchQAStats();
+    if (currentTab === 'questions') {
+      fetchAllQuestions();
+    }
+  }, [currentTab]);
+
+  const fetchQAStats = async () => {
+    try {
+      const response = await apiCall('/admin/qa-stats');
+      setQAStats(response.data);
+    } catch (error) {
+      console.error('Error fetching Q&A stats:', error);
+    }
+  };
+
+  const fetchAllQuestions = async () => {
+    setLoading(true);
+    try {
+      const response = await apiCall('/questions?limit=50&sort_by=created_at&sort_order=desc');
+      setQuestions(response.data.questions || []);
+    } catch (error) {
+      console.error('Error fetching questions:', error);
+      setQuestions([]);
+    }
+    setLoading(false);
+  };
+
+  const togglePinQuestion = async (questionId, currentPinStatus) => {
+    try {
+      await apiCall(`/admin/questions/${questionId}/pin`, {
+        method: 'PUT'
+      });
+      // Refresh the questions list
+      fetchAllQuestions();
+    } catch (error) {
+      console.error('Error toggling pin:', error);
+      alert('Failed to toggle pin status');
+    }
+  };
+
+  const deleteQuestion = async (questionId) => {
+    if (!window.confirm('Are you sure you want to delete this question? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await apiCall(`/questions/${questionId}`, {
+        method: 'DELETE'
+      });
+      // Refresh the questions list
+      fetchAllQuestions();
+      fetchQAStats(); // Update stats
+    } catch (error) {
+      console.error('Error deleting question:', error);
+      alert('Failed to delete question');
+    }
+  };
+
+  if (!qaStats && currentTab === 'stats') {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading Q&A statistics...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-xl font-semibold text-gray-800 mb-6">💬 Q&A Forum Management</h2>
+
+      {/* Tabs */}
+      <div className="flex flex-wrap border-b mb-6">
+        <button
+          onClick={() => setCurrentTab('stats')}
+          className={`px-4 py-2 font-medium transition duration-200 ${
+            currentTab === 'stats'
+              ? 'border-b-2 border-blue-500 text-blue-600'
+              : 'text-gray-600 hover:text-gray-800'
+          }`}
+        >
+          📊 Statistics
+        </button>
+        <button
+          onClick={() => setCurrentTab('questions')}
+          className={`px-4 py-2 font-medium transition duration-200 ${
+            currentTab === 'questions'
+              ? 'border-b-2 border-blue-500 text-blue-600'
+              : 'text-gray-600 hover:text-gray-800'
+          }`}
+        >
+          ❓ Manage Questions
+        </button>
+      </div>
+
+      {/* Statistics Tab */}
+      {currentTab === 'stats' && qaStats && (
+        <div className="space-y-6">
+          {/* Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-600 text-sm font-medium">Total Questions</p>
+                  <p className="text-2xl font-bold text-blue-800">{qaStats.total_questions}</p>
+                </div>
+                <div className="text-3xl">❓</div>
+              </div>
+            </div>
+            
+            <div className="bg-green-50 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-green-600 text-sm font-medium">Total Answers</p>
+                  <p className="text-2xl font-bold text-green-800">{qaStats.total_answers}</p>
+                </div>
+                <div className="text-3xl">💬</div>
+              </div>
+            </div>
+            
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-600 text-sm font-medium">Discussions</p>
+                  <p className="text-2xl font-bold text-purple-800">{qaStats.total_discussions}</p>
+                </div>
+                <div className="text-3xl">💭</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Questions by Status */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-semibold text-gray-800 mb-3">Questions by Status</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-600">
+                  {qaStats.questions_by_status.open}
+                </div>
+                <div className="text-sm text-gray-600">Open Questions</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {qaStats.questions_by_status.answered}
+                </div>
+                <div className="text-sm text-gray-600">Answered Questions</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-600">
+                  {qaStats.questions_by_status.closed}
+                </div>
+                <div className="text-sm text-gray-600">Closed Questions</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Questions by Subject */}
+          {qaStats.questions_by_subject.length > 0 && (
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold text-gray-800 mb-3">Questions by Subject</h3>
+              <div className="space-y-2">
+                {qaStats.questions_by_subject.map((subject, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-gray-700">
+                      📖 {subject._id || 'No Subject'}
+                    </span>
+                    <span className="font-semibold text-blue-600">
+                      {subject.count} questions
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Questions Management Tab */}
+      {currentTab === 'questions' && (
+        <div className="space-y-4">
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading questions...</p>
+            </div>
+          ) : questions.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🤔</div>
+              <p className="text-gray-600">No questions found</p>
+            </div>
+          ) : (
+            questions.map((question) => (
+              <div key={question.id} className="border rounded-lg p-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      {question.is_pinned && (
+                        <span className="px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800 font-medium">
+                          📌 Pinned
+                        </span>
+                      )}
+                      {question.has_accepted_answer && (
+                        <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800 font-medium">
+                          ✅ Answered
+                        </span>
+                      )}
+                      {question.subject && (
+                        <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                          📖 {question.subject}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <h3 className="font-semibold text-gray-800 mb-2">{question.title}</h3>
+                    <p className="text-gray-600 text-sm mb-2 line-clamp-2">{question.content}</p>
+                    
+                    <div className="flex items-center text-sm text-gray-500 space-x-4">
+                      <span>👤 {question.user.name}</span>
+                      <span>💬 {question.answer_count} answers</span>
+                      <span>👍 {question.upvotes - question.downvotes} votes</span>
+                      <span>{new Date(question.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 ml-4">
+                    <button
+                      onClick={() => togglePinQuestion(question.id, question.is_pinned)}
+                      className={`px-3 py-1 rounded text-xs transition duration-200 ${
+                        question.is_pinned
+                          ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {question.is_pinned ? '📌 Unpin' : '📌 Pin'}
+                    </button>
+                    <button
+                      onClick={() => deleteQuestion(question.id)}
+                      className="px-3 py-1 rounded text-xs bg-red-100 text-red-800 hover:bg-red-200 transition duration-200"
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ====================================================================
 // Q&A DISCUSSION SYSTEM COMPONENTS
 // ====================================================================
