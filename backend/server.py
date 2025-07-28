@@ -32,7 +32,18 @@ JWT_EXPIRATION_HOURS = 24
 # Create the main app
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
+from fastapi.middleware.cors import CORSMiddleware
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://squiz-k5qa.onrender.com",  # frontend hosted domain
+        "http://localhost:3000",  # local dev
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # Security
 security = HTTPBearer()
 
