@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../App';
-import { FaThumbsUp, FaComment, FaTag, FaUser, FaShield, FaClock } from 'react-icons/fa';
+import { FaThumbsUp, FaComment, FaTag, FaUser, FaShieldAlt, FaClock } from 'react-icons/fa';
 import axios from 'axios';
 
 const Home = () => {
