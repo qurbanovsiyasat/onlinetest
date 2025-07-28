@@ -373,7 +373,7 @@ class SocialBackendTester:
         
         # Test 2: View private user profile (User3) as non-follower
         # First, ensure User1 is not following User3
-        self.make_request("POST", "/unfollow", {"user_id": self.user3_id}, token=self.user1_token)
+        self.make_request("DELETE", f"/follow/{self.user3_id}", token=self.user1_token)
         
         response = self.make_request("GET", f"/user/{self.user3_id}/profile", token=self.user1_token)
         if response:
