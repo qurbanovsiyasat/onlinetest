@@ -349,6 +349,105 @@ class QuizSessionResponse(BaseModel):
     created_at: datetime
     last_activity: datetime
 
+# Q&A Discussion System Models
+class QuestionStatus(str, Enum):
+    OPEN = "open"
+    ANSWERED = "answered"
+    CLOSED = "closed"
+
+class Question(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    content: str
+    image: Optional[str] = None  # Base64 encoded image
+    user_id: str
+    subject: Optional[str] = None  # Link to quiz subjects for categorization
+    subcategory: Optional[str] = None
+    tags: List[str] = []
+    upvotes: int = 0
+    downvotes: int = 0
+    upvoted_by: List[str] = []  # List of user IDs who upvoted
+    downvoted_by: List[str] = []  # List of user IDs who downvoted
+    status: QuestionStatus = QuestionStatus.OPEN
+    answer_count: int = 0
+    has_accepted_answer: bool = False
+    is_pinned: bool = False  # Admin can pin important questions
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class QuestionCreate(BaseModel):
+    title: str
+    content: str
+    image: Optional[str] = None
+    subject: Optional[str] = None
+    subcategory: Optional[str] = None
+    tags: List[str] = []
+
+class QuestionUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    image: Optional[str] = None
+    subject: Optional[str] = None
+    subcategory: Optional[str] = None
+    tags: Optional[List[str]] = None
+    status: Optional[QuestionStatus] = None
+    is_pinned: Optional[bool] = None
+
+class Answer(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    question_id: str
+    content: str
+    image: Optional[str] = None  # Base64 encoded image
+    user_id: str
+    upvotes: int = 0
+    downvotes: int = 0
+    upvoted_by: List[str] = []
+    downvoted_by: List[str] = []
+    is_accepted: bool = False  # Marked as best answer by question author
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class AnswerCreate(BaseModel):
+    content: str
+    image: Optional[str] = None
+
+class AnswerUpdate(BaseModel):
+    content: Optional[str] = None
+    image: Optional[str] = None
+    is_accepted: Optional[bool] = None
+
+class Discussion(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    question_id: str
+    user_id: str
+    message: str
+    image: Optional[str] = None  # Base64 encoded image
+    reply_to_id: Optional[str] = None  # For threaded conversations
+    upvotes: int = 0
+    downvotes: int = 0
+    upvoted_by: List[str] = []
+    downvoted_by: List[str] = []
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class DiscussionCreate(BaseModel):
+    message: str
+    image: Optional[str] = None
+    reply_to_id: Optional[str] = None
+
+class DiscussionUpdate(BaseModel):
+    message: Optional[str] = None
+    image: Optional[str] = None
+
+# Vote related models
+class VoteType(str, Enum):
+    UPVOTE = "upvote"
+    DOWNVOTE = "downvote"
+    REMOVE = "remove"
+
+class VoteRequest(BaseModel):
+    vote_type: VoteType
+
 class Category(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
