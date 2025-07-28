@@ -8252,7 +8252,7 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
               )}
               
               {/* Emoji Reactions */}
-              <EmojiReactions answerId={answer.id} currentUser={currentUser} />
+              <EmojiReactions answerId={answer.id} currentUser={user} />
             </div>
           ))}
         </div>
