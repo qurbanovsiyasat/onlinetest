@@ -4140,3 +4140,6 @@ async def startup_initialize():
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+# Include router after all endpoints are defined
+app.include_router(api_router)
