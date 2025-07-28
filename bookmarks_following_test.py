@@ -117,7 +117,7 @@ class BookmarksFollowingTester:
         
         # Register User 2
         user2_data = {
-            "email": "bookmarkuser2@test.com",
+            "email": f"bookmarkuser2_{timestamp}@test.com",
             "name": "Bookmark Test User 2",
             "password": "testpass123"
         }
