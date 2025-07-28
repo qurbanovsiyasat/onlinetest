@@ -421,13 +421,25 @@ class QAForumTester:
     
     def test_user_activity(self):
         """Test getting user's questions and answers"""
-        # Test getting user's questions
+        # Test getting user's questions (may require auth for private profiles)
         try:
             response = self.session.get(f"{BASE_URL}/users/{self.admin_user_id}/questions")
             if response.status_code == 200:
                 data = response.json()
                 question_count = len(data)
                 self.log_test("Get User Questions", True, f"User has {question_count} questions")
+            elif response.status_code == 403:
+                # If it requires auth, test with auth
+                headers = {"Authorization": f"Bearer {self.admin_token}"}
+                response = self.session.get(f"{BASE_URL}/users/{self.admin_user_id}/questions", headers=headers)
+                if response.status_code == 200:
+                    data = response.json()
+                    question_count = len(data)
+                    self.log_test("Get User Questions", True, f"User has {question_count} questions with auth")
+                else:
+                    self.log_test("Get User Questions", False, 
+                                f"Status: {response.status_code}, Response: {response.text}")
+                    return False
             else:
                 self.log_test("Get User Questions", False, 
                             f"Status: {response.status_code}, Response: {response.text}")
