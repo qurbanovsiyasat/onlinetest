@@ -7832,6 +7832,20 @@ function QuestionCard({ question, onClick, currentUser }) {
                   <span>👤</span>
                   <span>{question.user ? question.user.name : 'Unknown User'}</span>
                 </span>
+                {currentUser && (
+                  <button
+                    onClick={handleBookmark}
+                    disabled={bookmarking}
+                    className={`flex items-center space-x-1 px-2 py-1 rounded transition duration-200 ${
+                      isBookmarked
+                        ? 'text-blue-600 bg-blue-50 hover:bg-blue-100'
+                        : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+                    } ${bookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <span>{isBookmarked ? '🔖' : '📄'}</span>
+                    <span className="text-xs">{isBookmarked ? 'Saved' : 'Save'}</span>
+                  </button>
+                )}
               </div>
               <span>{getTimeSince(question.created_at)}</span>
             </div>
