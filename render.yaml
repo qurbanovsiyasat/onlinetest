@@ -1,46 +1,37 @@
-{
-  "version": 2,
-  "services": [
-    {
-      "type": "web",
-      "name": "squiz-backend",
-      "env": "python",
-      "plan": "free",
-      "buildCommand": "cd backend && pip install -r requirements.txt",
-      "startCommand": "cd backend && python -m uvicorn server:app --host 0.0.0.0 --port $PORT",
-      "healthCheckPath": "/api/health",
-      "envVars": {
-        "MONGO_URL": {
-          "type": "database",
-          "property": "connectionString"
-        },
-        "DB_NAME": "squiz_production",
-        "JWT_SECRET": {
-          "generateValue": true
-        }
-      }
-    },
-    {
-      "type": "static",
-      "name": "squiz-frontend", 
-      "buildCommand": "cd frontend && yarn install && yarn build",
-      "staticPublishPath": "frontend/build",
-      "envVars": {
-        "REACT_APP_BACKEND_URL": {
-          "type": "service",
-          "property": "url",
-          "serviceType": "web"
-        },
-        "GENERATE_SOURCEMAP": "false",
-        "CI": "false"
-      }
-    }
-  ],
-  "databases": [
-    {
-      "name": "squiz-database",
-      "type": "mongodb",
-      "plan": "free"
-    }
-  ]
-}
+services:
+  - type: web
+    name: squiz-backend
+    env: python
+    plan: free
+    buildCommand: cd backend && pip install -r requirements.txt
+    startCommand: cd backend && python -m uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: "/api/health"
+    envVars:
+      - key: MONGO_URL
+        fromDatabase:
+          name: squiz-database
+          property: connectionString
+      - key: DB_NAME
+        value: squiz_production
+      - key: JWT_SECRET
+        generateValue: true
+        
+  - type: static
+    name: squiz-frontend
+    buildCommand: cd frontend && yarn install --frozen-lockfile && yarn build:production
+    staticPublishPath: frontend/build
+    envVars:
+      - key: REACT_APP_BACKEND_URL
+        fromService:
+          type: web
+          name: squiz-backend
+          property: url
+      - key: GENERATE_SOURCEMAP
+        value: false
+      - key: CI
+        value: false
+
+databases:
+  - name: squiz-database
+    databaseName: squiz_production
+    plan: free
