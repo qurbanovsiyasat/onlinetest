@@ -2806,9 +2806,10 @@ async def get_user_info(user_id: str):
         return {
             "id": user["id"],
             "name": user["name"],
-            "role": user.get("role", "user")
+            "role": user.get("role", "user"),
+            "is_admin": user.get("role") == "admin"
         }
-    return {"id": user_id, "name": "Unknown User", "role": "user"}
+    return {"id": user_id, "name": "Unknown User", "role": "user", "is_admin": False}
 
 async def update_question_stats(question_id: str):
     """Update question statistics after changes"""
