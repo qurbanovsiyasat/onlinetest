@@ -366,13 +366,14 @@ class QADiscussionAPITester:
             return self.log_test("Add Answer", False, f"Error: {str(e)}")
 
     def test_get_question_answers(self):
-        """Test getting answers for a question"""
+        """Test getting answers for a question (via question details endpoint)"""
         if not self.user_token or not self.created_question_id:
             return self.log_test("Get Question Answers", False, "No user token or question ID available")
         
         try:
+            # Get question details which includes answers
             response = requests.get(
-                f"{self.api_url}/questions/{self.created_question_id}/answers",
+                f"{self.api_url}/questions/{self.created_question_id}",
                 headers=self.get_auth_headers(self.user_token),
                 timeout=10
             )
@@ -381,9 +382,10 @@ class QADiscussionAPITester:
             
             if success:
                 data = response.json()
-                details += f", Answers Count: {len(data)}"
-                if len(data) > 0:
-                    first_answer = data[0]
+                answers = data.get('answers', [])
+                details += f", Answers Count: {len(answers)}"
+                if len(answers) > 0:
+                    first_answer = answers[0]
                     details += f", First Answer Length: {len(first_answer.get('content', ''))}"
                     details += f", Upvotes: {first_answer.get('upvotes', 0)}"
                     details += f", Is Accepted: {first_answer.get('is_accepted', False)}"
