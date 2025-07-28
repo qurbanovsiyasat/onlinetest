@@ -4089,7 +4089,7 @@ async def notify_followers_of_new_quiz(user_id: str, quiz_title: str, quiz_id: s
     for follow in follows:
         notification = NotificationCreate(
             user_id=follow["follower_id"],
-            type=NotificationType.NEW_ANSWER,  # We'll add specific types later
+            type=NotificationType.FOLLOWED_USER_QUIZ,
             title="New Quiz from Followed User",
             message=f"{user_info['name']} created a new quiz: {quiz_title[:50]}...",
             related_id=quiz_id
