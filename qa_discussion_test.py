@@ -688,13 +688,13 @@ class QADiscussionAPITester:
             return self.log_test("Admin Q&A Statistics", False, f"Error: {str(e)}")
 
     def test_admin_pin_question(self):
-        """Test admin pinning question"""
+        """Test admin pinning question via PUT endpoint"""
         if not self.admin_token or not self.created_question_id:
             return self.log_test("Admin Pin Question", False, "No admin token or question ID available")
         
         try:
-            # Pin the question
-            response = requests.post(
+            # Pin the question (toggle endpoint)
+            response = requests.put(
                 f"{self.api_url}/admin/questions/{self.created_question_id}/pin",
                 headers=self.get_auth_headers(self.admin_token),
                 timeout=10
@@ -707,9 +707,9 @@ class QADiscussionAPITester:
                 details += f", Message: {data.get('message', 'No message')}"
                 details += f", Is Pinned: {data.get('is_pinned', False)}"
                 
-                # Test unpinning
-                unpin_response = requests.post(
-                    f"{self.api_url}/admin/questions/{self.created_question_id}/unpin",
+                # Test unpinning (toggle again)
+                unpin_response = requests.put(
+                    f"{self.api_url}/admin/questions/{self.created_question_id}/pin",
                     headers=self.get_auth_headers(self.admin_token),
                     timeout=10
                 )
