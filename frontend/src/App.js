@@ -8872,7 +8872,7 @@ const UserProfile = ({ user }) => {
           )}
           
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
+          <div className="grid grid-cols-2 md:grid-cols-7 gap-4 mt-6">
             <div className="text-center">
               <div className="text-2xl font-bold text-white">{profile.questions_count}</div>
               <div className="text-indigo-100 text-sm">Suallar</div>
@@ -8892,6 +8892,14 @@ const UserProfile = ({ user }) => {
             <div className="text-center">
               <div className="text-2xl font-bold text-white">{profile.avg_quiz_score}%</div>
               <div className="text-indigo-100 text-sm">Orta nəticə</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">{followStats.followers_count}</div>
+              <div className="text-indigo-100 text-sm">İzləyicilər</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">{followStats.following_count}</div>
+              <div className="text-indigo-100 text-sm">İzlədikləri</div>
             </div>
           </div>
         </div>
