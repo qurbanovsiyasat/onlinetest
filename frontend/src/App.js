@@ -3626,20 +3626,24 @@ function UserDashboard({ currentView, setCurrentView }) {
               }`}
             >
               📊 Mənim nəticələrim
-            </button>
+            </motion.button>
             {/* User quiz and subject creation removed - admin-only functionality */}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setShowPasswordChange(true)}
-              className="text-gray-700 hover:bg-gray-100 px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm"
+              className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm"
             >
               🔑 Şifrə
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={logout}
-              className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200 text-xs sm:text-sm"
+              className="bg-red-600 dark:bg-red-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition duration-200 text-xs sm:text-sm"
             >
               🚪 Çıxış
-            </button>
+            </motion.button>
           </div>
         </div>
       </header>
