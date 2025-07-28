@@ -818,19 +818,19 @@ async def set_quiz_access(quiz_id: str, access_data: UserQuizAccess, admin_user:
 
 @api_router.get("/admin/quiz/{quiz_id}/leaderboard")
 async def get_quiz_leaderboard(quiz_id: str, admin_user: User = Depends(get_admin_user)):
-    """Get top 3 performers for a quiz (admin only)"""
+    """Get top 3 performers for a quiz (admin only) - based on FIRST attempts only"""
     # Get all attempts for this quiz
     attempts = await db.quiz_attempts.find({"quiz_id": quiz_id}).to_list(1000)
     
-    # Group by user and get best attempt for each user
-    user_best_attempts = {}
+    # Group by user and get FIRST attempt for each user (not best)
+    user_first_attempts = {}
     for attempt in attempts:
         user_id = attempt["user_id"]
-        if user_id not in user_best_attempts or attempt["percentage"] > user_best_attempts[user_id]["percentage"]:
-            user_best_attempts[user_id] = attempt
+        if user_id not in user_first_attempts or attempt["attempted_at"] < user_first_attempts[user_id]["attempted_at"]:
+            user_first_attempts[user_id] = attempt
     
-    # Sort by percentage and get top 3
-    top_attempts = sorted(user_best_attempts.values(), key=lambda x: x["percentage"], reverse=True)[:3]
+    # Sort by percentage and get top 3 (based on first attempts only)
+    top_attempts = sorted(user_first_attempts.values(), key=lambda x: x["percentage"], reverse=True)[:3]
     
     # Enrich with user information
     leaderboard = []
@@ -843,7 +843,8 @@ async def get_quiz_leaderboard(quiz_id: str, admin_user: User = Depends(get_admi
             "score": attempt["score"],
             "total_questions": attempt["total_questions"],
             "percentage": attempt["percentage"],
-            "attempted_at": attempt["attempted_at"]
+            "attempted_at": attempt["attempted_at"],
+            "is_first_attempt": True  # Indicator that this is user's first attempt
         })
     
     return leaderboard
