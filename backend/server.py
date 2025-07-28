@@ -41,8 +41,9 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://squiz-k5qa.onrender.com",  # Frontend ünvanı
-        "http://localhost:3000",            # Lokal inkişaf üçün
+        "https://squiz-frontend.onrender.com",  # Production frontend URL
+        "https://squiz-k5qa.onrender.com",      # Alternative frontend URL
+        "http://localhost:3000",                # Local development
     ],
     allow_credentials=True,
     allow_methods=["*"],                    # Bütün metodlara icazə
