@@ -170,7 +170,7 @@ class ActivityFeedTester:
         
         for follower, following in follow_relationships:
             if follower in self.user_tokens and following in self.user_ids:
-                success, result = self.make_request("POST", "/user/follow", {
+                success, result = self.make_request("POST", "/follow", {
                     "user_id": self.user_ids[following]
                 }, token=self.user_tokens[follower])
                 
