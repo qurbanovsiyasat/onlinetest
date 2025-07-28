@@ -330,18 +330,29 @@ class SocialBackendTester:
         if response and response.get("action") == "request_sent":
             self.log_test("Follow Request for Rejection Test", True, "Follow request sent successfully")
             
-            # User3 rejects the follow request
-            reject_data = {"user_id": self.user2_id}
-            response = self.make_request("POST", "/follow-requests/reject", reject_data, token=self.user3_token)
+            # Get the request ID for rejection
+            requests_response = self.make_request("GET", "/follow-requests", token=self.user3_token)
+            request_id = None
+            if requests_response and "requests" in requests_response:
+                for req in requests_response["requests"]:
+                    if req.get("follower_id") == self.user2_id:
+                        request_id = req.get("id")
+                        break
             
-            if response:
-                expected_action = "request_rejected"
-                if response.get("action") == expected_action:
-                    self.log_test("Reject Follow Request", True, f"Follow request rejected: {response.get('message')}")
+            if request_id:
+                # User3 rejects the follow request
+                response = self.make_request("POST", f"/follow-requests/{request_id}/reject", token=self.user3_token)
+                
+                if response:
+                    expected_action = "request_rejected"
+                    if response.get("action") == expected_action:
+                        self.log_test("Reject Follow Request", True, f"Follow request rejected: {response.get('message')}")
+                    else:
+                        self.log_test("Reject Follow Request", False, f"Unexpected response: {response}")
                 else:
-                    self.log_test("Reject Follow Request", False, f"Unexpected response: {response}")
+                    self.log_test("Reject Follow Request", False, "Failed to reject follow request")
             else:
-                self.log_test("Reject Follow Request", False, "Failed to reject follow request")
+                self.log_test("Reject Follow Request", False, "Could not find request ID for rejection")
         else:
             self.log_test("Follow Request for Rejection Test", False, "Failed to send follow request for rejection test")
     
