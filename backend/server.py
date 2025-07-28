@@ -2832,6 +2832,10 @@ async def create_question(question_data: QuestionCreate, current_user: User = De
     )
     
     await db.questions.insert_one(question.dict())
+    
+    # Notify followers of new question
+    await notify_followers_of_new_question(current_user.id, question.title, question.id)
+    
     return question
 
 @api_router.put("/questions/{question_id}", response_model=Question)
