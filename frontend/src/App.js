@@ -3695,7 +3695,7 @@ function UserDashboard({ currentView, setCurrentView }) {
 
       <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
         {currentView === 'home' && (
-          <UserHome quizzes={quizzes} startQuiz={startQuiz} startRealTimeQuiz={startRealTimeQuiz} />
+          <UserHome quizzes={quizzes} startQuiz={startQuiz} startRealTimeQuiz={startRealTimeQuiz} currentUser={user} />
         )}
 
         {currentView === 'qa-forum' && (
