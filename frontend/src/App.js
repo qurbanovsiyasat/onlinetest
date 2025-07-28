@@ -7934,7 +7934,7 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
             <div key={answer.id} className="border-l-4 border-gray-200 pl-6">
               <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center space-x-2">
-                  <span className="font-medium text-gray-800">{answer.user.name}</span>
+                  <span className="font-medium text-gray-800">{answer.user ? answer.user.name : 'Unknown User'}</span>
                   <span className="text-sm text-gray-500">
                     {new Date(answer.created_at).toLocaleDateString()}
                   </span>
@@ -7946,7 +7946,7 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-500">
-                    {answer.upvotes - answer.downvotes} votes
+                    {(answer.upvotes || 0) - (answer.downvotes || 0)} votes
                   </span>
                 </div>
               </div>
