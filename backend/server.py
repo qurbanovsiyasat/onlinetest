@@ -3928,7 +3928,7 @@ async def follow_user(
     # Create notification for the followed user
     await create_notification(NotificationCreate(
         user_id=follow_data.user_id,
-        type=NotificationType.NEW_ANSWER,  # We'll add a new type later
+        type=NotificationType.NEW_FOLLOWER,
         title="New Follower",
         message=f"{current_user.name} started following you",
         related_id=current_user.id
