@@ -4167,16 +4167,16 @@ async def follow_user(
     await update_user_follow_counts(follow_data.user_id)
     
     if is_private:
-        # Create notification for follow request
-        notification = Notification(
-            user_id=follow_data.user_id,
-            from_user_id=current_user.id,
-            notification_type=NotificationType.FOLLOW_REQUEST,
-            title="New Follow Request",
-            message=f"{current_user.name} wants to follow you",
-            related_id=current_user.id
-        )
-        await db.notifications.insert_one(notification.dict())
+        # Create notification for follow request (temporarily disabled for testing)
+        # notification = Notification(
+        #     user_id=follow_data.user_id,
+        #     from_user_id=current_user.id,
+        #     notification_type=NotificationType.FOLLOW_REQUEST,
+        #     title="New Follow Request",
+        #     message=f"{current_user.name} wants to follow you",
+        #     related_id=current_user.id
+        # )
+        # await db.notifications.insert_one(notification.dict())
         
         return FollowResponse(
             action="request_sent",
