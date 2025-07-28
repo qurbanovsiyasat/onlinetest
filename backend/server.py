@@ -2676,6 +2676,586 @@ async def get_user_details(user_id: str, admin_user: User = Depends(get_admin_us
         "attempts": detailed_attempts
     }
 
+# ====================================================================
+# Q&A DISCUSSION SYSTEM API ENDPOINTS
+# ====================================================================
+
+# Helper functions for Q&A system
+async def get_user_info(user_id: str):
+    """Get basic user information for Q&A responses"""
+    user = await db.users.find_one({"id": user_id})
+    if user:
+        return {
+            "id": user["id"],
+            "name": user["name"],
+            "role": user.get("role", "user")
+        }
+    return {"id": user_id, "name": "Unknown User", "role": "user"}
+
+async def update_question_stats(question_id: str):
+    """Update question statistics after changes"""
+    answer_count = await db.answers.count_documents({"question_id": question_id})
+    has_accepted_answer = bool(await db.answers.find_one({"question_id": question_id, "is_accepted": True}))
+    
+    status = QuestionStatus.ANSWERED if has_accepted_answer else (
+        QuestionStatus.OPEN if answer_count == 0 else QuestionStatus.OPEN
+    )
+    
+    await db.questions.update_one(
+        {"id": question_id},
+        {"$set": {
+            "answer_count": answer_count,
+            "has_accepted_answer": has_accepted_answer,
+            "status": status,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+
+# Questions API Endpoints
+@api_router.get("/questions")
+async def get_questions(
+    subject: Optional[str] = None,
+    subcategory: Optional[str] = None,
+    status: Optional[str] = None,
+    page: int = 1,
+    limit: int = 20,
+    sort_by: str = "created_at",  # created_at, upvotes, answer_count, updated_at
+    sort_order: str = "desc"
+):
+    """Get all questions with optional filtering and pagination"""
+    skip = (page - 1) * limit
+    sort_direction = -1 if sort_order == "desc" else 1
+    
+    # Build filter
+    filter_dict = {}
+    if subject:
+        filter_dict["subject"] = subject
+    if subcategory:
+        filter_dict["subcategory"] = subcategory
+    if status:
+        filter_dict["status"] = status
+    
+    # Get questions with sorting
+    sort_field = sort_by if sort_by in ["created_at", "upvotes", "answer_count", "updated_at"] else "created_at"
+    
+    questions = await db.questions.find(filter_dict).sort(sort_field, sort_direction).skip(skip).limit(limit).to_list(limit)
+    total_count = await db.questions.count_documents(filter_dict)
+    
+    # Enrich with user information
+    enriched_questions = []
+    for question in questions:
+        user_info = await get_user_info(question["user_id"])
+        question["user"] = user_info
+        enriched_questions.append(Question(**question))
+    
+    return {
+        "questions": enriched_questions,
+        "total": total_count,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total_count + limit - 1) // limit
+    }
+
+@api_router.get("/questions/{question_id}")
+async def get_question_detail(question_id: str):
+    """Get detailed question with answers and discussions"""
+    # Get question
+    question = await db.questions.find_one({"id": question_id})
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    # Get question user info
+    question_user = await get_user_info(question["user_id"])
+    question["user"] = question_user
+    
+    # Get answers
+    answers = await db.answers.find({"question_id": question_id}).sort("created_at", -1).to_list(100)
+    enriched_answers = []
+    for answer in answers:
+        user_info = await get_user_info(answer["user_id"])
+        answer["user"] = user_info
+        enriched_answers.append(Answer(**answer))
+    
+    # Get discussions
+    discussions = await db.discussions.find({"question_id": question_id}).sort("created_at", 1).to_list(100)
+    enriched_discussions = []
+    for discussion in discussions:
+        user_info = await get_user_info(discussion["user_id"])
+        discussion["user"] = user_info
+        enriched_discussions.append(Discussion(**discussion))
+    
+    return {
+        "question": Question(**question),
+        "answers": enriched_answers,
+        "discussions": enriched_discussions
+    }
+
+@api_router.post("/questions", response_model=Question)
+async def create_question(question_data: QuestionCreate, current_user: User = Depends(get_current_user)):
+    """Create a new question (authenticated users only)"""
+    if not question_data.title.strip() or len(question_data.title.strip()) < 5:
+        raise HTTPException(status_code=400, detail="Question title must be at least 5 characters long")
+    
+    if not question_data.content.strip() or len(question_data.content.strip()) < 10:
+        raise HTTPException(status_code=400, detail="Question content must be at least 10 characters long")
+    
+    # Create question
+    question = Question(
+        **question_data.dict(),
+        user_id=current_user.id
+    )
+    
+    await db.questions.insert_one(question.dict())
+    return question
+
+@api_router.put("/questions/{question_id}", response_model=Question)
+async def update_question(
+    question_id: str, 
+    question_data: QuestionUpdate, 
+    current_user: User = Depends(get_current_user)
+):
+    """Update question (only by author or admin)"""
+    question = await db.questions.find_one({"id": question_id})
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    # Check permissions
+    if question["user_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="You can only edit your own questions")
+    
+    # Update fields
+    update_data = {k: v for k, v in question_data.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.questions.update_one({"id": question_id}, {"$set": update_data})
+    
+    # Return updated question
+    updated_question = await db.questions.find_one({"id": question_id})
+    return Question(**updated_question)
+
+@api_router.delete("/questions/{question_id}")
+async def delete_question(question_id: str, current_user: User = Depends(get_current_user)):
+    """Delete question (only by author or admin)"""
+    question = await db.questions.find_one({"id": question_id})
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    # Check permissions
+    if question["user_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="You can only delete your own questions")
+    
+    # Delete question and all related data
+    await db.questions.delete_one({"id": question_id})
+    await db.answers.delete_many({"question_id": question_id})
+    await db.discussions.delete_many({"question_id": question_id})
+    
+    return {"message": "Question deleted successfully"}
+
+# Answers API Endpoints
+@api_router.post("/questions/{question_id}/answers", response_model=Answer)
+async def create_answer(
+    question_id: str, 
+    answer_data: AnswerCreate, 
+    current_user: User = Depends(get_current_user)
+):
+    """Add answer to question (authenticated users only)"""
+    # Check if question exists
+    question = await db.questions.find_one({"id": question_id})
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    if not answer_data.content.strip() or len(answer_data.content.strip()) < 5:
+        raise HTTPException(status_code=400, detail="Answer content must be at least 5 characters long")
+    
+    # Create answer
+    answer = Answer(
+        **answer_data.dict(),
+        question_id=question_id,
+        user_id=current_user.id
+    )
+    
+    await db.answers.insert_one(answer.dict())
+    
+    # Update question stats
+    await update_question_stats(question_id)
+    
+    return answer
+
+@api_router.put("/questions/{question_id}/answers/{answer_id}", response_model=Answer)
+async def update_answer(
+    question_id: str,
+    answer_id: str,
+    answer_data: AnswerUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Update answer (only by author or admin)"""
+    answer = await db.answers.find_one({"id": answer_id, "question_id": question_id})
+    if not answer:
+        raise HTTPException(status_code=404, detail="Answer not found")
+    
+    # Check permissions for content updates
+    if answer_data.content is not None or answer_data.image is not None:
+        if answer["user_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="You can only edit your own answers")
+    
+    # Check permissions for accepting answer (only question author or admin)
+    if answer_data.is_accepted is not None:
+        question = await db.questions.find_one({"id": question_id})
+        if question["user_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Only the question author can accept answers")
+        
+        # If accepting this answer, un-accept all others
+        if answer_data.is_accepted:
+            await db.answers.update_many(
+                {"question_id": question_id},
+                {"$set": {"is_accepted": False}}
+            )
+    
+    # Update fields
+    update_data = {k: v for k, v in answer_data.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.answers.update_one({"id": answer_id}, {"$set": update_data})
+    
+    # Update question stats
+    await update_question_stats(question_id)
+    
+    # Return updated answer
+    updated_answer = await db.answers.find_one({"id": answer_id})
+    return Answer(**updated_answer)
+
+@api_router.delete("/questions/{question_id}/answers/{answer_id}")
+async def delete_answer(
+    question_id: str,
+    answer_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete answer (only by author or admin)"""
+    answer = await db.answers.find_one({"id": answer_id, "question_id": question_id})
+    if not answer:
+        raise HTTPException(status_code=404, detail="Answer not found")
+    
+    # Check permissions
+    if answer["user_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="You can only delete your own answers")
+    
+    await db.answers.delete_one({"id": answer_id})
+    
+    # Update question stats
+    await update_question_stats(question_id)
+    
+    return {"message": "Answer deleted successfully"}
+
+# Discussions API Endpoints
+@api_router.get("/questions/{question_id}/discussions")
+async def get_discussions(question_id: str):
+    """Get all discussions for a question"""
+    discussions = await db.discussions.find({"question_id": question_id}).sort("created_at", 1).to_list(100)
+    
+    enriched_discussions = []
+    for discussion in discussions:
+        user_info = await get_user_info(discussion["user_id"])
+        discussion["user"] = user_info
+        enriched_discussions.append(Discussion(**discussion))
+    
+    return enriched_discussions
+
+@api_router.post("/questions/{question_id}/discussions", response_model=Discussion)
+async def create_discussion(
+    question_id: str,
+    discussion_data: DiscussionCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Add discussion message to question (authenticated users only)"""
+    # Check if question exists
+    question = await db.questions.find_one({"id": question_id})
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    if not discussion_data.message.strip() or len(discussion_data.message.strip()) < 1:
+        raise HTTPException(status_code=400, detail="Discussion message cannot be empty")
+    
+    # Create discussion
+    discussion = Discussion(
+        **discussion_data.dict(),
+        question_id=question_id,
+        user_id=current_user.id
+    )
+    
+    await db.discussions.insert_one(discussion.dict())
+    return discussion
+
+@api_router.put("/questions/{question_id}/discussions/{discussion_id}", response_model=Discussion)
+async def update_discussion(
+    question_id: str,
+    discussion_id: str,
+    discussion_data: DiscussionUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Update discussion message (only by author or admin)"""
+    discussion = await db.discussions.find_one({"id": discussion_id, "question_id": question_id})
+    if not discussion:
+        raise HTTPException(status_code=404, detail="Discussion message not found")
+    
+    # Check permissions
+    if discussion["user_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="You can only edit your own messages")
+    
+    # Update fields
+    update_data = {k: v for k, v in discussion_data.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.discussions.update_one({"id": discussion_id}, {"$set": update_data})
+    
+    # Return updated discussion
+    updated_discussion = await db.discussions.find_one({"id": discussion_id})
+    return Discussion(**updated_discussion)
+
+@api_router.delete("/questions/{question_id}/discussions/{discussion_id}")
+async def delete_discussion(
+    question_id: str,
+    discussion_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete discussion message (only by author or admin)"""
+    discussion = await db.discussions.find_one({"id": discussion_id, "question_id": question_id})
+    if not discussion:
+        raise HTTPException(status_code=404, detail="Discussion message not found")
+    
+    # Check permissions
+    if discussion["user_id"] != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="You can only delete your own messages")
+    
+    await db.discussions.delete_one({"id": discussion_id})
+    return {"message": "Discussion message deleted successfully"}
+
+# Voting API Endpoints
+@api_router.post("/questions/{question_id}/vote")
+async def vote_question(
+    question_id: str,
+    vote_data: VoteRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Vote on a question (upvote/downvote/remove)"""
+    question = await db.questions.find_one({"id": question_id})
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    # Prevent voting on own question
+    if question["user_id"] == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot vote on your own question")
+    
+    user_id = current_user.id
+    upvoted_by = question.get("upvoted_by", [])
+    downvoted_by = question.get("downvoted_by", [])
+    
+    # Remove existing votes first
+    if user_id in upvoted_by:
+        upvoted_by.remove(user_id)
+    if user_id in downvoted_by:
+        downvoted_by.remove(user_id)
+    
+    # Add new vote
+    if vote_data.vote_type == VoteType.UPVOTE:
+        upvoted_by.append(user_id)
+    elif vote_data.vote_type == VoteType.DOWNVOTE:
+        downvoted_by.append(user_id)
+    # For REMOVE, we just removed existing votes above
+    
+    # Update question
+    await db.questions.update_one(
+        {"id": question_id},
+        {"$set": {
+            "upvotes": len(upvoted_by),
+            "downvotes": len(downvoted_by),
+            "upvoted_by": upvoted_by,
+            "downvoted_by": downvoted_by,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    return {
+        "message": "Vote recorded successfully",
+        "upvotes": len(upvoted_by),
+        "downvotes": len(downvoted_by)
+    }
+
+@api_router.post("/answers/{answer_id}/vote")
+async def vote_answer(
+    answer_id: str,
+    vote_data: VoteRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Vote on an answer (upvote/downvote/remove)"""
+    answer = await db.answers.find_one({"id": answer_id})
+    if not answer:
+        raise HTTPException(status_code=404, detail="Answer not found")
+    
+    # Prevent voting on own answer
+    if answer["user_id"] == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot vote on your own answer")
+    
+    user_id = current_user.id
+    upvoted_by = answer.get("upvoted_by", [])
+    downvoted_by = answer.get("downvoted_by", [])
+    
+    # Remove existing votes first
+    if user_id in upvoted_by:
+        upvoted_by.remove(user_id)
+    if user_id in downvoted_by:
+        downvoted_by.remove(user_id)
+    
+    # Add new vote
+    if vote_data.vote_type == VoteType.UPVOTE:
+        upvoted_by.append(user_id)
+    elif vote_data.vote_type == VoteType.DOWNVOTE:
+        downvoted_by.append(user_id)
+    
+    # Update answer
+    await db.answers.update_one(
+        {"id": answer_id},
+        {"$set": {
+            "upvotes": len(upvoted_by),
+            "downvotes": len(downvoted_by),
+            "upvoted_by": upvoted_by,
+            "downvoted_by": downvoted_by,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    return {
+        "message": "Vote recorded successfully",
+        "upvotes": len(upvoted_by),
+        "downvotes": len(downvoted_by)
+    }
+
+@api_router.post("/discussions/{discussion_id}/vote")
+async def vote_discussion(
+    discussion_id: str,
+    vote_data: VoteRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Vote on a discussion message (upvote/downvote/remove)"""
+    discussion = await db.discussions.find_one({"id": discussion_id})
+    if not discussion:
+        raise HTTPException(status_code=404, detail="Discussion message not found")
+    
+    # Prevent voting on own message
+    if discussion["user_id"] == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot vote on your own message")
+    
+    user_id = current_user.id
+    upvoted_by = discussion.get("upvoted_by", [])
+    downvoted_by = discussion.get("downvoted_by", [])
+    
+    # Remove existing votes first
+    if user_id in upvoted_by:
+        upvoted_by.remove(user_id)
+    if user_id in downvoted_by:
+        downvoted_by.remove(user_id)
+    
+    # Add new vote
+    if vote_data.vote_type == VoteType.UPVOTE:
+        upvoted_by.append(user_id)
+    elif vote_data.vote_type == VoteType.DOWNVOTE:
+        downvoted_by.append(user_id)
+    
+    # Update discussion
+    await db.discussions.update_one(
+        {"id": discussion_id},
+        {"$set": {
+            "upvotes": len(upvoted_by),
+            "downvotes": len(downvoted_by),
+            "upvoted_by": upvoted_by,
+            "downvoted_by": downvoted_by,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    return {
+        "message": "Vote recorded successfully",
+        "upvotes": len(upvoted_by),
+        "downvotes": len(downvoted_by)
+    }
+
+# Admin Q&A Management Endpoints
+@api_router.get("/admin/qa-stats")
+async def get_qa_stats(admin_user: User = Depends(get_admin_user)):
+    """Get Q&A system statistics (admin only)"""
+    total_questions = await db.questions.count_documents({})
+    total_answers = await db.answers.count_documents({})
+    total_discussions = await db.discussions.count_documents({})
+    
+    # Questions by status
+    open_questions = await db.questions.count_documents({"status": "open"})
+    answered_questions = await db.questions.count_documents({"status": "answered"})
+    closed_questions = await db.questions.count_documents({"status": "closed"})
+    
+    # Questions by subject
+    subjects_pipeline = [
+        {"$group": {"_id": "$subject", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ]
+    subjects_stats = await db.questions.aggregate(subjects_pipeline).to_list(100)
+    
+    return {
+        "total_questions": total_questions,
+        "total_answers": total_answers,
+        "total_discussions": total_discussions,
+        "questions_by_status": {
+            "open": open_questions,
+            "answered": answered_questions,
+            "closed": closed_questions
+        },
+        "questions_by_subject": subjects_stats
+    }
+
+@api_router.put("/admin/questions/{question_id}/pin")
+async def toggle_question_pin(question_id: str, admin_user: User = Depends(get_admin_user)):
+    """Pin/unpin a question (admin only)"""
+    question = await db.questions.find_one({"id": question_id})
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    
+    new_pin_status = not question.get("is_pinned", False)
+    
+    await db.questions.update_one(
+        {"id": question_id},
+        {"$set": {
+            "is_pinned": new_pin_status,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    return {
+        "message": f"Question {'pinned' if new_pin_status else 'unpinned'} successfully",
+        "is_pinned": new_pin_status
+    }
+
+@api_router.get("/subjects-available")
+async def get_available_subjects():
+    """Get all subjects available in both quizzes and questions (public endpoint)"""
+    # Get subjects from quizzes
+    quiz_subjects = await db.quizzes.distinct("subject")
+    
+    # Get subjects from questions
+    question_subjects = await db.questions.distinct("subject")
+    
+    # Combine and remove None values
+    all_subjects = list(set(quiz_subjects + question_subjects))
+    all_subjects = [s for s in all_subjects if s is not None]
+    all_subjects.sort()
+    
+    return {
+        "subjects": all_subjects,
+        "quiz_subjects": sorted(quiz_subjects),
+        "question_subjects": sorted(question_subjects)
+    }
+
+# ====================================================================
+# END Q&A DISCUSSION SYSTEM API ENDPOINTS
+# ====================================================================
+
 # Include router
 app.include_router(api_router)
 
