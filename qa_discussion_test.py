@@ -397,13 +397,16 @@ class QADiscussionAPITester:
             return self.log_test("Get Question Answers", False, f"Error: {str(e)}")
 
     def test_accept_answer(self):
-        """Test accepting answer (question author only)"""
-        if not self.user_token or not self.created_answer_id:
-            return self.log_test("Accept Answer", False, "No user token or answer ID available")
+        """Test accepting answer (question author only) via PUT endpoint"""
+        if not self.user_token or not self.created_answer_id or not self.created_question_id:
+            return self.log_test("Accept Answer", False, "No user token, answer ID, or question ID available")
         
         try:
-            response = requests.post(
-                f"{self.api_url}/answers/{self.created_answer_id}/accept",
+            # Accept answer via PUT endpoint
+            update_data = {"is_accepted": True}
+            response = requests.put(
+                f"{self.api_url}/questions/{self.created_question_id}/answers/{self.created_answer_id}",
+                json=update_data,
                 headers=self.get_auth_headers(self.user_token),
                 timeout=10
             )
@@ -412,8 +415,8 @@ class QADiscussionAPITester:
             
             if success:
                 data = response.json()
-                details += f", Message: {data.get('message', 'No message')}"
                 details += f", Is Accepted: {data.get('is_accepted', False)}"
+                details += f", Answer ID: {data.get('id', 'Unknown')}"
             else:
                 details += f", Response: {response.text[:200]}"
                 
