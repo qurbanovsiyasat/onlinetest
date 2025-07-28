@@ -5794,6 +5794,110 @@ function UserResult({ result, quiz, setCurrentView, startQuiz, startRealTimeQuiz
   );
 }
 
+// Quiz Card Component
+function QuizCard({ quiz, startQuiz, startRealTimeQuiz, currentUser }) {
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarking, setBookmarking] = useState(false);
+
+  // Check bookmark status when component mounts
+  useEffect(() => {
+    if (currentUser) {
+      checkBookmarkStatus();
+    }
+  }, [quiz.id, currentUser]);
+
+  const checkBookmarkStatus = async () => {
+    try {
+      const response = await apiCall(`/bookmarks/check/${quiz.id}?item_type=quiz`);
+      setIsBookmarked(response.data.is_bookmarked);
+    } catch (error) {
+      console.error('Error checking bookmark status:', error);
+    }
+  };
+
+  const handleBookmark = async (e) => {
+    e.stopPropagation();
+    if (bookmarking || !currentUser) return;
+    
+    setBookmarking(true);
+    try {
+      if (isBookmarked) {
+        await apiCall(`/bookmarks/${quiz.id}?item_type=quiz`, { method: 'DELETE' });
+        setIsBookmarked(false);
+      } else {
+        await apiCall('/bookmarks', {
+          method: 'POST',
+          data: { item_id: quiz.id, item_type: 'quiz' }
+        });
+        setIsBookmarked(true);
+      }
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
+      alert('Failed to bookmark: ' + (error.response?.data?.detail || 'Unknown error'));
+    }
+    setBookmarking(false);
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition duration-200">
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="text-xl font-semibold text-gray-800 flex-1 mr-2">{quiz.title}</h3>
+        {currentUser && (
+          <button
+            onClick={handleBookmark}
+            disabled={bookmarking}
+            className={`p-2 rounded-full transition duration-200 ${
+              isBookmarked
+                ? 'text-blue-600 bg-blue-50 hover:bg-blue-100'
+                : 'text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+            } ${bookmarking ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title={isBookmarked ? 'Remove bookmark' : 'Bookmark quiz'}
+          >
+            {isBookmarked ? '🔖' : '📄'}
+          </button>
+        )}
+      </div>
+      <p className="text-gray-600 mb-4">{quiz.description}</p>
+      <div className="flex justify-between items-center mb-4 text-sm text-gray-500">
+        <span>{quiz.total_questions} suallar</span>
+        <span>{quiz.total_attempts || 0} cəhdlər</span>
+      </div>
+      <div className="flex justify-between items-center mb-4">
+        <span className="text-sm text-gray-500">
+         Cateqoriya: {quiz.category}
+        </span>
+        <span className="text-sm text-gray-500">
+          faiz: {quiz.average_score || 0}%
+        </span>
+      </div>
+      <div className="flex gap-2">
+        {quiz.time_limit_minutes ? (
+          // Time limit is set → Only show Timed mode
+          <button
+            onClick={() => startRealTimeQuiz(quiz)}
+            className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition duration-200 font-semibold text-sm"
+          >
+            ⏱️ Başla (Zamanlı)
+          </button>
+        ) : (
+          // No time limit → Only show Standard mode
+          <button
+            onClick={() => startQuiz(quiz)}
+            className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-200 font-semibold text-sm"
+          >
+            📝 Başla
+          </button>
+        )}
+      </div>
+      {quiz.time_limit_minutes && (
+        <div className="mt-2 text-xs text-gray-500 text-center">
+          ⏰ {quiz.time_limit_minutes} Dəqiqə limit
+        </div>
+      )}
+    </div>
+  );
+}
+
 // User Home Component with Hierarchical Subject/Subcategory Structure
 function UserHome({ quizzes, startQuiz, startRealTimeQuiz }) {
   const [selectedSubject, setSelectedSubject] = useState(null);
