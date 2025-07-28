@@ -111,49 +111,64 @@
 
 # backend:
 #   - task: "User Authentication System"
-#     implemented: false
+#     implemented: true
 #     working: "NA"
 #     file: "server.py"
 #     stuck_count: 0
 #     priority: "high"
-#     needs_retesting: false
-#     status_history: []
+#     needs_retesting: true
+#     status_history:
+#       - working: "NA"
+#         agent: "main"
+#         comment: "Implemented JWT-based authentication with register/login endpoints"
 #   
 #   - task: "User Profile Management"
-#     implemented: false
+#     implemented: true
 #     working: "NA"
 #     file: "server.py"
 #     stuck_count: 0
 #     priority: "high"
-#     needs_retesting: false
-#     status_history: []
+#     needs_retesting: true
+#     status_history:
+#       - working: "NA"
+#         agent: "main"
+#         comment: "Implemented user profiles with privacy settings, admin detection via email"
 #   
 #   - task: "Question and Answer System"
-#     implemented: false
+#     implemented: true
 #     working: "NA"
 #     file: "server.py"
 #     stuck_count: 0
 #     priority: "high"
-#     needs_retesting: false
-#     status_history: []
+#     needs_retesting: true
+#     status_history:
+#       - working: "NA"
+#         agent: "main"
+#         comment: "Implemented CRUD operations for questions and answers with categories"
 #   
 #   - task: "Admin System"
-#     implemented: false
+#     implemented: true
 #     working: "NA"
 #     file: "server.py"
 #     stuck_count: 0
 #     priority: "high"
-#     needs_retesting: false
-#     status_history: []
+#     needs_retesting: true
+#     status_history:
+#       - working: "NA"
+#         agent: "main"
+#         comment: "Implemented admin role detection via pre-configured emails (admin@squiz.com)"
 #   
 #   - task: "Follow System"
-#     implemented: false
+#     implemented: true
 #     working: "NA"
 #     file: "server.py"
 #     stuck_count: 0
 #     priority: "medium"
-#     needs_retesting: false
-#     status_history: []
+#     needs_retesting: true
+#     status_history:
+#       - working: "NA"
+#         agent: "main"
+#         comment: "Implemented follow/unfollow functionality with follower counts"
 
 # frontend:
 #   - task: "Profile Pages UI"
