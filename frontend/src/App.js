@@ -8606,88 +8606,128 @@ function ActivityFeed({ user }) {
     const time = new Date(timestamp);
     const diffInSeconds = Math.floor((now - time) / 1000);
     
-    if (diffInSeconds < 60) return 'just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-    return time.toLocaleDateString();
+    if (diffInSeconds < 60) return 'now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d`;
+    return time.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   const ActivityItem = ({ activity }) => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`border rounded-lg p-4 mb-4 ${getActivityColor(activity.activity_type)}`}
+      className={`border rounded-xl p-3 sm:p-4 mb-3 sm:mb-4 ${getActivityColor(activity.activity_type)} shadow-sm hover:shadow-md transition-shadow duration-200`}
     >
       <div className="flex items-start space-x-3">
+        {/* Avatar/Icon - Optimized for mobile */}
         <div className="flex-shrink-0">
-          <div className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm">
-            <span className="text-lg">{getActivityIcon(activity.activity_type)}</span>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm border border-gray-200 dark:border-gray-600">
+            <span className="text-lg sm:text-xl">{getActivityIcon(activity.activity_type)}</span>
           </div>
         </div>
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                <span className="font-semibold">{activity.user_name}</span> {activity.title}
+          {/* Header with timestamp - Mobile optimized */}
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-gray-100 leading-snug">
+                <span className="font-semibold text-indigo-600 dark:text-indigo-400">{activity.user_name}</span>
+                <span className="ml-1">{activity.title}</span>
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {activity.description}
-              </p>
-              
-              {/* Activity-specific metadata */}
-              {activity.activity_type === 'quiz_published' && activity.metadata?.subject && (
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="inline-block px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs rounded">
-                    {activity.metadata.subject}
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {activity.metadata.total_questions} questions
-                  </span>
-                </div>
-              )}
-              
-              {activity.activity_type === 'quiz_completed' && activity.metadata?.score && (
-                <div className="mt-2">
-                  <span className="inline-block px-2 py-1 bg-purple-100 dark:bg-purple-800 text-purple-800 dark:text-purple-200 text-xs rounded">
-                    {activity.metadata.score}% Score
-                  </span>
-                </div>
-              )}
-              
-              {activity.activity_type === 'question_posted' && activity.metadata?.tags?.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1 mt-2">
-                  {activity.metadata.tags.slice(0, 3).map((tag, index) => (
-                    <span key={index} className="inline-block px-2 py-1 bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 text-xs rounded">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
-            
             <div className="flex-shrink-0 ml-2">
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
                 {getTimeAgo(activity.created_at)}
               </span>
             </div>
           </div>
           
-          {/* Action buttons for relevant activities */}
+          {/* Description - Mobile friendly text */}
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-3 leading-relaxed break-words">
+            {activity.description}
+          </p>
+          
+          {/* Activity-specific metadata - Mobile optimized */}
+          {activity.activity_type === 'quiz_published' && activity.metadata?.subject && (
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="inline-flex items-center px-2.5 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs sm:text-sm rounded-full font-medium">
+                📚 {activity.metadata.subject}
+              </span>
+              <span className="inline-flex items-center px-2.5 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs sm:text-sm rounded-full">
+                {activity.metadata.total_questions} questions
+              </span>
+            </div>
+          )}
+          
+          {activity.activity_type === 'quiz_completed' && activity.metadata?.score && (
+            <div className="mb-3">
+              <span className="inline-flex items-center px-3 py-1.5 bg-purple-100 dark:bg-purple-800 text-purple-800 dark:text-purple-200 text-sm font-semibold rounded-full">
+                🏆 {activity.metadata.score}% Score
+              </span>
+            </div>
+          )}
+          
+          {activity.activity_type === 'question_posted' && activity.metadata?.tags?.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mb-3">
+              {activity.metadata.tags.slice(0, 3).map((tag, index) => (
+                <span key={index} className="inline-flex items-center px-2 py-1 bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 text-xs rounded-full">
+                  #{tag}
+                </span>
+              ))}
+              {activity.metadata.tags.length > 3 && (
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  +{activity.metadata.tags.length - 3} more
+                </span>
+              )}
+            </div>
+          )}
+          
+          {activity.activity_type === 'answer_posted' && activity.metadata?.is_accepted && (
+            <div className="mb-3">
+              <span className="inline-flex items-center px-2.5 py-1 bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 text-xs sm:text-sm rounded-full font-medium">
+                ✅ Accepted Answer
+              </span>
+            </div>
+          )}
+          
+          {/* Action buttons - Mobile optimized touch targets */}
           {(activity.activity_type === 'quiz_published' || activity.activity_type === 'quiz_completed') && activity.related_id && (
             <div className="mt-3">
-              <button className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium">
-                View Quiz →
-              </button>
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors duration-200 min-h-[44px]"
+              >
+                <span className="mr-2">📝</span>
+                View Quiz
+              </motion.button>
             </div>
           )}
           
           {activity.activity_type === 'question_posted' && activity.related_id && (
             <div className="mt-3">
-              <button className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium">
-                View Question →
-              </button>
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors duration-200 min-h-[44px]"
+              >
+                <span className="mr-2">❓</span>
+                View Question
+              </motion.button>
+            </div>
+          )}
+          
+          {activity.activity_type === 'user_followed' && activity.related_id && (
+            <div className="mt-3">
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors duration-200 min-h-[44px]"
+              >
+                <span className="mr-2">👤</span>
+                View Profile
+              </motion.button>
             </div>
           )}
         </div>
@@ -8698,11 +8738,11 @@ function ActivityFeed({ user }) {
   if (loading && activities.length === 0) {
     return (
       <PageTransition>
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex items-center justify-center py-12">
+        <div className="max-w-4xl mx-auto px-2 sm:px-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+            <div className="flex items-center justify-center py-8 sm:py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-              <span className="ml-3 text-gray-600 dark:text-gray-400">Loading activity feed...</span>
+              <span className="ml-3 text-gray-600 dark:text-gray-400 text-sm sm:text-base">Loading activities...</span>
             </div>
           </div>
         </div>
@@ -8712,14 +8752,17 @@ function ActivityFeed({ user }) {
 
   return (
     <PageTransition>
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">📰 Activity Feed</h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Stay updated with activities from people you follow
+      <div className="max-w-4xl mx-auto px-2 sm:px-4">
+        {/* Header - Mobile optimized */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+            <div className="flex-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center">
+                <span className="mr-2">📰</span>
+                <span>Activity Feed</span>
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm sm:text-base">
+                Updates from people you follow
               </p>
             </div>
             <motion.button
@@ -8727,51 +8770,77 @@ function ActivityFeed({ user }) {
               whileTap={{ scale: 0.98 }}
               onClick={refreshActivities}
               disabled={refreshing}
-              className="px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition duration-200 disabled:opacity-50"
+              className="w-full sm:w-auto px-4 py-2.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition duration-200 disabled:opacity-50 font-medium text-sm sm:text-base min-h-[44px] flex items-center justify-center"
             >
-              {refreshing ? '🔄 Refreshing...' : '🔄 Refresh'}
+              <span className="mr-2">🔄</span>
+              {refreshing ? 'Refreshing...' : 'Refresh'}
             </motion.button>
           </div>
         </div>
 
-        {/* Activity Feed */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        {/* Activity Feed - Mobile optimized */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-6">
           {activities.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">👥</div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+            <div className="text-center py-8 sm:py-12">
+              <div className="text-4xl sm:text-6xl mb-4">👥</div>
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
                 No activities yet
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Start following other users to see their activities in your feed
+              <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm sm:text-base px-4">
+                Start following other users to see their activities here
               </p>
-              <div className="text-sm text-gray-500 dark:text-gray-500">
-                Activities include: quiz publications, Q&A posts, high-score achievements, and more
+              <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mx-4">
+                <p className="font-medium mb-1">You'll see activities like:</p>
+                <div className="flex flex-wrap justify-center gap-2 text-xs">
+                  <span className="px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded">📝 Quiz publications</span>
+                  <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 rounded">❓ Q&A posts</span>
+                  <span className="px-2 py-1 bg-purple-100 dark:bg-purple-800 text-purple-800 dark:text-purple-200 rounded">🎯 High scores</span>
+                </div>
               </div>
             </div>
           ) : (
             <>
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                  Recent Activities ({activities.length})
-                </h2>
+              {/* Activity count - Mobile friendly */}
+              <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200">
+                    Recent Activities
+                  </h2>
+                  <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-full">
+                    {activities.length} {activities.length === 1 ? 'activity' : 'activities'}
+                  </span>
+                </div>
               </div>
               
+              {/* Activities list */}
               <div className="space-y-0">
                 {activities.map((activity) => (
                   <ActivityItem key={activity.id} activity={activity} />
                 ))}
               </div>
               
+              {/* Load more button - Mobile optimized */}
               {hasMore && (
-                <div className="text-center mt-6">
-                  <button
+                <div className="text-center mt-4 sm:mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => fetchActivities(false)}
                     disabled={loading}
-                    className="px-6 py-2 bg-gray-600 dark:bg-gray-500 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition duration-200 disabled:opacity-50"
+                    className="w-full sm:w-auto px-6 py-3 bg-gray-600 dark:bg-gray-500 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition duration-200 disabled:opacity-50 font-medium text-sm sm:text-base min-h-[44px] flex items-center justify-center"
                   >
-                    {loading ? 'Loading...' : 'Load More Activities'}
-                  </button>
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <span className="mr-2">📖</span>
+                        Load More Activities
+                      </>
+                    )}
+                  </motion.button>
                 </div>
               )}
             </>
