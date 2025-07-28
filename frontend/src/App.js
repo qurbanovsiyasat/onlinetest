@@ -766,41 +766,50 @@ function AdminDashboard({ currentView, setCurrentView }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <PageTransition className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center">
           <div className="mb-4 sm:mb-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">👑 Admin Dashboard</h1>
-            <p className="text-gray-600 text-sm sm:text-base">Xoş gəldiniz, {user.name}</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-200">👑 Admin Dashboard</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">Xoş gəldiniz, {user.name}</p>
           </div>
-          <button
-            onClick={logout}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200 text-sm sm:text-base"
-          >
-            Çıxış
-          </button>
+          <div className="flex items-center gap-3">
+            <DarkModeToggle />
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={logout}
+              className="bg-red-600 dark:bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition duration-200 text-sm sm:text-base"
+            >
+              Çıxış
+            </motion.button>
+          </div>
         </div>
       </header>
 
       <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
         <div className="flex flex-wrap gap-2 sm:gap-4 mb-6 sm:mb-8 overflow-x-auto pb-2">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setCurrentView('dashboard')}
             className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition duration-200 text-xs sm:text-sm whitespace-nowrap ${
-              currentView === 'dashboard' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+              currentView === 'dashboard' ? 'bg-indigo-600 dark:bg-indigo-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
             }`}
           >
             📊 İstifadəçi Paneli
-          </button>
-          <button
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setCurrentView('users')}
             className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition duration-200 text-xs sm:text-sm whitespace-nowrap ${
-              currentView === 'users' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+              currentView === 'users' ? 'bg-indigo-600 dark:bg-indigo-500 text-white' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
             }`}
           >
             👥 Users
-          </button>
+          </motion.button>
           <button
             onClick={() => setCurrentView('quizzes')}
             className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition duration-200 text-xs sm:text-sm whitespace-nowrap ${
