@@ -100,7 +100,7 @@ def set_user_private(user_token, user_id):
     log_test("🔒 Setting user profile to private...")
     
     headers = {"Authorization": f"Bearer {user_token}"}
-    response = make_request("PUT", "/profile", headers=headers, data={
+    response = make_request("PUT", "/privacy-settings", headers=headers, data={
         "is_private": True
     })
     
