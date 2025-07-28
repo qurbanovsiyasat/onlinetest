@@ -4109,12 +4109,12 @@ async def update_user_follow_counts(user_id: str):
 # FOLLOWING ENDPOINTS
 # =====================================
 
-@api_router.post("/follow")
+@api_router.post("/follow", response_model=FollowResponse)
 async def follow_user(
-    follow_data: FollowCreate,
+    follow_data: FollowRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """Follow another user"""
+    """Follow another user (handles both public and private accounts)"""
     if current_user.id == follow_data.user_id:
         raise HTTPException(status_code=400, detail="Cannot follow yourself")
     
@@ -4123,32 +4123,85 @@ async def follow_user(
     if not user_to_follow:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Check if already following
+    # Check if already following or has pending request
     existing_follow = await db.follows.find_one({
         "follower_id": current_user.id,
         "following_id": follow_data.user_id
     })
     
     if existing_follow:
-        raise HTTPException(status_code=400, detail="Already following this user")
+        if existing_follow["status"] == FollowStatus.APPROVED:
+            raise HTTPException(status_code=400, detail="Already following this user")
+        elif existing_follow["status"] == FollowStatus.PENDING:
+            raise HTTPException(status_code=400, detail="Follow request already pending")
+        elif existing_follow["status"] == FollowStatus.REJECTED:
+            # Update rejected request to pending (allow re-request)
+            await db.follows.update_one(
+                {"id": existing_follow["id"]},
+                {"$set": {
+                    "status": FollowStatus.PENDING,
+                    "requested_at": datetime.utcnow()
+                }}
+            )
+            return FollowResponse(
+                action="request_sent",
+                message="Follow request sent again",
+                is_following=False,
+                is_pending=True
+            )
     
-    follow = Follow(
+    # Check if target user has private profile
+    is_private = user_to_follow.get("is_private", False)
+    
+    follow = UserFollow(
         follower_id=current_user.id,
-        following_id=follow_data.user_id
+        following_id=follow_data.user_id,
+        status=FollowStatus.PENDING if is_private else FollowStatus.APPROVED,
+        approved_at=datetime.utcnow() if not is_private else None
     )
     
     await db.follows.insert_one(follow.dict())
     
-    # Create notification for the followed user
-    await create_notification(NotificationCreate(
-        user_id=follow_data.user_id,
-        type=NotificationType.NEW_FOLLOWER,
-        title="New Follower",
-        message=f"{current_user.name} started following you",
-        related_id=current_user.id
-    ))
+    # Update follow counts
+    await update_user_follow_counts(current_user.id)
+    await update_user_follow_counts(follow_data.user_id)
     
-    return {"message": "User followed successfully"}
+    if is_private:
+        # Create notification for follow request
+        notification = Notification(
+            user_id=follow_data.user_id,
+            from_user_id=current_user.id,
+            notification_type=NotificationType.FOLLOW_REQUEST,
+            title="New Follow Request",
+            message=f"{current_user.name} wants to follow you",
+            related_id=current_user.id
+        )
+        await db.notifications.insert_one(notification.dict())
+        
+        return FollowResponse(
+            action="request_sent",
+            message="Follow request sent (account is private)",
+            is_following=False,
+            is_pending=True
+        )
+    else:
+        # Create notification for new follower
+        notification = Notification(
+            user_id=follow_data.user_id,
+            from_user_id=current_user.id,
+            notification_type=NotificationType.NEW_FOLLOWER,
+            title="New Follower",
+            message=f"{current_user.name} started following you",
+            related_id=current_user.id
+        )
+        await db.notifications.insert_one(notification.dict())
+        
+        return FollowResponse(
+            action="followed",
+            message="Now following user",
+            is_following=True,
+            is_pending=False
+        )
 
 @api_router.delete("/follow/{user_id}")
 async def unfollow_user(
