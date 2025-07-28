@@ -279,27 +279,32 @@ class SocialBackendTester:
         
         # Test 2: Get pending follow requests for User3
         response = self.make_request("GET", "/follow-requests", token=self.user3_token)
-        if response and isinstance(response, list) and len(response) > 0:
-            request_found = any(req.get("follower_id") == self.user1_id for req in response)
-            if request_found:
-                self.log_test("Get Follow Requests", True, f"Found {len(response)} pending request(s)")
+        if response and "requests" in response and len(response["requests"]) > 0:
+            request_found = any(req.get("follower_id") == self.user1_id for req in response["requests"])
+            request_id = None
+            for req in response["requests"]:
+                if req.get("follower_id") == self.user1_id:
+                    request_id = req.get("id")
+                    break
+            
+            if request_found and request_id:
+                self.log_test("Get Follow Requests", True, f"Found {len(response['requests'])} pending request(s)")
+                
+                # Test 3: User3 approves the follow request
+                response = self.make_request("POST", f"/follow-requests/{request_id}/approve", token=self.user3_token)
+                
+                if response:
+                    expected_action = "request_approved"
+                    if response.get("action") == expected_action:
+                        self.log_test("Approve Follow Request", True, f"Follow request approved: {response.get('message')}")
+                    else:
+                        self.log_test("Approve Follow Request", False, f"Unexpected response: {response}")
+                else:
+                    self.log_test("Approve Follow Request", False, "Failed to approve follow request")
             else:
                 self.log_test("Get Follow Requests", False, "Follow request not found in pending requests")
         else:
             self.log_test("Get Follow Requests", False, "No pending requests found or failed to get requests")
-        
-        # Test 3: User3 approves the follow request
-        approve_data = {"user_id": self.user1_id}
-        response = self.make_request("POST", "/follow-requests/approve", approve_data, token=self.user3_token)
-        
-        if response:
-            expected_action = "request_approved"
-            if response.get("action") == expected_action:
-                self.log_test("Approve Follow Request", True, f"Follow request approved: {response.get('message')}")
-            else:
-                self.log_test("Approve Follow Request", False, f"Unexpected response: {response}")
-        else:
-            self.log_test("Approve Follow Request", False, "Failed to approve follow request")
         
         # Test 4: Verify follower/following counts updated after approval
         user1_info = self.make_request("GET", "/auth/me", token=self.user1_token)
