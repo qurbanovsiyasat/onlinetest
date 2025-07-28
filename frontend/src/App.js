@@ -3587,35 +3587,42 @@ function UserDashboard({ currentView, setCurrentView }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <PageTransition className="min-h-screen bg-gray-100 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="container mx-auto px-4 py-4 flex flex-col lg:flex-row justify-between items-start lg:items-center">
           <div className="mb-4 lg:mb-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">📝 Squiz</h1>
-            <p className="text-gray-600 text-sm sm:text-base">Xoş gəldin, {user.name}</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-200">📝 Squiz</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">Xoş gəldin, {user.name}</p>
           </div>
-          <div className="flex flex-wrap gap-2 sm:gap-4">
-            <button
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+            <DarkModeToggle />
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setCurrentView('home')}
               className={`px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm ${
-                currentView === 'home' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+                currentView === 'home' ? 'bg-indigo-600 dark:bg-indigo-500 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
               🏠 Sınaqlar
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setCurrentView('qa-forum')}
               className={`px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm ${
-                currentView === 'qa-forum' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+                currentView === 'qa-forum' ? 'bg-indigo-600 dark:bg-indigo-500 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
               💬 Q&A Forum
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setCurrentView('my-attempts')}
               className={`px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm ${
-                currentView === 'my-attempts' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+                currentView === 'my-attempts' ? 'bg-indigo-600 dark:bg-indigo-500 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
               📊 Mənim nəticələrim
