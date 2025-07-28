@@ -878,43 +878,62 @@ function AdminDashboard({ currentView, setCurrentView }) {
 // Admin Dashboard Components
 function AdminDashboardHome({ analytics }) {
   return (
-    <div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow"
+        >
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-blue-100 text-blue-600">
+            <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400">
               👥
             </div>
             <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-500">Total Users</h3>
-              <p className="text-2xl font-semibold text-gray-900">{analytics.total_users || 0}</p>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Users</h3>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{analytics.total_users || 0}</p>
             </div>
           </div>
-        </div>
+        </motion.div>
         
-        <div className="bg-white p-6 rounded-lg shadow">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow"
+        >
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-green-100 text-green-600">
+            <div className="p-3 rounded-full bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400">
               📝
             </div>
             <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-500">Total Quizzes</h3>
-              <p className="text-2xl font-semibold text-gray-900">{analytics.total_quizzes || 0}</p>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Quizzes</h3>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{analytics.total_quizzes || 0}</p>
             </div>
           </div>
-        </div>
+        </motion.div>
         
-        <div className="bg-white p-6 rounded-lg shadow">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow"
+        >
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-purple-100 text-purple-600">
+            <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400">
               📊
             </div>
             <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-500">Total Attempts</h3>
-              <p className="text-2xl font-semibold text-gray-900">{analytics.total_attempts || 0}</p>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Attempts</h3>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{analytics.total_attempts || 0}</p>
             </div>
           </div>
-        </div>
+        </motion.div>
         
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center">
