@@ -7367,7 +7367,7 @@ function QuestionCard({ question, onClick, currentUser }) {
               ▲
             </button>
             <span className="text-sm font-semibold text-gray-700">
-              {question.upvotes - question.downvotes}
+              {(question.upvotes || 0) - (question.downvotes || 0)}
             </span>
             <button
               onClick={(e) => handleVote(hasDownvoted ? 'remove' : 'downvote', e)}
