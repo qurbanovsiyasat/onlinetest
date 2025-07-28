@@ -8693,12 +8693,37 @@ const UserProfile = ({ user }) => {
 
   const fetchUserActivity = async (type) => {
     try {
-      const response = await apiCall(`/users/${user.id}/${type}`);
-      if (type === 'questions') setUserQuestions(response.data.questions);
-      if (type === 'answers') setUserAnswers(response.data.answers);
-      if (type === 'quiz-attempts') setUserQuizAttempts(response.data.quiz_attempts);
+      let response;
+      if (type === 'questions') {
+        response = await apiCall(`/users/${user.id}/${type}`);
+        setUserQuestions(response.data.questions);
+      } else if (type === 'answers') {
+        response = await apiCall(`/users/${user.id}/${type}`);
+        setUserAnswers(response.data.answers);
+      } else if (type === 'quiz-attempts') {
+        response = await apiCall(`/users/${user.id}/${type}`);
+        setUserQuizAttempts(response.data.quiz_attempts);
+      } else if (type === 'bookmarks') {
+        response = await apiCall('/bookmarks');
+        setUserBookmarks(response.data.bookmarks);
+      } else if (type === 'following') {
+        response = await apiCall('/following');
+        setUserFollowing(response.data.following);
+      } else if (type === 'followers') {
+        response = await apiCall('/followers');
+        setUserFollowers(response.data.followers);
+      }
     } catch (error) {
       console.error(`Error fetching user ${type}:`, error);
+    }
+  };
+
+  const fetchFollowStats = async () => {
+    try {
+      const response = await apiCall(`/users/${user.id}/follow-stats`);
+      setFollowStats(response.data);
+    } catch (error) {
+      console.error('Error fetching follow stats:', error);
     }
   };
 
