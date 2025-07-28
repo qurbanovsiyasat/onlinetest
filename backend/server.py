@@ -3255,6 +3255,87 @@ async def toggle_question_pin(question_id: str, admin_user: User = Depends(get_a
         "is_pinned": new_pin_status
     }
 
+# Emoji Reaction Endpoints
+@api_router.post("/answers/{answer_id}/react")
+async def add_emoji_reaction(
+    answer_id: str,
+    reaction_data: EmojiReactionRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Add or update emoji reaction to an answer"""
+    # Check if answer exists
+    answer = await db.answers.find_one({"id": answer_id})
+    if not answer:
+        raise HTTPException(status_code=404, detail="Answer not found")
+    
+    # Remove existing reaction from this user for this answer
+    await db.answer_reactions.delete_many({
+        "answer_id": answer_id,
+        "user_id": current_user.id
+    })
+    
+    # Add new reaction
+    reaction = AnswerReaction(
+        answer_id=answer_id,
+        user_id=current_user.id,
+        emoji=reaction_data.emoji
+    )
+    
+    await db.answer_reactions.insert_one(reaction.dict())
+    
+    return {"message": "Reaction added successfully", "emoji": reaction_data.emoji.value}
+
+@api_router.delete("/answers/{answer_id}/react")
+async def remove_emoji_reaction(
+    answer_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Remove user's emoji reaction from an answer"""
+    result = await db.answer_reactions.delete_many({
+        "answer_id": answer_id,
+        "user_id": current_user.id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="No reaction found to remove")
+    
+    return {"message": "Reaction removed successfully"}
+
+@api_router.get("/answers/{answer_id}/reactions")
+async def get_answer_reactions(
+    answer_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get emoji reaction statistics for an answer"""
+    # Get all reactions for this answer
+    reactions = await db.answer_reactions.find({"answer_id": answer_id}).to_list(1000)
+    
+    # Count reactions by emoji
+    emoji_counts = {}
+    user_reaction = None
+    
+    for reaction in reactions:
+        emoji = reaction["emoji"]
+        emoji_counts[emoji] = emoji_counts.get(emoji, 0) + 1
+        
+        if reaction["user_id"] == current_user.id:
+            user_reaction = emoji
+    
+    # Format response
+    reaction_stats = []
+    for emoji, count in emoji_counts.items():
+        reaction_stats.append(EmojiReactionStats(
+            emoji=emoji,
+            count=count,
+            user_reacted=(emoji == user_reaction)
+        ))
+    
+    return {
+        "reactions": reaction_stats,
+        "total_reactions": len(reactions),
+        "user_reaction": user_reaction
+    }
+
 @api_router.get("/subjects-available")
 async def get_available_subjects():
     """Get all subjects available in both quizzes and questions (public endpoint)"""
