@@ -5545,24 +5545,27 @@ function UserHome({ quizzes, startQuiz }) {
                 </span>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={() => startQuiz(quiz)}
-                  className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-200 font-semibold text-sm"
-                >
-                  📝 Standard
-                </button>
-                {quiz.time_limit_minutes && (
+                {quiz.time_limit_minutes ? (
+                  // Time limit is set → Only show Timed mode
                   <button
                     onClick={() => startRealTimeQuiz(quiz)}
                     className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition duration-200 font-semibold text-sm"
                   >
-                    ⏱️ Timed
+                    ⏱️ Start Timed Quiz
+                  </button>
+                ) : (
+                  // No time limit → Only show Standard mode
+                  <button
+                    onClick={() => startQuiz(quiz)}
+                    className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-200 font-semibold text-sm"
+                  >
+                    📝 Start Quiz
                   </button>
                 )}
               </div>
               {quiz.time_limit_minutes && (
                 <div className="mt-2 text-xs text-gray-500 text-center">
-                  Timed mode: {quiz.time_limit_minutes} minutes with live countdown
+                  ⏰ {quiz.time_limit_minutes} minutes with live countdown
                 </div>
               )}
             </div>
