@@ -805,12 +805,25 @@ class QADiscussionAPITester:
             
             if success:
                 data = response.json()
-                details += f", Subjects Count: {len(data)}"
-                if len(data) > 0:
-                    details += f", First Subject: {data[0]}"
+                # Handle the actual response structure
+                if isinstance(data, dict):
+                    subjects = data.get('subjects', [])
+                    question_subjects = data.get('question_subjects', [])
+                    quiz_subjects = data.get('quiz_subjects', [])
+                    details += f", Total Subjects: {len(subjects)}"
+                    details += f", Question Subjects: {len(question_subjects)}"
+                    details += f", Quiz Subjects: {len(quiz_subjects)}"
+                    
                     # Check if our test subject is included
-                    if "Computer Science" in data:
+                    if "Computer Science" in subjects or "Computer Science" in question_subjects:
                         details += ", Test Subject Found: Yes"
+                elif isinstance(data, list):
+                    details += f", Subjects Count: {len(data)}"
+                    if len(data) > 0:
+                        details += f", First Subject: {data[0]}"
+                        # Check if our test subject is included
+                        if "Computer Science" in data:
+                            details += ", Test Subject Found: Yes"
             else:
                 details += f", Response: {response.text[:200]}"
                 
