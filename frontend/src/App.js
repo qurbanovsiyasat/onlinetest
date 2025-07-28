@@ -9081,8 +9081,8 @@ const FollowButton = ({ userId, initialStats = null, className = '', onFollowCha
   );
 };
 
-// User Profile Component
-const UserProfile = ({ user }) => {
+// Enhanced User Profile Component with Admin Social Features
+const UserProfile = ({ user, viewingUserId = null }) => {
   const { currentUser } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -9090,23 +9090,39 @@ const UserProfile = ({ user }) => {
   const [editData, setEditData] = useState({});
   const [userQuestions, setUserQuestions] = useState([]);
   const [userAnswers, setUserAnswers] = useState([]);
-  const [userQuizAttempts, setUserQuizAttempts] = useState([]);
-  const [userBookmarks, setUserBookmarks] = useState([]);
-  const [userFollowing, setUserFollowing] = useState([]);
+  const [userActivity, setUserActivity] = useState([]);
   const [userFollowers, setUserFollowers] = useState([]);
-  const [followStats, setFollowStats] = useState({ followers_count: 0, following_count: 0, is_following: false, is_followed_by: false });
+  const [userFollowing, setUserFollowing] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
+  const [isPrivateProfile, setIsPrivateProfile] = useState(false);
+  const [canViewActivity, setCanViewActivity] = useState(true);
+
+  // Determine which user profile to view (current user or specific user)
+  const targetUserId = viewingUserId || user?.id;
+  const isOwnProfile = targetUserId === currentUser?.id;
+  const isAdminViewing = currentUser?.role === 'admin';
 
   useEffect(() => {
-    fetchProfile();
-    fetchFollowStats();
-  }, []);
+    if (targetUserId) {
+      fetchProfile();
+    }
+  }, [targetUserId]);
 
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const response = await apiCall('/profile');
+      let response;
+      
+      if (isOwnProfile) {
+        response = await apiCall('/profile');
+      } else {
+        response = await apiCall(`/users/${targetUserId}/profile`);
+      }
+      
       setProfile(response.data);
+      setIsPrivateProfile(response.data.is_private && !isOwnProfile && !isAdminViewing && !response.data.is_following);
+      setCanViewActivity(response.data.can_view_activity);
+      
       setEditData({
         name: response.data.name,
         bio: response.data.bio || '',
@@ -9121,42 +9137,46 @@ const UserProfile = ({ user }) => {
   };
 
   const fetchUserActivity = async (type) => {
+    if (!canViewActivity && !isAdminViewing && !isOwnProfile) {
+      return;
+    }
+
     try {
       let response;
       if (type === 'questions') {
-        response = await apiCall(`/users/${user.id}/${type}`);
-        setUserQuestions(response.data.questions);
+        response = await apiCall(`/users/${targetUserId}/questions`);
+        if (response.data.can_view !== false) {
+          setUserQuestions(response.data.questions || []);
+        }
       } else if (type === 'answers') {
-        response = await apiCall(`/users/${user.id}/${type}`);
-        setUserAnswers(response.data.answers);
-      } else if (type === 'quiz-attempts') {
-        response = await apiCall(`/users/${user.id}/${type}`);
-        setUserQuizAttempts(response.data.quiz_attempts);
-      } else if (type === 'bookmarks') {
-        response = await apiCall('/bookmarks');
-        setUserBookmarks(response.data.bookmarks);
-      } else if (type === 'following') {
-        response = await apiCall('/following');
-        setUserFollowing(response.data.following);
+        response = await apiCall(`/users/${targetUserId}/answers`);
+        if (response.data.can_view !== false) {
+          setUserAnswers(response.data.answers || []);
+        }
+      } else if (type === 'activity') {
+        response = await apiCall(`/users/${targetUserId}/activity`);
+        if (response.data.can_view !== false) {
+          setUserActivity(response.data.activities || []);
+        }
       } else if (type === 'followers') {
-        response = await apiCall('/followers');
-        setUserFollowers(response.data.followers);
+        response = await apiCall(`/users/${targetUserId}/followers`);
+        if (response.data.can_view !== false) {
+          setUserFollowers(response.data.followers || []);
+        }
+      } else if (type === 'following') {
+        response = await apiCall(`/users/${targetUserId}/following`);
+        if (response.data.can_view !== false) {
+          setUserFollowing(response.data.following || []);
+        }
       }
     } catch (error) {
       console.error(`Error fetching user ${type}:`, error);
     }
   };
 
-  const fetchFollowStats = async () => {
-    try {
-      const response = await apiCall(`/users/${user.id}/follow-stats`);
-      setFollowStats(response.data);
-    } catch (error) {
-      console.error('Error fetching follow stats:', error);
-    }
-  };
-
   const updateProfile = async () => {
+    if (!isOwnProfile) return;
+    
     try {
       const response = await apiCall('/profile', {
         method: 'PUT',
@@ -9188,11 +9208,70 @@ const UserProfile = ({ user }) => {
     );
   }
 
+  // Private Profile View for Non-Followers
+  if (isPrivateProfile && !canViewActivity) {
+    return (
+      <PageTransition className="max-w-4xl mx-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-gray-500 to-gray-600 px-6 py-8">
+            <div className="flex items-center space-x-6">
+              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center">
+                {profile.avatar ? (
+                  <img src={profile.avatar} alt="Avatar" className="w-20 h-20 rounded-full object-cover" />
+                ) : (
+                  <span className="text-2xl font-bold text-gray-600">
+                    {profile.name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              
+              <div className="flex-1">
+                <div className="flex items-center space-x-2">
+                  <h1 className="text-2xl font-bold text-white">{profile.name}</h1>
+                  {profile.is_admin && (
+                    <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                      {profile.admin_badge || '🛡️ Admin'}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center space-x-4 mt-2 text-gray-100">
+                  <span className="text-sm">🔒 This profile is private</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-6 text-center">
+            <div className="text-6xl mb-4">🔒</div>
+            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
+              Private Profile
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              This user has set their profile to private. Follow them to see their activity.
+            </p>
+            
+            <div className="flex justify-center">
+              <FollowButton 
+                userId={targetUserId}
+                onFollowChange={fetchProfile}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
+
   return (
     <PageTransition className="max-w-4xl mx-auto">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
         {/* Profile Header */}
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-8">
+        <div className={`bg-gradient-to-r px-6 py-8 ${
+          profile.is_admin 
+            ? 'from-red-500 to-pink-600' 
+            : 'from-indigo-500 to-purple-600'
+        }`}>
           <div className="flex items-center space-x-6">
             <div className="relative">
               <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center">
@@ -9204,7 +9283,7 @@ const UserProfile = ({ user }) => {
                   </span>
                 )}
               </div>
-              {editing && (
+              {editing && isOwnProfile && (
                 <label className="absolute -bottom-2 -right-2 bg-indigo-600 text-white p-2 rounded-full cursor-pointer hover:bg-indigo-700">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -9218,46 +9297,68 @@ const UserProfile = ({ user }) => {
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <div>
-                  {editing ? (
-                    <input
-                      type="text"
-                      value={editData.name}
-                      onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                      className="text-2xl font-bold text-white bg-transparent border-b border-white/30 focus:border-white outline-none"
-                    />
-                  ) : (
-                    <h1 className="text-2xl font-bold text-white">{profile.name}</h1>
+                  <div className="flex items-center space-x-2 mb-1">
+                    {editing && isOwnProfile ? (
+                      <input
+                        type="text"
+                        value={editData.name}
+                        onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                        className="text-2xl font-bold text-white bg-transparent border-b border-white/30 focus:border-white outline-none"
+                      />
+                    ) : (
+                      <h1 className="text-2xl font-bold text-white">{profile.name}</h1>
+                    )}
+                    {profile.is_admin && (
+                      <span className="bg-yellow-400 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
+                        {profile.admin_badge || '🛡️ Admin'}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {(isOwnProfile || isAdminViewing) && profile.email && (
+                    <p className="text-indigo-100">{profile.email}</p>
                   )}
-                  <p className="text-indigo-100">{profile.email}</p>
+                  
                   <div className="flex items-center space-x-4 mt-2 text-indigo-100">
                     <span className="text-sm">👤 {profile.role === 'admin' ? 'Admin' : 'User'}</span>
                     <span className="text-sm">📅 {new Date(profile.created_at).toLocaleDateString()}</span>
+                    {profile.is_private && (
+                      <span className="text-sm">🔒 Private</span>
+                    )}
                   </div>
                 </div>
                 
                 <div className="text-right">
-                  {editing ? (
-                    <div className="space-x-2">
+                  {isOwnProfile ? (
+                    editing ? (
+                      <div className="space-x-2">
+                        <button
+                          onClick={updateProfile}
+                          className="bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          Save Changes
+                        </button>
+                        <button
+                          onClick={() => setEditing(false)}
+                          className="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
                       <button
-                        onClick={updateProfile}
-                        className="bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
-                      >
-                        Yadda saxla
-                      </button>
-                      <button
-                        onClick={() => setEditing(false)}
+                        onClick={() => setEditing(true)}
                         className="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors"
                       >
-                        Ləğv et
+                        ✏️ Edit Profile
                       </button>
-                    </div>
+                    )
                   ) : (
-                    <button
-                      onClick={() => setEditing(true)}
+                    <FollowButton 
+                      userId={targetUserId}
+                      onFollowChange={fetchProfile}
                       className="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors"
-                    >
-                      ✏️ Profili redaktə et
-                    </button>
+                    />
                   )}
                 </div>
               </div>
@@ -9266,93 +9367,78 @@ const UserProfile = ({ user }) => {
           
           {/* Bio Section */}
           <div className="mt-4">
-            {editing ? (
+            {editing && isOwnProfile ? (
               <textarea
                 value={editData.bio}
                 onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
-                placeholder="Özünüz haqqında məlumat yazın..."
+                placeholder="Tell others about yourself..."
                 className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-white/70 resize-none"
                 rows="3"
               />
             ) : (
-              <p className="text-indigo-100">{profile.bio || 'Profil məlumatı əlavə edilməyib'}</p>
+              <p className="text-indigo-100">{profile.bio || 'No bio added yet'}</p>
             )}
           </div>
           
           {/* Location and Website */}
-          {editing && (
+          {editing && isOwnProfile && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <input
                 type="text"
                 value={editData.location}
                 onChange={(e) => setEditData({ ...editData, location: e.target.value })}
-                placeholder="📍 Məkan"
+                placeholder="📍 Location"
                 className="p-3 rounded-lg bg-white/20 text-white placeholder-white/70"
               />
               <input
                 type="url"
                 value={editData.website}
                 onChange={(e) => setEditData({ ...editData, website: e.target.value })}
-                placeholder="🌐 Veb sayt"
+                placeholder="🌐 Website"
                 className="p-3 rounded-lg bg-white/20 text-white placeholder-white/70"
               />
             </div>
           )}
           
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-7 gap-4 mt-6">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mt-6">
             <div className="text-center">
-              <div className="text-2xl font-bold text-white">{profile.questions_count}</div>
-              <div className="text-indigo-100 text-sm">Suallar</div>
+              <div className="text-2xl font-bold text-white">{profile.questions_count || 0}</div>
+              <div className="text-indigo-100 text-sm">Questions</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-white">{profile.answers_count}</div>
-              <div className="text-indigo-100 text-sm">Cavablar</div>
+              <div className="text-2xl font-bold text-white">{profile.answers_count || 0}</div>
+              <div className="text-indigo-100 text-sm">Answers</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-white">{profile.accepted_answers}</div>
-              <div className="text-indigo-100 text-sm">Qəbul olunan</div>
+              <div className="text-2xl font-bold text-white">{profile.accepted_answers || 0}</div>
+              <div className="text-indigo-100 text-sm">Accepted</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-white">{profile.quizzes_taken}</div>
-              <div className="text-indigo-100 text-sm">Testlər</div>
+              <div className="text-2xl font-bold text-white">{profile.quizzes_taken || 0}</div>
+              <div className="text-indigo-100 text-sm">Quizzes</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-white">{profile.avg_quiz_score}%</div>
-              <div className="text-indigo-100 text-sm">Orta nəticə</div>
+              <div className="text-2xl font-bold text-white">{profile.follower_count || 0}</div>
+              <div className="text-indigo-100 text-sm">Followers</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-white">{followStats.followers_count}</div>
-              <div className="text-indigo-100 text-sm">İzləyicilər</div>
+              <div className="text-2xl font-bold text-white">{profile.following_count || 0}</div>
+              <div className="text-indigo-100 text-sm">Following</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-white">{followStats.following_count}</div>
-              <div className="text-indigo-100 text-sm">İzlədikləri</div>
-            </div>
-          </div>
-          
-          {/* Follow/Unfollow Button */}
-          <div className="mt-6 flex justify-center">
-            <FollowButton 
-              userId={user.id} 
-              initialStats={followStats}
-              onFollowChange={fetchFollowStats}
-              className="text-sm"
-            />
           </div>
         </div>
 
         {/* Navigation Tabs */}
         <div className="border-b border-gray-200 dark:border-gray-700">
-          <nav className="flex space-x-8 px-6">
+          <nav className="flex space-x-4 px-6 overflow-x-auto">
             {[
-              { id: 'overview', label: 'Ümumi', icon: '📊' },
-              { id: 'questions', label: 'Suallar', icon: '❓' },
-              { id: 'answers', label: 'Cavablar', icon: '💬' },
-              { id: 'quizzes', label: 'Test nəticələri', icon: '🏆' },
-              { id: 'bookmarks', label: 'Əlfəcinlər', icon: '🔖' },
-              { id: 'following', label: 'İzlədikləri', icon: '👥' },
-              { id: 'followers', label: 'İzləyicilər', icon: '👤' }
+              { id: 'overview', label: 'Overview', icon: '📊' },
+              { id: 'questions', label: 'Questions', icon: '❓' },
+              { id: 'answers', label: 'Answers', icon: '💬' },
+              { id: 'activity', label: 'Activity', icon: '📈' },
+              { id: 'followers', label: 'Followers', icon: '👥' },
+              { id: 'following', label: 'Following', icon: '👤' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -9360,7 +9446,7 @@ const UserProfile = ({ user }) => {
                   setActiveTab(tab.id);
                   if (tab.id !== 'overview') fetchUserActivity(tab.id);
                 }}
-                className={`py-4 px-2 border-b-2 font-medium text-sm ${
+                className={`py-4 px-2 border-b-2 font-medium text-sm whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                     : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
@@ -9377,37 +9463,37 @@ const UserProfile = ({ user }) => {
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-lg">
-                <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Q&A Fəaliyyəti</h3>
+                <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Q&A Activity</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Suallar:</span>
-                    <span className="font-semibold text-gray-800 dark:text-gray-200">{profile.questions_count}</span>
+                    <span className="text-gray-600 dark:text-gray-400">Questions:</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">{profile.questions_count || 0}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Cavablar:</span>
-                    <span className="font-semibold text-gray-800 dark:text-gray-200">{profile.answers_count}</span>
+                    <span className="text-gray-600 dark:text-gray-400">Answers:</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">{profile.answers_count || 0}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Qəbul olunan cavablar:</span>
-                    <span className="font-semibold text-green-600">{profile.accepted_answers}</span>
+                    <span className="text-gray-600 dark:text-gray-400">Accepted answers:</span>
+                    <span className="font-semibold text-green-600">{profile.accepted_answers || 0}</span>
                   </div>
                 </div>
               </div>
               
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-lg">
-                <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Test Statistikası</h3>
+                <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Quiz Statistics</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Cəhd edilən testlər:</span>
-                    <span className="font-semibold text-gray-800 dark:text-gray-200">{profile.quizzes_taken}</span>
+                    <span className="text-gray-600 dark:text-gray-400">Quizzes taken:</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">{profile.quizzes_taken || 0}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Orta nəticə:</span>
-                    <span className="font-semibold text-blue-600">{profile.avg_quiz_score}%</span>
+                    <span className="text-gray-600 dark:text-gray-400">Average score:</span>
+                    <span className="font-semibold text-blue-600">{profile.avg_quiz_score || 0}%</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Ümumi xal:</span>
-                    <span className="font-semibold text-gray-800 dark:text-gray-200">{profile.total_quiz_score.toFixed(1)}</span>
+                    <span className="text-gray-600 dark:text-gray-400">Total score:</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">{(profile.total_quiz_score || 0).toFixed(1)}</span>
                   </div>
                 </div>
               </div>
@@ -9418,16 +9504,28 @@ const UserProfile = ({ user }) => {
             <div className="space-y-4">
               {userQuestions.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  Hələ sual verilməyib
+                  No questions posted yet
                 </div>
               ) : (
                 userQuestions.map((question) => (
                   <div key={question.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">{question.title}</h4>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{question.content.substring(0, 150)}...</p>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>👍 {question.upvotes} 👎 {question.downvotes}</span>
-                      <span>{new Date(question.created_at).toLocaleDateString()}</span>
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">{question.title}</h4>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{question.content?.substring(0, 150)}...</p>
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <div className="flex items-center space-x-4">
+                            <span>👍 {question.upvotes || 0}</span>
+                            <span>💬 {question.answer_count || 0} answers</span>
+                            {question.subject && (
+                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                {question.subject}
+                              </span>
+                            )}
+                          </div>
+                          <span>{new Date(question.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -9439,27 +9537,27 @@ const UserProfile = ({ user }) => {
             <div className="space-y-4">
               {userAnswers.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  Hələ cavab verilməyib
+                  No answers posted yet
                 </div>
               ) : (
                 userAnswers.map((answer) => (
                   <div key={answer.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                     <div className="flex items-start space-x-3">
                       <div className="flex-1">
-                        <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{answer.content.substring(0, 200)}...</p>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{answer.content?.substring(0, 200)}...</p>
                         {answer.question && (
                           <p className="text-xs text-indigo-600 dark:text-indigo-400 mb-2">
-                            Sual: {answer.question.title}
+                            Question: {answer.question.title}
                           </p>
                         )}
                         <div className="flex items-center justify-between text-xs text-gray-500">
-                          <span>👍 {answer.upvotes} 👎 {answer.downvotes}</span>
+                          <span>👍 {answer.upvotes || 0}</span>
                           <span>{new Date(answer.created_at).toLocaleDateString()}</span>
                         </div>
                       </div>
                       {answer.is_accepted && (
                         <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                          ✅ Qəbul edilib
+                          ✅ Accepted
                         </div>
                       )}
                     </div>
@@ -9469,39 +9567,36 @@ const UserProfile = ({ user }) => {
             </div>
           )}
 
-          {activeTab === 'quizzes' && (
+          {activeTab === 'activity' && (
             <div className="space-y-4">
-              {userQuizAttempts.length === 0 ? (
+              {userActivity.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  Hələ test cəhdi yoxdur
+                  No recent activity
                 </div>
               ) : (
-                userQuizAttempts.map((attempt) => (
-                  <div key={attempt.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-semibold text-gray-800 dark:text-gray-200">
-                          {attempt.quiz ? attempt.quiz.title : 'Test'}
-                        </h4>
-                        <div className="flex items-center space-x-4 mt-2 text-sm">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            Xal: {attempt.score}/{attempt.total_questions}
-                          </span>
-                          <span className={`font-semibold ${
-                            attempt.percentage >= 80 ? 'text-green-600' :
-                            attempt.percentage >= 60 ? 'text-yellow-600' : 'text-red-600'
-                          }`}>
-                            {attempt.percentage.toFixed(1)}%
-                          </span>
-                          {attempt.passed && (
-                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                              Keçdi
-                            </span>
-                          )}
-                        </div>
+                userActivity.map((activity, index) => (
+                  <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="text-2xl">
+                        {activity.type === 'question_posted' ? '❓' : 
+                         activity.type === 'answer_posted' ? '💬' : 
+                         activity.type === 'quiz_completed' ? '🏆' : '📝'}
                       </div>
-                      <div className="text-right text-sm text-gray-500">
-                        {new Date(attempt.attempted_at).toLocaleDateString()}
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-1">{activity.title}</h4>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{activity.content}</p>
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <div className="flex items-center space-x-2">
+                            {activity.upvotes && <span>👍 {activity.upvotes}</span>}
+                            {activity.score && <span>🎯 {activity.score.toFixed(1)}%</span>}
+                            {activity.subject && (
+                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                {activity.subject}
+                              </span>
+                            )}
+                          </div>
+                          <span>{new Date(activity.created_at).toLocaleDateString()}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -9510,39 +9605,37 @@ const UserProfile = ({ user }) => {
             </div>
           )}
 
-          {activeTab === 'bookmarks' && (
+          {activeTab === 'followers' && (
             <div className="space-y-4">
-              {userBookmarks.length === 0 ? (
+              {userFollowers.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  Hələ əlfəcin əlavə edilməyib
+                  No followers yet
                 </div>
               ) : (
-                userBookmarks.map((bookmark) => (
-                  <div key={bookmark.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="text-2xl">
-                        {bookmark.item_type === 'question' ? '❓' : '📝'}
+                userFollowers.map((follower) => (
+                  <div key={follower.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                        {follower.avatar ? (
+                          <img src={follower.avatar} alt="Avatar" className="w-12 h-12 rounded-full object-cover" />
+                        ) : (
+                          <span className="text-lg font-bold text-indigo-600">
+                            {follower.name.charAt(0).toUpperCase()}
+                          </span>
+                        )}
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                          {bookmark.item ? (
-                            bookmark.item_type === 'question' ? bookmark.item.title : bookmark.item.title
-                          ) : 'Məlumat tapılmadı'}
-                        </h4>
-                        {bookmark.item && (
-                          <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
-                            {bookmark.item_type === 'question' 
-                              ? bookmark.item.content?.substring(0, 150) + '...'
-                              : bookmark.item.description?.substring(0, 150) + '...'
-                            }
-                          </p>
-                        )}
-                        <div className="flex items-center justify-between text-xs text-gray-500">
-                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                            {bookmark.item_type === 'question' ? 'Sual' : 'Test'}
-                          </span>
-                          <span>{new Date(bookmark.created_at).toLocaleDateString()}</span>
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-semibold text-gray-800 dark:text-gray-200">{follower.name}</h4>
+                          {follower.is_admin && (
+                            <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
+                              {follower.admin_badge || '🛡️ Admin'}
+                            </span>
+                          )}
                         </div>
+                        <p className="text-xs text-gray-500">
+                          Followed: {new Date(follower.followed_at).toLocaleDateString()}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -9555,36 +9648,37 @@ const UserProfile = ({ user }) => {
             <div className="space-y-4">
               {userFollowing.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  Hələ heç kimi izləmirsən
+                  Not following anyone yet
                 </div>
               ) : (
-                userFollowing.map((follow) => (
-                  <div key={follow.user.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                userFollowing.map((following) => (
+                  <div key={following.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                     <div className="flex items-center space-x-4">
                       <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
-                        {follow.user.avatar ? (
-                          <img src={follow.user.avatar} alt="Avatar" className="w-12 h-12 rounded-full object-cover" />
+                        {following.avatar ? (
+                          <img src={following.avatar} alt="Avatar" className="w-12 h-12 rounded-full object-cover" />
                         ) : (
                           <span className="text-lg font-bold text-indigo-600">
-                            {follow.user.name.charAt(0).toUpperCase()}
+                            {following.name.charAt(0).toUpperCase()}
                           </span>
                         )}
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-800 dark:text-gray-200">{follow.user.name}</h4>
-                        <p className="text-gray-600 dark:text-gray-400 text-sm">{follow.user.email}</p>
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-semibold text-gray-800 dark:text-gray-200">{following.name}</h4>
+                          {following.is_admin && (
+                            <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
+                              {following.admin_badge || '🛡️ Admin'}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500">
-                          İzləmə tarixi: {new Date(follow.followed_at).toLocaleDateString()}
+                          Following since: {new Date(following.followed_at).toLocaleDateString()}
                         </p>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          follow.user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {follow.user.role === 'admin' ? 'Admin' : 'İstifadəçi'}
-                        </span>
                         <FollowButton 
-                          userId={follow.user.id}
+                          userId={following.id}
                           onFollowChange={() => fetchUserActivity('following')}
                           className="text-xs px-3 py-1"
                         />
@@ -9595,9 +9689,11 @@ const UserProfile = ({ user }) => {
               )}
             </div>
           )}
-
-          {activeTab === 'followers' && (
-            <div className="space-y-4">
+        </div>
+      </div>
+    </PageTransition>
+  );
+};
               {userFollowers.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   Hələ izləyiciniz yoxdur
