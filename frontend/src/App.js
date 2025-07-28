@@ -6835,4 +6835,927 @@ function UserCreateQuiz({ setCurrentView }) {
   );
 }
 
+// ====================================================================
+// Q&A DISCUSSION SYSTEM COMPONENTS
+// ====================================================================
+
+// Q&A Forum Main Component
+function QAForum({ user }) {
+  const [currentTab, setCurrentTab] = useState('all-questions');
+  const [questions, setQuestions] = useState([]);
+  const [selectedQuestion, setSelectedQuestion] = useState(null);
+  const [availableSubjects, setAvailableSubjects] = useState([]);
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showAskQuestion, setShowAskQuestion] = useState(false);
+
+  useEffect(() => {
+    if (currentTab === 'all-questions') {
+      fetchQuestions();
+    } else if (currentTab === 'by-subject') {
+      fetchAvailableSubjects();
+    }
+  }, [currentTab]);
+
+  const fetchQuestions = async (subject = '', subcategory = '') => {
+    setLoading(true);
+    try {
+      let url = '/questions?limit=20&sort_by=created_at&sort_order=desc';
+      if (subject) url += `&subject=${encodeURIComponent(subject)}`;
+      if (subcategory) url += `&subcategory=${encodeURIComponent(subcategory)}`;
+      
+      const response = await apiCall(url);
+      setQuestions(response.data.questions || []);
+    } catch (error) {
+      console.error('Error fetching questions:', error);
+      setQuestions([]);
+    }
+    setLoading(false);
+  };
+
+  const fetchAvailableSubjects = async () => {
+    try {
+      const response = await apiCall('/subjects-available');
+      setAvailableSubjects(response.data.subjects || []);
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+      setAvailableSubjects([]);
+    }
+  };
+
+  const handleSubjectSelect = (subject) => {
+    setSelectedSubject(subject);
+    fetchQuestions(subject);
+  };
+
+  if (selectedQuestion) {
+    return (
+      <QuestionDetail 
+        question={selectedQuestion}
+        user={user}
+        onBack={() => setSelectedQuestion(null)}
+        onQuestionUpdate={(updatedQuestion) => {
+          setQuestions(questions.map(q => q.id === updatedQuestion.id ? updatedQuestion : q));
+          setSelectedQuestion(updatedQuestion);
+        }}
+      />
+    );
+  }
+
+  if (showAskQuestion) {
+    return (
+      <AskQuestionForm
+        user={user}
+        availableSubjects={availableSubjects}
+        onCancel={() => setShowAskQuestion(false)}
+        onQuestionCreated={(newQuestion) => {
+          setQuestions([newQuestion, ...questions]);
+          setShowAskQuestion(false);
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">💬 Q&A Forum</h1>
+            <p className="text-gray-600">Ask questions, share knowledge, and learn together</p>
+          </div>
+          <button
+            onClick={() => setShowAskQuestion(true)}
+            className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition duration-200 font-semibold"
+          >
+            ➕ Ask Question
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white rounded-lg shadow-sm mb-6">
+        <div className="flex flex-wrap border-b">
+          <button
+            onClick={() => setCurrentTab('all-questions')}
+            className={`px-4 sm:px-6 py-3 font-medium transition duration-200 ${
+              currentTab === 'all-questions'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            🌐 All Questions
+          </button>
+          <button
+            onClick={() => setCurrentTab('by-subject')}
+            className={`px-4 sm:px-6 py-3 font-medium transition duration-200 ${
+              currentTab === 'by-subject'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            📚 By Subject
+          </button>
+        </div>
+
+        {/* Subject Filter for By Subject Tab */}
+        {currentTab === 'by-subject' && (
+          <div className="p-4 border-b bg-gray-50">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  setSelectedSubject('');
+                  fetchQuestions();
+                }}
+                className={`px-3 py-2 rounded-lg text-sm transition duration-200 ${
+                  selectedSubject === ''
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 border hover:bg-gray-50'
+                }`}
+              >
+                All Subjects
+              </button>
+              {availableSubjects.map((subject) => (
+                <button
+                  key={subject}
+                  onClick={() => handleSubjectSelect(subject)}
+                  className={`px-3 py-2 rounded-lg text-sm transition duration-200 ${
+                    selectedSubject === subject
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-gray-700 border hover:bg-gray-50'
+                  }`}
+                >
+                  📖 {subject}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Questions List */}
+      <div className="space-y-4">
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading questions...</p>
+          </div>
+        ) : questions.length === 0 ? (
+          <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+            <div className="text-6xl mb-4">🤔</div>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">No questions yet</h3>
+            <p className="text-gray-600 mb-6">
+              {selectedSubject 
+                ? `No questions found for ${selectedSubject}. Be the first to ask!`
+                : 'Be the first to ask a question in the forum!'
+              }
+            </p>
+            <button
+              onClick={() => setShowAskQuestion(true)}
+              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition duration-200"
+            >
+              Ask First Question
+            </button>
+          </div>
+        ) : (
+          questions.map((question) => (
+            <QuestionCard
+              key={question.id}
+              question={question}
+              onClick={() => setSelectedQuestion(question)}
+              currentUser={user}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Question Card Component
+function QuestionCard({ question, onClick, currentUser }) {
+  const [voting, setVoting] = useState(false);
+
+  const handleVote = async (voteType, e) => {
+    e.stopPropagation(); // Prevent opening question detail
+    if (voting) return;
+    
+    setVoting(true);
+    try {
+      await apiCall(`/questions/${question.id}/vote`, {
+        method: 'POST',
+        data: { vote_type: voteType }
+      });
+      // In a real app, you'd update the question data here
+      // For now, we'll just refresh on next load
+    } catch (error) {
+      console.error('Error voting:', error);
+      alert('Failed to vote: ' + (error.response?.data?.detail || 'Unknown error'));
+    }
+    setVoting(false);
+  };
+
+  const getTimeSince = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays}d ago`;
+    
+    return date.toLocaleDateString();
+  };
+
+  const isOwnQuestion = currentUser && question.user.id === currentUser.id;
+  const hasUpvoted = currentUser && question.upvoted_by && question.upvoted_by.includes(currentUser.id);
+  const hasDownvoted = currentUser && question.downvoted_by && question.downvoted_by.includes(currentUser.id);
+
+  return (
+    <div 
+      className="bg-white rounded-lg shadow-sm border hover:shadow-md transition duration-200 cursor-pointer"
+      onClick={onClick}
+    >
+      <div className="p-6">
+        <div className="flex gap-4">
+          {/* Voting Section */}
+          <div className="flex flex-col items-center space-y-1 mr-4">
+            <button
+              onClick={(e) => handleVote(hasUpvoted ? 'remove' : 'upvote', e)}
+              disabled={voting || isOwnQuestion}
+              className={`p-2 rounded-full transition duration-200 ${
+                hasUpvoted
+                  ? 'text-green-600 bg-green-50'
+                  : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+              } ${(voting || isOwnQuestion) ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              ▲
+            </button>
+            <span className="text-sm font-semibold text-gray-700">
+              {question.upvotes - question.downvotes}
+            </span>
+            <button
+              onClick={(e) => handleVote(hasDownvoted ? 'remove' : 'downvote', e)}
+              disabled={voting || isOwnQuestion}
+              className={`p-2 rounded-full transition duration-200 ${
+                hasDownvoted
+                  ? 'text-red-600 bg-red-50'
+                  : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+              } ${(voting || isOwnQuestion) ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              ▼
+            </button>
+          </div>
+
+          {/* Question Content */}
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              {question.is_pinned && (
+                <span className="inline-block px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800 font-medium">
+                  📌 Pinned
+                </span>
+              )}
+              {question.has_accepted_answer && (
+                <span className="inline-block px-2 py-1 rounded text-xs bg-green-100 text-green-800 font-medium">
+                  ✅ Answered
+                </span>
+              )}
+              {question.subject && (
+                <span className="inline-block px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                  📖 {question.subject}
+                </span>
+              )}
+              {question.subcategory && question.subcategory !== 'General' && (
+                <span className="inline-block px-2 py-1 rounded text-xs bg-purple-100 text-purple-800">
+                  📁 {question.subcategory}
+                </span>
+              )}
+            </div>
+
+            <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
+              {question.title}
+            </h3>
+            
+            <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+              {question.content}
+            </p>
+
+            {question.image && (
+              <div className="mb-4">
+                <img
+                  src={question.image}
+                  alt="Question"
+                  className="max-w-xs max-h-32 object-cover rounded-lg"
+                />
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-between text-sm text-gray-500">
+              <div className="flex items-center space-x-4">
+                <span className="flex items-center space-x-1">
+                  <span>💬</span>
+                  <span>{question.answer_count} answers</span>
+                </span>
+                <span className="flex items-center space-x-1">
+                  <span>👤</span>
+                  <span>{question.user.name}</span>
+                </span>
+              </div>
+              <span>{getTimeSince(question.created_at)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Ask Question Form Component
+function AskQuestionForm({ user, availableSubjects, onCancel, onQuestionCreated }) {
+  const [formData, setFormData] = useState({
+    title: '',
+    content: '',
+    subject: '',
+    subcategory: 'General',
+    tags: [],
+    image: null
+  });
+  const [loading, setLoading] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const fileInputRef = useRef(null);
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size must be less than 5MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setFormData({ ...formData, image: e.target.result });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const addTag = () => {
+    if (tagInput.trim() && !formData.tags.includes(tagInput.trim()) && formData.tags.length < 5) {
+      setFormData({
+        ...formData,
+        tags: [...formData.tags, tagInput.trim()]
+      });
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tagToRemove) => {
+    setFormData({
+      ...formData,
+      tags: formData.tags.filter(tag => tag !== tagToRemove)
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.title.trim() || !formData.content.trim()) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await apiCall('/questions', {
+        method: 'POST',
+        data: {
+          title: formData.title.trim(),
+          content: formData.content.trim(),
+          subject: formData.subject || null,
+          subcategory: formData.subcategory || 'General',
+          tags: formData.tags,
+          image: formData.image
+        }
+      });
+
+      // Add user info to the response for immediate display
+      const newQuestion = {
+        ...response.data,
+        user: { id: user.id, name: user.name, role: user.role }
+      };
+
+      onQuestionCreated(newQuestion);
+    } catch (error) {
+      console.error('Error creating question:', error);
+      alert('Failed to create question: ' + (error.response?.data?.detail || 'Unknown error'));
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-800">❓ Ask a Question</h1>
+          <button
+            onClick={onCancel}
+            className="text-gray-500 hover:text-gray-700 text-xl"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Title */}
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">
+              Question Title *
+            </label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({...formData, title: e.target.value})}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="What's your question? Be specific and clear..."
+              required
+              maxLength={200}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {formData.title.length}/200 characters
+            </p>
+          </div>
+
+          {/* Content */}
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">
+              Question Details *
+            </label>
+            <textarea
+              value={formData.content}
+              onChange={(e) => setFormData({...formData, content: e.target.value})}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              rows="6"
+              placeholder="Provide more details about your question. Include any relevant context, what you've tried, and what specific help you need..."
+              required
+            />
+          </div>
+
+          {/* Subject and Subcategory */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
+                Subject (Optional)
+              </label>
+              <select
+                value={formData.subject}
+                onChange={(e) => setFormData({...formData, subject: e.target.value, subcategory: 'General'})}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select a subject...</option>
+                {availableSubjects.map(subject => (
+                  <option key={subject} value={subject}>{subject}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
+                Subcategory
+              </label>
+              <input
+                type="text"
+                value={formData.subcategory}
+                onChange={(e) => setFormData({...formData, subcategory: e.target.value})}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="General"
+              />
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">
+              Tags (Optional)
+            </label>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                placeholder="Add a tag and press Enter"
+                maxLength={20}
+              />
+              <button
+                type="button"
+                onClick={addTag}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200"
+              >
+                Add
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {formData.tags.map((tag, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+                >
+                  #{tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="ml-2 text-blue-600 hover:text-blue-800"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Image Upload */}
+          <div>
+            <label className="block text-gray-700 font-semibold mb-2">
+              Image (Optional)
+            </label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+              {formData.image ? (
+                <div className="text-center">
+                  <img
+                    src={formData.image}
+                    alt="Preview"
+                    className="max-w-full max-h-48 mx-auto rounded-lg mb-4"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, image: null})}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    Remove Image
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="text-gray-400 mb-4">
+                    <svg className="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition duration-200"
+                  >
+                    Choose Image
+                  </button>
+                  <p className="text-xs text-gray-500 mt-2">PNG, JPG up to 5MB</p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </div>
+          </div>
+
+          {/* Submit Buttons */}
+          <div className="flex gap-4 pt-6">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition duration-200 font-semibold disabled:opacity-50"
+            >
+              {loading ? 'Posting...' : '✓ Post Question'}
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition duration-200"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Question Detail Component (placeholder for now)
+function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
+  const [answers, setAnswers] = useState([]);
+  const [discussions, setDiscussions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAnswerForm, setShowAnswerForm] = useState(false);
+  const [newAnswer, setNewAnswer] = useState({ content: '', image: null });
+  const [newDiscussion, setNewDiscussion] = useState({ message: '', image: null });
+  const [submittingAnswer, setSubmittingAnswer] = useState(false);
+  const [submittingDiscussion, setSubmittingDiscussion] = useState(false);
+
+  useEffect(() => {
+    fetchQuestionDetail();
+  }, [question.id]);
+
+  const fetchQuestionDetail = async () => {
+    setLoading(true);
+    try {
+      const response = await apiCall(`/questions/${question.id}`);
+      setAnswers(response.data.answers || []);
+      setDiscussions(response.data.discussions || []);
+    } catch (error) {
+      console.error('Error fetching question detail:', error);
+    }
+    setLoading(false);
+  };
+
+  const submitAnswer = async (e) => {
+    e.preventDefault();
+    if (!newAnswer.content.trim()) return;
+
+    setSubmittingAnswer(true);
+    try {
+      const response = await apiCall(`/questions/${question.id}/answers`, {
+        method: 'POST',
+        data: newAnswer
+      });
+      
+      const answerWithUser = {
+        ...response.data,
+        user: { id: user.id, name: user.name, role: user.role }
+      };
+      
+      setAnswers([...answers, answerWithUser]);
+      setNewAnswer({ content: '', image: null });
+      setShowAnswerForm(false);
+    } catch (error) {
+      console.error('Error submitting answer:', error);
+      alert('Failed to submit answer: ' + (error.response?.data?.detail || 'Unknown error'));
+    }
+    setSubmittingAnswer(false);
+  };
+
+  const submitDiscussion = async (e) => {
+    e.preventDefault();
+    if (!newDiscussion.message.trim()) return;
+
+    setSubmittingDiscussion(true);
+    try {
+      const response = await apiCall(`/questions/${question.id}/discussions`, {
+        method: 'POST',
+        data: newDiscussion
+      });
+      
+      const discussionWithUser = {
+        ...response.data,
+        user: { id: user.id, name: user.name, role: user.role }
+      };
+      
+      setDiscussions([...discussions, discussionWithUser]);
+      setNewDiscussion({ message: '', image: null });
+    } catch (error) {
+      console.error('Error submitting discussion:', error);
+      alert('Failed to submit message: ' + (error.response?.data?.detail || 'Unknown error'));
+    }
+    setSubmittingDiscussion(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading question...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto">
+      {/* Back Button */}
+      <button
+        onClick={onBack}
+        className="mb-4 flex items-center text-blue-600 hover:text-blue-800 transition duration-200"
+      >
+        ← Back to Questions
+      </button>
+
+      {/* Question Detail */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="flex gap-4">
+          {/* Voting Section */}
+          <div className="flex flex-col items-center space-y-2">
+            <button className="p-2 rounded-full text-gray-400 hover:text-green-600 hover:bg-green-50">
+              ▲
+            </button>
+            <span className="text-lg font-semibold text-gray-700">
+              {question.upvotes - question.downvotes}
+            </span>
+            <button className="p-2 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50">
+              ▼
+            </button>
+          </div>
+
+          {/* Question Content */}
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {question.is_pinned && (
+                <span className="px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800 font-medium">
+                  📌 Pinned
+                </span>
+              )}
+              {question.has_accepted_answer && (
+                <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800 font-medium">
+                  ✅ Answered
+                </span>
+              )}
+              {question.subject && (
+                <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+                  📖 {question.subject}
+                </span>
+              )}
+            </div>
+
+            <h1 className="text-2xl font-bold text-gray-800 mb-4">{question.title}</h1>
+            
+            <div className="prose max-w-none mb-4">
+              <div className="text-gray-700 whitespace-pre-wrap">{question.content}</div>
+            </div>
+
+            {question.image && (
+              <div className="mb-4">
+                <img
+                  src={question.image}
+                  alt="Question"
+                  className="max-w-full max-h-96 rounded-lg shadow-sm"
+                />
+              </div>
+            )}
+
+            <div className="flex items-center text-sm text-gray-500 space-x-4">
+              <span className="flex items-center space-x-1">
+                <span>👤</span>
+                <span>{question.user.name}</span>
+              </span>
+              <span>Asked {new Date(question.created_at).toLocaleDateString()}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Answers Section */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-semibold text-gray-800">
+            {answers.length} Answer{answers.length !== 1 ? 's' : ''}
+          </h2>
+          <button
+            onClick={() => setShowAnswerForm(!showAnswerForm)}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200"
+          >
+            {showAnswerForm ? 'Cancel' : 'Write Answer'}
+          </button>
+        </div>
+
+        {/* Answer Form */}
+        {showAnswerForm && (
+          <form onSubmit={submitAnswer} className="mb-6 p-4 border rounded-lg bg-gray-50">
+            <textarea
+              value={newAnswer.content}
+              onChange={(e) => setNewAnswer({...newAnswer, content: e.target.value})}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-3"
+              rows="4"
+              placeholder="Write your answer..."
+              required
+            />
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={submittingAnswer}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200 disabled:opacity-50"
+              >
+                {submittingAnswer ? 'Submitting...' : 'Submit Answer'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAnswerForm(false)}
+                className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition duration-200"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Answers List */}
+        <div className="space-y-6">
+          {answers.map((answer) => (
+            <div key={answer.id} className="border-l-4 border-gray-200 pl-6">
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center space-x-2">
+                  <span className="font-medium text-gray-800">{answer.user.name}</span>
+                  <span className="text-sm text-gray-500">
+                    {new Date(answer.created_at).toLocaleDateString()}
+                  </span>
+                  {answer.is_accepted && (
+                    <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800 font-medium">
+                      ✅ Accepted
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-500">
+                    {answer.upvotes - answer.downvotes} votes
+                  </span>
+                </div>
+              </div>
+              <div className="text-gray-700 whitespace-pre-wrap">{answer.content}</div>
+              {answer.image && (
+                <img
+                  src={answer.image}
+                  alt="Answer"
+                  className="mt-3 max-w-md max-h-64 rounded-lg shadow-sm"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Discussion Section */}
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <h2 className="text-xl font-semibold text-gray-800 mb-6">
+          Discussion ({discussions.length})
+        </h2>
+
+        {/* Discussion Form */}
+        <form onSubmit={submitDiscussion} className="mb-6 p-4 border rounded-lg bg-gray-50">
+          <textarea
+            value={newDiscussion.message}
+            onChange={(e) => setNewDiscussion({...newDiscussion, message: e.target.value})}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-3"
+            rows="3"
+            placeholder="Join the discussion..."
+            required
+          />
+          <button
+            type="submit"
+            disabled={submittingDiscussion}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-200 disabled:opacity-50"
+          >
+            {submittingDiscussion ? 'Posting...' : 'Post Message'}
+          </button>
+        </form>
+
+        {/* Discussion Messages */}
+        <div className="space-y-4">
+          {discussions.map((discussion) => (
+            <div key={discussion.id} className="flex space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs font-semibold">
+                    {discussion.user.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center space-x-2 mb-1">
+                  <span className="font-medium text-gray-800">{discussion.user.name}</span>
+                  <span className="text-xs text-gray-500">
+                    {new Date(discussion.created_at).toLocaleString()}
+                  </span>
+                </div>
+                <div className="text-gray-700 text-sm whitespace-pre-wrap">{discussion.message}</div>
+                {discussion.image && (
+                  <img
+                    src={discussion.image}
+                    alt="Discussion"
+                    className="mt-2 max-w-xs max-h-32 rounded-lg shadow-sm"
+                  />
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ====================================================================
+// END Q&A DISCUSSION SYSTEM COMPONENTS
+// ====================================================================
+
 export default App;
