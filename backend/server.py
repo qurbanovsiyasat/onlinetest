@@ -481,6 +481,83 @@ class EmojiReactionStats(BaseModel):
     count: int
     user_reacted: bool = False
 
+# Social & Privacy Control Models
+class FollowStatus(str, Enum):
+    PENDING = "pending"  # Follow request pending approval (for private accounts)
+    APPROVED = "approved"  # Follow request approved/direct follow for public accounts
+    REJECTED = "rejected"  # Follow request rejected
+
+class UserFollow(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    follower_id: str  # User who is following
+    following_id: str  # User being followed
+    status: FollowStatus = FollowStatus.APPROVED  # Default for public accounts
+    requested_at: datetime = Field(default_factory=datetime.utcnow)
+    approved_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class FollowRequest(BaseModel):
+    user_id: str
+
+class FollowResponse(BaseModel):
+    action: str  # "followed", "unfollowed", "request_sent", "request_approved", "request_rejected"
+    message: str
+    is_following: bool = False
+    is_pending: bool = False
+
+class UserPrivacySettings(BaseModel):
+    user_id: str
+    is_private: bool = False
+    allow_followers_to_see_activity: bool = True
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class PrivacySettingsUpdate(BaseModel):
+    is_private: Optional[bool] = None
+    allow_followers_to_see_activity: Optional[bool] = None
+
+class UserProfile(BaseModel):
+    id: str
+    name: str
+    email: Optional[str] = None  # Hidden for non-admin viewers of private profiles
+    role: UserRole
+    is_active: bool
+    created_at: datetime
+    
+    # Privacy and social
+    is_private: bool = False
+    follower_count: int = 0
+    following_count: int = 0
+    
+    # Activity stats (may be hidden for private profiles)
+    total_questions: Optional[int] = 0
+    total_answers: Optional[int] = 0
+    total_quiz_attempts: Optional[int] = 0
+    average_quiz_score: Optional[float] = 0.0
+    
+    # Relationship status with current viewer
+    is_following: bool = False
+    is_pending_approval: bool = False
+    can_view_activity: bool = True  # Whether current user can see this user's activity
+
+# Notification Models for Social Features
+class NotificationType(str, Enum):
+    NEW_FOLLOWER = "new_follower"
+    FOLLOW_REQUEST = "follow_request"
+    FOLLOW_REQUEST_APPROVED = "follow_request_approved"
+    NEW_QUIZ_FROM_FOLLOWED_USER = "new_quiz_from_followed_user"
+    NEW_QUESTION_FROM_FOLLOWED_USER = "new_question_from_followed_user"
+
+class Notification(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str  # Recipient of notification
+    from_user_id: Optional[str] = None  # Who triggered the notification
+    notification_type: NotificationType
+    title: str
+    message: str
+    related_id: Optional[str] = None  # ID of related quiz, question, etc.
+    is_read: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
 class Category(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
