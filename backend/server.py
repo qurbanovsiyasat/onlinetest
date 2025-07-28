@@ -3629,40 +3629,90 @@ class NotificationCreate(BaseModel):
 # =====================================
 
 @api_router.get("/users/{user_id}/profile", response_model=UserProfile)
-async def get_user_profile(user_id: str):
-    """Get user profile with statistics (public endpoint)"""
+async def get_user_profile(user_id: str, current_user: User = Depends(get_current_user)):
+    """Get user profile with admin access to private profiles"""
     user = await db.users.find_one({"id": user_id})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Calculate user statistics
-    questions_count = await db.questions.count_documents({"user_id": user_id})
-    answers_count = await db.answers.count_documents({"user_id": user_id})
-    accepted_answers = await db.answers.count_documents({"user_id": user_id, "is_accepted": True})
+    # Check if current user is admin or viewing their own profile
+    is_admin = current_user.role == UserRole.ADMIN
+    is_own_profile = current_user.id == user_id
+    is_target_private = user.get("is_private", False)
     
-    # Quiz statistics
-    quiz_attempts = await db.quiz_attempts.find({"user_id": user_id}).to_list(1000)
-    quizzes_taken = len(quiz_attempts)
-    total_quiz_score = sum(attempt.get("percentage", 0) for attempt in quiz_attempts)
-    avg_quiz_score = total_quiz_score / quizzes_taken if quizzes_taken > 0 else 0.0
+    # Check if user can view this profile
+    can_view_full_profile = is_admin or is_own_profile or not is_target_private
+    
+    # Check follow relationship for private profiles
+    is_following = False
+    is_pending_approval = False
+    
+    if is_target_private and not is_admin and not is_own_profile:
+        # Check if current user follows this private user
+        follow_relation = await db.user_follows.find_one({
+            "follower_id": current_user.id,
+            "following_id": user_id
+        })
+        if follow_relation:
+            is_following = follow_relation.get("status") == "approved"
+            is_pending_approval = follow_relation.get("status") == "pending"
+            can_view_full_profile = is_following
+    
+    # Calculate user statistics (only if can view profile)
+    questions_count = 0
+    answers_count = 0
+    accepted_answers = 0
+    quizzes_taken = 0
+    total_quiz_score = 0.0
+    avg_quiz_score = 0.0
+    
+    if can_view_full_profile:
+        questions_count = await db.questions.count_documents({"user_id": user_id})
+        answers_count = await db.answers.count_documents({"user_id": user_id})
+        accepted_answers = await db.answers.count_documents({"user_id": user_id, "is_accepted": True})
+        
+        # Quiz statistics
+        quiz_attempts = await db.quiz_attempts.find({"user_id": user_id}).to_list(1000)
+        quizzes_taken = len(quiz_attempts)
+        total_quiz_score = sum(attempt.get("percentage", 0) for attempt in quiz_attempts)
+        avg_quiz_score = total_quiz_score / quizzes_taken if quizzes_taken > 0 else 0.0
+    
+    # Get follower/following counts
+    follower_count = await db.user_follows.count_documents({"following_id": user_id, "status": "approved"})
+    following_count = await db.user_follows.count_documents({"follower_id": user_id, "status": "approved"})
+    
+    # Determine admin badge
+    admin_badge = None
+    is_user_admin = user.get("role") == "admin"
+    if is_user_admin:
+        admin_badge = "🛡️ Admin"
     
     return UserProfile(
         id=user["id"],
-        email=user["email"],
+        email=user["email"] if (is_admin or is_own_profile) else None,  # Hide email for non-admins viewing others
         name=user["name"],
         role=user["role"],
         avatar=user.get("avatar"),
-        bio=user.get("bio"),
-        location=user.get("location"),
-        website=user.get("website"),
+        bio=user.get("bio") if can_view_full_profile else None,
+        location=user.get("location") if can_view_full_profile else None,
+        website=user.get("website") if can_view_full_profile else None,
         is_active=user["is_active"],
         created_at=user["created_at"],
-        questions_count=questions_count,
-        answers_count=answers_count,
-        quizzes_taken=quizzes_taken,
-        total_quiz_score=total_quiz_score,
-        avg_quiz_score=round(avg_quiz_score, 1),
-        accepted_answers=accepted_answers
+        is_private=user.get("is_private", False),
+        follower_count=follower_count,
+        following_count=following_count,
+        questions_count=questions_count if can_view_full_profile else 0,
+        answers_count=answers_count if can_view_full_profile else 0,
+        quizzes_taken=quizzes_taken if can_view_full_profile else 0,
+        total_quiz_score=total_quiz_score if can_view_full_profile else 0.0,
+        avg_quiz_score=round(avg_quiz_score, 1) if can_view_full_profile else 0.0,
+        accepted_answers=accepted_answers if can_view_full_profile else 0,
+        is_following=is_following,
+        is_pending_approval=is_pending_approval,
+        can_view_activity=can_view_full_profile,
+        is_admin=is_user_admin,
+        admin_badge=admin_badge,
+        profile_visible=can_view_full_profile
     )
 
 @api_router.get("/profile", response_model=UserProfile)
