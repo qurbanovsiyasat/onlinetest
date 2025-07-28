@@ -1,11 +1,249 @@
-import { useState, useEffect, createContext, useContext, useRef } from "react";
+import React, { useState, useEffect, createContext, useContext, useRef } from "react";
 import "./App.css";
 import axios from "axios";
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+// Dark Mode Context
+const DarkModeContext = createContext();
+
+const DarkModeProvider = ({ children }) => {
+  const [isDark, setIsDark] = useState(() => {
+    // Check local storage first, then system preference
+    const savedTheme = localStorage.getItem('darkMode');
+    if (savedTheme !== null) {
+      return JSON.parse(savedTheme);
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    // Apply dark class to document
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    
+    // Save preference
+    localStorage.setItem('darkMode', JSON.stringify(isDark));
+  }, [isDark]);
+
+  const toggleDarkMode = () => {
+    setIsDark(!isDark);
+  };
+
+  return (
+    <DarkModeContext.Provider value={{ isDark, toggleDarkMode }}>
+      {children}
+    </DarkModeContext.Provider>
+  );
+};
+
+const useDarkMode = () => {
+  const context = useContext(DarkModeContext);
+  if (!context) {
+    throw new Error('useDarkMode must be used within a DarkModeProvider');
+  }
+  return context;
+};
+
+// Scroll to Top Component
+const ScrollToTop = () => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const toggleVisibility = () => {
+      if (window.pageYOffset > 300) {
+        setIsVisible(true);
+      } else {
+        setIsVisible(false);
+      }
+    };
+
+    window.addEventListener('scroll', toggleVisibility);
+    return () => window.removeEventListener('scroll', toggleVisibility);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
+  return (
+    <AnimatePresence>
+      {isVisible && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={scrollToTop}
+          className="fixed bottom-8 right-8 z-50 bg-indigo-600 dark:bg-indigo-500 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors animate-float"
+          style={{ backdropFilter: 'blur(10px)' }}
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+          </svg>
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// Page Transition Wrapper
+const PageTransition = ({ children, className = "" }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3, ease: "easeInOut" }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+// Emoji Reaction Component
+const EmojiReactions = ({ answerId, currentUser }) => {
+  const [reactions, setReactions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [userReaction, setUserReaction] = useState(null);
+
+  const emojis = [
+    { emoji: '👍', type: '👍', label: 'Thumbs up' },
+    { emoji: '❤️', type: '❤️', label: 'Love' },
+    { emoji: '😂', type: '😂', label: 'Laugh' },
+    { emoji: '🤔', type: '🤔', label: 'Thinking' },
+    { emoji: '🎉', type: '🎉', label: 'Celebrate' }
+  ];
+
+  useEffect(() => {
+    if (currentUser && answerId) {
+      fetchReactions();
+    }
+  }, [answerId, currentUser]);
+
+  const fetchReactions = async () => {
+    try {
+      const response = await apiCall(`/answers/${answerId}/reactions`);
+      setReactions(response.data.reactions || []);
+      setUserReaction(response.data.user_reaction);
+    } catch (error) {
+      console.error('Error fetching reactions:', error);
+    }
+  };
+
+  const handleReaction = async (emojiType) => {
+    if (!currentUser || loading) return;
+    
+    setLoading(true);
+    try {
+      if (userReaction === emojiType) {
+        // Remove reaction if same emoji clicked
+        await apiCall(`/answers/${answerId}/react`, { method: 'DELETE' });
+        setUserReaction(null);
+      } else {
+        // Add new reaction
+        await apiCall(`/answers/${answerId}/react`, {
+          method: 'POST',
+          data: { emoji: emojiType }
+        });
+        setUserReaction(emojiType);
+      }
+      await fetchReactions();
+    } catch (error) {
+      console.error('Error updating reaction:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getReactionCount = (emojiType) => {
+    const reaction = reactions.find(r => r.emoji === emojiType);
+    return reaction ? reaction.count : 0;
+  };
+
+  const isUserReacted = (emojiType) => {
+    return userReaction === emojiType;
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex flex-wrap gap-2 mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+    >
+      {emojis.map(({ emoji, type, label }) => {
+        const count = getReactionCount(type);
+        const isReacted = isUserReacted(type);
+        
+        return (
+          <motion.button
+            key={type}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => handleReaction(type)}
+            disabled={loading}
+            className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm transition-all ${
+              isReacted 
+                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border-2 border-indigo-300 dark:border-indigo-600' 
+                : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
+            }`}
+            title={label}
+          >
+            <span className="text-lg">{emoji}</span>
+            {count > 0 && (
+              <span className={`font-medium ${isReacted ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-400'}`}>
+                {count}
+              </span>
+            )}
+          </motion.button>
+        );
+      })}
+    </motion.div>
+  );
+};
+
+// Dark Mode Toggle Component
+const DarkModeToggle = () => {
+  const { isDark, toggleDarkMode } = useDarkMode();
+  
+  return (
+    <motion.button
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.9 }}
+      onClick={toggleDarkMode}
+      className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      <motion.div
+        initial={false}
+        animate={{ rotate: isDark ? 180 : 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        {isDark ? (
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.464 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" />
+          </svg>
+        ) : (
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+          </svg>
+        )}
+      </motion.div>
+    </motion.button>
+  );
+};
 
 // Auth Context
 const AuthContext = createContext();
