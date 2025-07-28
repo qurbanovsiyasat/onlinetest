@@ -4571,38 +4571,50 @@ async def admin_get_user_followers(
 # =====================================
 
 async def notify_followers_of_new_question(user_id: str, question_title: str, question_id: str):
-    """Notify followers when a user posts a new question"""
-    # Get all followers of this user
-    follows = await db.follows.find({"following_id": user_id}).to_list(1000)
+    """Notify approved followers when a user posts a new question"""
+    # Get all approved followers of this user
+    follows = await db.follows.find({
+        "following_id": user_id,
+        "status": FollowStatus.APPROVED
+    }).to_list(1000)
     
-    user_info = await get_user_info(user_id)
+    user_info = await db.users.find_one({"id": user_id})
+    if not user_info:
+        return
     
     for follow in follows:
-        notification = NotificationCreate(
+        notification = Notification(
             user_id=follow["follower_id"],
-            type=NotificationType.FOLLOWED_USER_QUESTION,
+            from_user_id=user_id,
+            notification_type=NotificationType.NEW_QUESTION_FROM_FOLLOWED_USER,
             title="New Question from Followed User",
             message=f"{user_info['name']} posted a new question: {question_title[:50]}...",
             related_id=question_id
         )
-        await create_notification(notification)
+        await db.notifications.insert_one(notification.dict())
 
 async def notify_followers_of_new_quiz(user_id: str, quiz_title: str, quiz_id: str):
-    """Notify followers when a user creates a new quiz"""
-    # Get all followers of this user
-    follows = await db.follows.find({"following_id": user_id}).to_list(1000)
+    """Notify approved followers when a user creates a new quiz"""
+    # Get all approved followers of this user
+    follows = await db.follows.find({
+        "following_id": user_id,
+        "status": FollowStatus.APPROVED
+    }).to_list(1000)
     
-    user_info = await get_user_info(user_id)
+    user_info = await db.users.find_one({"id": user_id})
+    if not user_info:
+        return
     
     for follow in follows:
-        notification = NotificationCreate(
+        notification = Notification(
             user_id=follow["follower_id"],
-            type=NotificationType.FOLLOWED_USER_QUIZ,
+            from_user_id=user_id,
+            notification_type=NotificationType.NEW_QUIZ_FROM_FOLLOWED_USER,
             title="New Quiz from Followed User",
             message=f"{user_info['name']} created a new quiz: {quiz_title[:50]}...",
             related_id=quiz_id
         )
-        await create_notification(notification)
+        await db.notifications.insert_one(notification.dict())
 
 @app.on_event("startup")
 async def startup_initialize():
