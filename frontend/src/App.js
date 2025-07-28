@@ -935,29 +935,39 @@ function AdminDashboardHome({ analytics }) {
           </div>
         </motion.div>
         
-        <div className="bg-white p-6 rounded-lg shadow">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow"
+        >
           <div className="flex items-center">
-            <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
+            <div className="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400">
               🎯
             </div>
             <div className="ml-4">
-              <h3 className="text-sm font-medium text-gray-500">Average Score</h3>
-              <p className="text-2xl font-semibold text-gray-900">{analytics.average_score || 0}%</p>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Average Score</h3>
+              <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{analytics.average_score || 0}%</p>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">📈 Platform Overview</h3>
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5 }}
+          className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow"
+        >
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">📈 Platform Overview</h3>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-600">Most Popular Quiz:</span>
-              <span className="font-medium">{analytics.most_popular_quiz || 'None'}</span>
+              <span className="text-gray-600 dark:text-gray-400">Most Popular Quiz:</span>
+              <span className="font-medium text-gray-900 dark:text-gray-100">{analytics.most_popular_quiz || 'None'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Platform Status:</span>
+              <span className="text-gray-600 dark:text-gray-400">Platform Status:</span>
               <span className="text-green-600 font-medium">Active</span>
             </div>
           </div>
