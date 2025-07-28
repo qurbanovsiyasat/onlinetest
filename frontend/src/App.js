@@ -9071,6 +9071,127 @@ const UserProfile = ({ user }) => {
               )}
             </div>
           )}
+
+          {activeTab === 'bookmarks' && (
+            <div className="space-y-4">
+              {userBookmarks.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  Hələ əlfəcin əlavə edilməyib
+                </div>
+              ) : (
+                userBookmarks.map((bookmark) => (
+                  <div key={bookmark.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="text-2xl">
+                        {bookmark.item_type === 'question' ? '❓' : '📝'}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                          {bookmark.item ? (
+                            bookmark.item_type === 'question' ? bookmark.item.title : bookmark.item.title
+                          ) : 'Məlumat tapılmadı'}
+                        </h4>
+                        {bookmark.item && (
+                          <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
+                            {bookmark.item_type === 'question' 
+                              ? bookmark.item.content?.substring(0, 150) + '...'
+                              : bookmark.item.description?.substring(0, 150) + '...'
+                            }
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                            {bookmark.item_type === 'question' ? 'Sual' : 'Test'}
+                          </span>
+                          <span>{new Date(bookmark.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {activeTab === 'following' && (
+            <div className="space-y-4">
+              {userFollowing.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  Hələ heç kimi izləmirsən
+                </div>
+              ) : (
+                userFollowing.map((follow) => (
+                  <div key={follow.user.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                        {follow.user.avatar ? (
+                          <img src={follow.user.avatar} alt="Avatar" className="w-12 h-12 rounded-full object-cover" />
+                        ) : (
+                          <span className="text-lg font-bold text-indigo-600">
+                            {follow.user.name.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-800 dark:text-gray-200">{follow.user.name}</h4>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm">{follow.user.email}</p>
+                        <p className="text-xs text-gray-500">
+                          İzləmə tarixi: {new Date(follow.followed_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="text-right text-sm text-gray-500">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          follow.user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {follow.user.role === 'admin' ? 'Admin' : 'İstifadəçi'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {activeTab === 'followers' && (
+            <div className="space-y-4">
+              {userFollowers.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  Hələ izləyiciniz yoxdur
+                </div>
+              ) : (
+                userFollowers.map((follower) => (
+                  <div key={follower.user.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                        {follower.user.avatar ? (
+                          <img src={follower.user.avatar} alt="Avatar" className="w-12 h-12 rounded-full object-cover" />
+                        ) : (
+                          <span className="text-lg font-bold text-indigo-600">
+                            {follower.user.name.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-800 dark:text-gray-200">{follower.user.name}</h4>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm">{follower.user.email}</p>
+                        <p className="text-xs text-gray-500">
+                          İzləmə tarixi: {new Date(follower.followed_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="text-right text-sm text-gray-500">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          follower.user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {follower.user.role === 'admin' ? 'Admin' : 'İstifadəçi'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
       </div>
     </PageTransition>
