@@ -7995,13 +7995,13 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
               <div className="flex-shrink-0">
                 <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-xs font-semibold">
-                    {discussion.user.name.charAt(0).toUpperCase()}
+                    {discussion.user && discussion.user.name ? discussion.user.name.charAt(0).toUpperCase() : 'U'}
                   </span>
                 </div>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center space-x-2 mb-1">
-                  <span className="font-medium text-gray-800">{discussion.user.name}</span>
+                  <span className="font-medium text-gray-800">{discussion.user ? discussion.user.name : 'Unknown User'}</span>
                   <span className="text-xs text-gray-500">
                     {new Date(discussion.created_at).toLocaleString()}
                   </span>
