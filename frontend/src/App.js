@@ -8663,6 +8663,10 @@ const UserProfile = ({ user }) => {
   const [userQuestions, setUserQuestions] = useState([]);
   const [userAnswers, setUserAnswers] = useState([]);
   const [userQuizAttempts, setUserQuizAttempts] = useState([]);
+  const [userBookmarks, setUserBookmarks] = useState([]);
+  const [userFollowing, setUserFollowing] = useState([]);
+  const [userFollowers, setUserFollowers] = useState([]);
+  const [followStats, setFollowStats] = useState({ followers_count: 0, following_count: 0 });
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
