@@ -8535,6 +8535,258 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
 // ====================================================================
 
 // ====================================================================
+// ACTIVITY FEED COMPONENT
+// ====================================================================
+
+function ActivityFeed({ user }) {
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    fetchActivities(true);
+  }, []);
+
+  const fetchActivities = async (isInitial = false) => {
+    const currentOffset = isInitial ? 0 : offset;
+    setLoading(isInitial);
+    
+    try {
+      const response = await apiCall(`/user/activity-feed?limit=20&offset=${currentOffset}`);
+      const data = response.data;
+      
+      if (isInitial) {
+        setActivities(data.activities);
+        setOffset(20);
+      } else {
+        setActivities(prev => [...prev, ...data.activities]);
+        setOffset(prev => prev + 20);
+      }
+      
+      setHasMore(data.has_more);
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const refreshActivities = async () => {
+    setRefreshing(true);
+    await fetchActivities(true);
+  };
+
+  const getActivityIcon = (activityType) => {
+    switch (activityType) {
+      case 'quiz_published': return '📝';
+      case 'question_posted': return '❓';
+      case 'answer_posted': return '💬';
+      case 'quiz_completed': return '🎯';
+      case 'user_followed': return '👥';
+      default: return '📰';
+    }
+  };
+
+  const getActivityColor = (activityType) => {
+    switch (activityType) {
+      case 'quiz_published': return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800';
+      case 'question_posted': return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800';
+      case 'answer_posted': return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
+      case 'quiz_completed': return 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800';
+      case 'user_followed': return 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800';
+      default: return 'bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800';
+    }
+  };
+
+  const getTimeAgo = (timestamp) => {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - time) / 1000);
+    
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    return time.toLocaleDateString();
+  };
+
+  const ActivityItem = ({ activity }) => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`border rounded-lg p-4 mb-4 ${getActivityColor(activity.activity_type)}`}
+    >
+      <div className="flex items-start space-x-3">
+        <div className="flex-shrink-0">
+          <div className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm">
+            <span className="text-lg">{getActivityIcon(activity.activity_type)}</span>
+          </div>
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                <span className="font-semibold">{activity.user_name}</span> {activity.title}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {activity.description}
+              </p>
+              
+              {/* Activity-specific metadata */}
+              {activity.activity_type === 'quiz_published' && activity.metadata?.subject && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="inline-block px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs rounded">
+                    {activity.metadata.subject}
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {activity.metadata.total_questions} questions
+                  </span>
+                </div>
+              )}
+              
+              {activity.activity_type === 'quiz_completed' && activity.metadata?.score && (
+                <div className="mt-2">
+                  <span className="inline-block px-2 py-1 bg-purple-100 dark:bg-purple-800 text-purple-800 dark:text-purple-200 text-xs rounded">
+                    {activity.metadata.score}% Score
+                  </span>
+                </div>
+              )}
+              
+              {activity.activity_type === 'question_posted' && activity.metadata?.tags?.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1 mt-2">
+                  {activity.metadata.tags.slice(0, 3).map((tag, index) => (
+                    <span key={index} className="inline-block px-2 py-1 bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 text-xs rounded">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex-shrink-0 ml-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {getTimeAgo(activity.created_at)}
+              </span>
+            </div>
+          </div>
+          
+          {/* Action buttons for relevant activities */}
+          {(activity.activity_type === 'quiz_published' || activity.activity_type === 'quiz_completed') && activity.related_id && (
+            <div className="mt-3">
+              <button className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium">
+                View Quiz →
+              </button>
+            </div>
+          )}
+          
+          {activity.activity_type === 'question_posted' && activity.related_id && (
+            <div className="mt-3">
+              <button className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium">
+                View Question →
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+
+  if (loading && activities.length === 0) {
+    return (
+      <PageTransition>
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              <span className="ml-3 text-gray-600 dark:text-gray-400">Loading activity feed...</span>
+            </div>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
+
+  return (
+    <PageTransition>
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">📰 Activity Feed</h1>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">
+                Stay updated with activities from people you follow
+              </p>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={refreshActivities}
+              disabled={refreshing}
+              className="px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 transition duration-200 disabled:opacity-50"
+            >
+              {refreshing ? '🔄 Refreshing...' : '🔄 Refresh'}
+            </motion.button>
+          </div>
+        </div>
+
+        {/* Activity Feed */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          {activities.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">👥</div>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                No activities yet
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Start following other users to see their activities in your feed
+              </p>
+              <div className="text-sm text-gray-500 dark:text-gray-500">
+                Activities include: quiz publications, Q&A posts, high-score achievements, and more
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                  Recent Activities ({activities.length})
+                </h2>
+              </div>
+              
+              <div className="space-y-0">
+                {activities.map((activity) => (
+                  <ActivityItem key={activity.id} activity={activity} />
+                ))}
+              </div>
+              
+              {hasMore && (
+                <div className="text-center mt-6">
+                  <button
+                    onClick={() => fetchActivities(false)}
+                    disabled={loading}
+                    className="px-6 py-2 bg-gray-600 dark:bg-gray-500 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition duration-200 disabled:opacity-50"
+                  >
+                    {loading ? 'Loading...' : 'Load More Activities'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </PageTransition>
+  );
+}
+
+// ====================================================================
+// END ACTIVITY FEED COMPONENT
+// ====================================================================
+
+// ====================================================================
 // USER PROFILE & NOTIFICATION SYSTEM COMPONENTS
 // ====================================================================
 
