@@ -126,7 +126,7 @@ const UserHome = ({ quizzes, startQuiz }) => {
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-4">
             <CategoryButton onClick={handleBackToSubjects} icon="🏠">
-              All Subjects
+              Bütün Mövzülər
             </CategoryButton>
             <span className="text-gray-500">→</span>
             <CategoryButton onClick={handleBackToSubcategories} icon="📚">
@@ -136,7 +136,7 @@ const UserHome = ({ quizzes, startQuiz }) => {
             <span className="text-lg font-semibold text-gray-800">📂 {selectedSubcategory}</span>
           </div>
           <h2 className="text-3xl font-bold text-gray-800">
-            {selectedSubject} - {selectedSubcategory} Quizzes
+            {selectedSubject} - {selectedSubcategory} Sınaqlar
           </h2>
         </div>
 
@@ -178,13 +178,13 @@ const UserHome = ({ quizzes, startQuiz }) => {
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-4">
             <CategoryButton onClick={handleBackToSubjects} icon="🏠">
-              All Subjects
+              Bütün Mövzular
             </CategoryButton>
             <span className="text-gray-500">→</span>
             <span className="text-lg font-semibold text-gray-800">📚 {selectedSubject}</span>
           </div>
           <h2 className="text-3xl font-bold text-gray-800">
-            {selectedSubject} Subcategories
+            {selectedSubject} Bölmələr
           </h2>
         </div>
 

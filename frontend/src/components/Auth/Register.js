@@ -59,13 +59,13 @@ const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
             📝 Squiz
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Create your account
+            Hesab yarat
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div>
             <label htmlFor="name" className="block text-gray-700 font-semibold mb-2">
-              Full Name
+              Ad və Soyad
             </label>
             <input
               id="name"
@@ -95,7 +95,7 @@ const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
           </div>
           <div>
             <label htmlFor="password" className="block text-gray-700 font-semibold mb-2">
-              Password
+              Şifrə
             </label>
             <input
               id="password"
@@ -110,7 +110,7 @@ const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
           </div>
           <div>
             <label htmlFor="confirmPassword" className="block text-gray-700 font-semibold mb-2">
-              Confirm Password
+              Şifrəni yenilə
             </label>
             <input
               id="confirmPassword"
@@ -146,7 +146,7 @@ const Register = ({ onSwitchToLogin, onRegisterSuccess }) => {
               onClick={onSwitchToLogin}
               className="text-sm text-indigo-600 hover:text-indigo-500"
             >
-              Already have an account? Login
+              Giriş yerinə qayıt
             </button>
           </div>
         </form>

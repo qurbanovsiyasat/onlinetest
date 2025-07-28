@@ -354,13 +354,13 @@ function AuthScreen() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-indigo-900 mb-2">📝 Squiz</h1>
-          <p className="text-gray-600">Admin-Controlled Quiz Platform</p>
+          
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div>
-              <label className="block text-gray-700 font-semibold mb-2">Full Name</label>
+              <label className="block text-gray-700 font-semibold mb-2">Ad və soyad</label>
               <input
                 type="text"
                 value={formData.name}
@@ -385,7 +385,7 @@ function AuthScreen() {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">Password</label>
+            <label className="block text-gray-700 font-semibold mb-2">Şifrə</label>
             <input
               type="password"
               value={formData.password}
@@ -407,7 +407,7 @@ function AuthScreen() {
             disabled={loading}
             className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition duration-200 font-semibold disabled:opacity-50"
           >
-            {loading ? 'Processing...' : (isLogin ? 'Login' : 'Register')}
+            {loading ? 'Processing...' : (isLogin ? 'Giriş' : 'Qeydiyyat')}
           </button>
         </form>
 
@@ -420,7 +420,7 @@ function AuthScreen() {
             }}
             className="text-indigo-600 hover:text-indigo-800 font-semibold"
           >
-            {isLogin ? "Don't have an account? Register" : "Already have an account? Login"}
+            {isLogin ? "Yeni hesab yarat" : "Giriş yerinə qayıt"}
           </button>
         </div>
 
@@ -499,13 +499,13 @@ function AdminDashboard({ currentView, setCurrentView }) {
         <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center">
           <div className="mb-4 sm:mb-0">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-800">👑 Admin Dashboard</h1>
-            <p className="text-gray-600 text-sm sm:text-base">Welcome back, {user.name}</p>
+            <p className="text-gray-600 text-sm sm:text-base">Xoş gəldiniz, {user.name}</p>
           </div>
           <button
             onClick={logout}
             className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200 text-sm sm:text-base"
           >
-            Logout
+            Çıxış
           </button>
         </div>
       </header>
@@ -518,7 +518,7 @@ function AdminDashboard({ currentView, setCurrentView }) {
               currentView === 'dashboard' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
             }`}
           >
-            📊 Dashboard
+            📊 İstifadəçi Paneli
           </button>
           <button
             onClick={() => setCurrentView('users')}
@@ -534,7 +534,7 @@ function AdminDashboard({ currentView, setCurrentView }) {
               currentView === 'quizzes' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
             }`}
           >
-            📝 Quizzes
+            📝 Sınaqlar
           </button>
           <button
             onClick={() => setCurrentView('results')}
@@ -791,14 +791,14 @@ function AdminResultsView({ results }) {
       )}
       
       <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-        <h3 className="font-semibold text-gray-800 mb-2">📊 Summary Statistics</h3>
+        <h3 className="font-semibold text-gray-800 mb-2">📊 Ümumi Statistikalar</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
           <div>
-            <p className="text-gray-600">Total Results:</p>
+            <p className="text-gray-600">Ümumi Nəticələr:</p>
             <p className="font-semibold">{filteredAndSortedResults.length}</p>
           </div>
           <div>
-            <p className="text-gray-600">High Scores (80%+):</p>
+            <p className="text-gray-600">Yüksək Nəticə (80%+):</p>
             <p className="font-semibold text-green-600">
               {filteredAndSortedResults.filter(r => r.percentage >= 80).length}
             </p>
@@ -3294,7 +3294,7 @@ function UserDashboard({ currentView, setCurrentView }) {
                 currentView === 'home' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
-              🏠 Home
+              🏠 Sınaqlar
             </button>
             <button
               onClick={() => setCurrentView('my-attempts')}
@@ -3302,20 +3302,20 @@ function UserDashboard({ currentView, setCurrentView }) {
                 currentView === 'my-attempts' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
-              📊 My Results
+              📊 Mənim nəticələrim
             </button>
             {/* User quiz and subject creation removed - admin-only functionality */}
             <button
               onClick={() => setShowPasswordChange(true)}
               className="text-gray-700 hover:bg-gray-100 px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm"
             >
-              🔑 Password
+              🔑 Şifrə
             </button>
             <button
               onClick={logout}
               className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-red-700 transition duration-200 text-xs sm:text-sm"
             >
-              Logout
+              🚪 Çıxış
             </button>
           </div>
         </div>
@@ -3330,23 +3330,23 @@ function UserDashboard({ currentView, setCurrentView }) {
 
         {currentView === 'my-attempts' && (
           <div>
-            <h2 className="text-3xl font-bold text-gray-800 mb-6">My Quiz Results</h2>
+            <h2 className="text-3xl font-bold text-gray-800 mb-6">Mənim sınaq nəticələrim</h2>
             {myAttempts.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">You haven't taken any quizzes yet.</p>
+                <p className="text-gray-500 text-lg">Nəticələrinin yoxdur hələ</p>
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {myAttempts.map((attempt) => (
                   <div key={attempt.id} className="bg-white rounded-lg shadow p-6">
-                    <h3 className="font-semibold text-gray-800 mb-2">Quiz Attempt</h3>
+                    <h3 className="font-semibold text-gray-800 mb-2">Test sınağı</h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span>Score:</span>
+                        <span>Xal:</span>
                         <span className="font-semibold">{attempt.score}/{attempt.total_questions}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Percentage:</span>
+                        <span>Faiz:</span>
                         <span className={`font-semibold ${
                           attempt.percentage >= 80 ? 'text-green-600' :
                           attempt.percentage >= 60 ? 'text-yellow-600' : 'text-red-600'
@@ -3355,7 +3355,7 @@ function UserDashboard({ currentView, setCurrentView }) {
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Date:</span>
+                        <span>Tarix:</span>
                         <span>{new Date(attempt.attempted_at).toLocaleDateString()}</span>
                       </div>
                     </div>
@@ -3461,7 +3461,7 @@ function QuestionCreationForm({
               onChange={(e) => setCurrentQuestion({ ...currentQuestion, question_type: e.target.value })}
               className="mr-2"
             />
-            📝 Multiple Choice
+            📝 Çoxlu seçim
           </label>
           <label className="flex items-center">
             <input
@@ -3528,9 +3528,9 @@ function QuestionCreationForm({
             onChange={(e) => setCurrentQuestion({ ...currentQuestion, difficulty: e.target.value })}
             className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg text-sm"
           >
-            <option value="easy">🟢 Easy</option>
-            <option value="medium">🟡 Medium</option>
-            <option value="hard">🔴 Hard</option>
+            <option value="easy">🟢 Asan</option>
+            <option value="medium">🟡 Normal</option>
+            <option value="hard">🔴 Çətin</option>
           </select>
         </div>
         
@@ -3542,7 +3542,7 @@ function QuestionCreationForm({
               onChange={(e) => setCurrentQuestion({ ...currentQuestion, is_mandatory: e.target.checked })}
               className="mr-2"
             />
-            Mandatory
+            Məcburi
           </label>
         </div>
 
@@ -4010,7 +4010,7 @@ function PasswordChangeModal({ onClose, userName }) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold">Change Password</h3>
+          <h3 className="text-lg font-semibold">Şifrəni dəyiş</h3>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 text-xl"
@@ -4021,7 +4021,7 @@ function PasswordChangeModal({ onClose, userName }) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">Current Password</label>
+            <label className="block text-gray-700 font-semibold mb-2">Köhnə şifrən</label>
             <input
               type="password"
               value={formData.current_password}
@@ -4032,7 +4032,7 @@ function PasswordChangeModal({ onClose, userName }) {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">New Password</label>
+            <label className="block text-gray-700 font-semibold mb-2">Yeni şifrən</label>
             <input
               type="password"
               value={formData.new_password}
@@ -4044,7 +4044,7 @@ function PasswordChangeModal({ onClose, userName }) {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">Confirm New Password</label>
+            <label className="block text-gray-700 font-semibold mb-2">Yeni şifrəni gir </label>
             <input
               type="password"
               value={formData.confirm_password}
@@ -4066,14 +4066,14 @@ function PasswordChangeModal({ onClose, userName }) {
               disabled={loading}
               className="flex-1 bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition duration-200 font-semibold disabled:opacity-50"
             >
-              {loading ? 'Changing...' : 'Change Password'}
+              {loading ? 'Changing...' : 'Şifrəni dəyiş'}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold"
             >
-              Cancel
+              Geri
             </button>
           </div>
         </form>
@@ -4318,7 +4318,7 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
               <div className="space-y-4">
                 <div className="p-3 bg-yellow-50 rounded-lg mb-4">
                   <p className="text-yellow-800 text-sm font-medium">
-                    ✏️ Open-ended question. Type your answer in the text area below.
+                    ✏️ Açıq sual. Cavabınızı aşağıdakı mətn sahəsində yazın.
                   </p>
                 </div>
                 
@@ -4331,7 +4331,7 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
                 />
                 
                 <div className="text-xs sm:text-sm text-gray-500">
-                  {userAnswers[currentQuestionIndex]?.length || 0} characters
+                  {userAnswers[currentQuestionIndex]?.length || 0} Simvol
                 </div>
               </div>
             )}
@@ -4344,7 +4344,7 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
               disabled={currentQuestionIndex === 0}
               className="px-4 sm:px-6 py-2 sm:py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
-              Previous
+              Geri
             </button>
             
             <div className="flex gap-2 sm:gap-3">
@@ -4352,7 +4352,7 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
                 onClick={handleFinishQuiz}
                 className="px-3 sm:px-4 py-2 sm:py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition duration-200 font-semibold text-xs sm:text-sm"
               >
-                🏁 Finish Quiz
+                🏁 Sınağı bitir
               </button>
               
               <button
@@ -4361,7 +4361,7 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
                          (userAnswers[currentQuestionIndex] && userAnswers[currentQuestionIndex].trim() === '')}
                 className="px-4 sm:px-6 py-2 sm:py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm sm:text-base"
               >
-                {currentQuestionIndex === quiz.questions.length - 1 ? 'Submit Quiz' : 'Next Question'}
+                {currentQuestionIndex === quiz.questions.length - 1 ? 'sınaq bitsin' : 'Növbəti Sual'}
               </button>
             </div>
           </div>
@@ -4374,13 +4374,13 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
             <div className="text-center mb-6">
               <div className="text-4xl mb-4">🏁</div>
-              <h3 className="text-lg font-semibold mb-2">Finish Quiz?</h3>
+              <h3 className="text-lg font-semibold mb-2">Sınağı bitir</h3>
               <p className="text-gray-600 text-sm">
-                You have answered {getAnsweredCount()} out of {quiz.questions.length} questions.
+               Cavabladığınız suallar{getAnsweredCount()}/{quiz.questions.length} 
               </p>
               {getAnsweredCount() < quiz.questions.length && (
                 <p className="text-orange-600 text-sm mt-2">
-                  ⚠️ {quiz.questions.length - getAnsweredCount()} questions will be marked as unanswered.
+                  ⚠️ {quiz.questions.length - getAnsweredCount()} Suallar cavabsız qeyd ediləcək.
                 </p>
               )}
             </div>
@@ -4398,17 +4398,17 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
                 {isSubmittingQuiz ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Submitting...
+                   Göndərilir...
                   </div>
                 ) : (
-                  'Yes, Finish'
+                  'sınağı bitir'
                 )}
               </button>
               <button
                 onClick={() => setShowFinishModal(false)}
                 className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold"
               >
-                Continue Quiz
+                Sınağa davam et
               </button>
             </div>
           </div>
@@ -4696,13 +4696,13 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
             onClick={() => setCurrentView('home')}
             className="mb-6 text-indigo-600 hover:text-indigo-800 font-semibold"
           >
-            ← Back to Home
+            ← Sınaqlara geri dön
           </button>
           
           <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
             <div className="text-center mb-8">
               <div className="text-6xl mb-4">⏱️</div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-4">Real-time Quiz Session</h1>
+              <h1 className="text-3xl font-bold text-gray-800 mb-4">Canlı Sual-Cavab</h1>
               <h2 className="text-xl font-semibold text-indigo-600 mb-2">{quiz.title}</h2>
               <p className="text-gray-600 mb-6">{quiz.description}</p>
             </div>
@@ -4710,27 +4710,27 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="bg-blue-50 p-4 rounded-lg">
                 <div className="text-2xl mb-2">📝</div>
-                <h3 className="font-semibold text-blue-800">Questions</h3>
-                <p className="text-blue-600">{quiz.questions.length} questions</p>
+                <h3 className="font-semibold text-blue-800">Suallar</h3>
+                <p className="text-blue-600">{quiz.questions.length} suallar</p>
               </div>
               
               <div className="bg-green-50 p-4 rounded-lg">
                 <div className="text-2xl mb-2">⭐</div>
-                <h3 className="font-semibold text-green-800">Points</h3>
-                <p className="text-green-600">{quiz.total_points} total points</p>
+                <h3 className="font-semibold text-green-800">Xal</h3>
+                <p className="text-green-600">{quiz.total_points} ümumi xal</p>
               </div>
               
               {quiz.time_limit_minutes && (
                 <div className="bg-orange-50 p-4 rounded-lg">
                   <div className="text-2xl mb-2">⏰</div>
-                  <h3 className="font-semibold text-orange-800">Time Limit</h3>
-                  <p className="text-orange-600">{quiz.time_limit_minutes} minutes</p>
+                  <h3 className="font-semibold text-orange-800">Vaxt limiti</h3>
+                  <p className="text-orange-600">{quiz.time_limit_minutes} dəqiqə</p>
                 </div>
               )}
               
               <div className="bg-purple-50 p-4 rounded-lg">
                 <div className="text-2xl mb-2">🎯</div>
-                <h3 className="font-semibold text-purple-800">Pass Mark</h3>
+                <h3 className="font-semibold text-purple-800">Keçid balı</h3>
                 <p className="text-purple-600">{quiz.min_pass_percentage}%</p>
               </div>
             </div>
@@ -4754,15 +4754,15 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
                 {loading ? (
                   <div className="flex items-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Starting Session...
+                    Sessiyaya başlanır
                   </div>
                 ) : (
-                  '🚀 Start Quiz Session'
+                  'Sınağa Başla'
                 )}
               </button>
               
               <p className="text-sm text-gray-500 mt-4">
-                Once started, the timer will begin immediately
+                Timer başlayandan dərhal sonra işə düşəcək
               </p>
             </div>
           </div>
@@ -4785,7 +4785,7 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
               onClick={() => setCurrentView('home')}
               className="text-indigo-600 hover:text-indigo-800 font-semibold text-sm sm:text-base"
             >
-              ← Back to Home
+              ← Sınaqlara geri dön
             </button>
             
             {/* Timer Display */}
@@ -4797,7 +4797,7 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
                     <div className={`text-2xl font-bold ${getTimerColor()}`}>
                       {formatTime(timeRemaining)}
                     </div>
-                    <div className="text-xs text-gray-500">Time Remaining</div>
+                    <div className="text-xs text-gray-500">Qalan vaxt</div>
                   </div>
                 </div>
               </div>
@@ -4849,8 +4849,8 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
           </div>
           
           <div className="flex justify-between items-center text-xs sm:text-sm text-gray-600">
-            <span>Question {currentQuestionIndex + 1} of {quiz.questions.length}</span>
-            <span>Answered: {userAnswers.filter(a => a && a.trim()).length}/{quiz.questions.length}</span>
+            <span>Sual {currentQuestionIndex + 1} of {quiz.questions.length}</span>
+            <span>Cavablanan: {userAnswers.filter(a => a && a.trim()).length}/{quiz.questions.length}</span>
           </div>
         </header>
 
@@ -4863,7 +4863,7 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
                   <span className="text-orange-400 text-xl">⚠️</span>
                 </div>
                 <div className="ml-3 flex-1">
-                  <h3 className="text-sm font-medium text-orange-800">Time Warning</h3>
+                  <h3 className="text-sm font-medium text-orange-800">Vaxt bildirişi</h3>
                   <p className="mt-1 text-sm text-orange-700">
                     {timeRemaining <= 60 
                       ? 'Less than 1 minute remaining! Quiz will auto-submit when time expires.'
@@ -4875,7 +4875,7 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
                       onClick={() => setAutoSubmitWarning(false)}
                       className="bg-orange-100 hover:bg-orange-200 text-orange-800 px-3 py-1 rounded text-sm transition duration-200"
                     >
-                      Dismiss
+                      Bağla
                     </button>
                   </div>
                 </div>
@@ -4900,7 +4900,7 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
                       onClick={() => setError(null)}
                       className="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded text-sm transition duration-200"
                     >
-                      Dismiss
+                      Bağla
                     </button>
                   </div>
                 </div>
@@ -4955,7 +4955,7 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
                 {currentQuestion.multiple_correct && (
                   <div className="p-3 bg-blue-50 rounded-lg mb-4">
                     <p className="text-blue-800 text-sm font-medium">
-                      📌 Multiple answers may be correct. Select all that apply.
+                      📌 Birdən çox cavab doğru ola bilər. Uyğun olanların hamısını seçin.
                     </p>
                   </div>
                 )}
@@ -5019,7 +5019,7 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
               <div className="space-y-4">
                 <div className="p-3 bg-yellow-50 rounded-lg mb-4">
                   <p className="text-yellow-800 text-sm font-medium">
-                    ✏️ Open-ended question. Type your answer in the text area below.
+                    ✏️ Açıq sual. Cavabınızı aşağıdakı mətn sahəsində yazın.
                   </p>
                 </div>
                 
@@ -5035,7 +5035,7 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
                 />
                 
                 <div className="text-xs sm:text-sm text-gray-500">
-                  {userAnswers[currentQuestionIndex]?.length || 0} characters
+                  {userAnswers[currentQuestionIndex]?.length || 0} simvollar
                 </div>
               </div>
             )}
@@ -5048,7 +5048,7 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
               disabled={currentQuestionIndex === 0 || sessionStatus !== 'active'}
               className="px-4 sm:px-6 py-2 sm:py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
             >
-              Previous
+              Geri
             </button>
             
             <div className="flex gap-2 sm:gap-3">
@@ -5057,7 +5057,7 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
                 disabled={sessionStatus !== 'active' && sessionStatus !== 'expired'}
                 className="px-3 sm:px-4 py-2 sm:py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition duration-200 font-semibold text-xs sm:text-sm disabled:opacity-50"
               >
-                🏁 Finish Quiz
+                🏁 Sınağı bitir
               </button>
               
               <button
@@ -5066,7 +5066,7 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
                          (userAnswers[currentQuestionIndex] && userAnswers[currentQuestionIndex].trim() === '')}
                 className="px-4 sm:px-6 py-2 sm:py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm sm:text-base"
               >
-                {currentQuestionIndex === quiz.questions.length - 1 ? 'Submit Quiz' : 'Next Question'}
+                {currentQuestionIndex === quiz.questions.length - 1 ? 'sınaq bitsin' : 'Növbəti Sual'}
               </button>
             </div>
           </div>
@@ -5082,19 +5082,19 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
                 {sessionStatus === 'expired' ? '⏰' : '🏁'}
               </div>
               <h3 className="text-lg font-semibold mb-2">
-                {sessionStatus === 'expired' ? 'Time Expired!' : 'Finish Quiz?'}
+                {sessionStatus === 'expired' ? 'Time Expired!' : 'Sınaq Bitsin?'}
               </h3>
               <p className="text-gray-600 text-sm">
-                You have answered {userAnswers.filter(a => a && a.trim()).length} out of {quiz.questions.length} questions.
+                Sənin nəticən {userAnswers.filter(a => a && a.trim()).length}/{quiz.questions.length} 
               </p>
               {sessionStatus === 'expired' && (
                 <p className="text-red-600 text-sm mt-2">
-                  ⏰ Time has expired. The quiz will be submitted automatically.
+                  ⏰ Vaxt bitdi! Sınaq avtomatik olaraq göndəriləcək.
                 </p>
               )}
               {userAnswers.filter(a => a && a.trim()).length < quiz.questions.length && sessionStatus !== 'expired' && (
                 <p className="text-orange-600 text-sm mt-2">
-                  ⚠️ {quiz.questions.length - userAnswers.filter(a => a && a.trim()).length} questions will be marked as unanswered.
+                  ⚠️ {quiz.questions.length - userAnswers.filter(a => a && a.trim()).length} suallar cavabsız qalacaq.
                 </p>
               )}
             </div>
@@ -5117,9 +5117,9 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
                     Submitting...
                   </div>
                 ) : sessionStatus === 'expired' ? (
-                  'Submit Quiz'
+                  'Sınaq bitsin'
                 ) : (
-                  'Yes, Finish'
+                  'Bəli, sınağı bitir'
                 )}
               </button>
               
@@ -5128,7 +5128,7 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
                   onClick={() => setShowFinishModal(false)}
                   className="flex-1 bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition duration-200 font-semibold"
                 >
-                  Continue Quiz
+                  Sınağa davam et
                 </button>
               )}
             </div>
@@ -5187,7 +5187,7 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
               <div className={`inline-block px-4 py-2 rounded-full text-white text-sm font-semibold mb-4 ${badge.color}`}>
                 {badge.text}
               </div>
-              <h1 className="text-4xl font-bold text-gray-800 mb-2">Quiz Complete!</h1>
+              <h1 className="text-4xl font-bold text-gray-800 mb-2">Sınaq tamamlandı!</h1>
               <h2 className="text-2xl font-semibold text-gray-700 mb-6">{quiz.title}</h2>
             </div>
 
@@ -5199,7 +5199,7 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
                 </span>
               </div>
               <p className="text-xl text-gray-600 mb-2">
-                You scored {result.score} out of {result.total_questions} questions correctly
+                Sənin düzgün cavabların {result.score}/{result.total_questions}
               </p>
               <div className="w-full bg-gray-200 rounded-full h-4 mb-4 max-w-md mx-auto">
                 <div
@@ -5218,19 +5218,19 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
                 onClick={() => setCurrentView('home')}
                 className="bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition duration-200 font-semibold"
               >
-                🏠 Back to Home
+                🏠 Sınaqlara qayıt
               </button>
               <button
                 onClick={() => startQuiz(quiz)}
                 className="bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition duration-200 font-semibold"
               >
-                🔄 Retake Quiz
+                🔄 Yenidən işlə
               </button>
               <button
                 onClick={() => setShowMistakes(!showMistakes)}
                 className="bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 transition duration-200 font-semibold"
               >
-                {showMistakes ? '👁️ Hide Review' : '📝 Review Mistakes'}
+                {showMistakes ? '👁️ Baxışı gizlət' : '📝 Səhvlərinə bax'}
               </button>
             </div>
           </div>
@@ -5238,7 +5238,7 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
           {/* Mistakes Review */}
           {showMistakes && detailedResults && (
             <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-              <h3 className="text-2xl font-semibold text-gray-800 mb-6">📝 Detailed Review</h3>
+              <h3 className="text-2xl font-semibold text-gray-800 mb-6">📝 Ətraflı baxış</h3>
               
               <div className="space-y-4">
                 {detailedResults.map((questionResult, index) => (
@@ -5257,7 +5257,7 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {questionResult.is_correct ? '✅ Correct' : '❌ Wrong'}
+                        {questionResult.is_correct ? '✅ Düz' : '❌ Səhv'}
                       </span>
                     </div>
 
@@ -5271,7 +5271,7 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm font-semibold text-gray-600 mb-2">Your Answer:</p>
+                        <p className="text-sm font-semibold text-gray-600 mb-2">Sənin cavabın:</p>
                         <p className={`p-2 rounded ${
                           questionResult.is_correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}>
@@ -5281,7 +5281,7 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
                       
                       {!questionResult.is_correct && (
                         <div>
-                          <p className="text-sm font-semibold text-gray-600 mb-2">Correct Answer:</p>
+                          <p className="text-sm font-semibold text-gray-600 mb-2">Düzgün cavab:</p>
                           <p className="p-2 rounded bg-green-100 text-green-800">
                             {questionResult.correct_answer}
                           </p>
@@ -5291,7 +5291,7 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
 
                     {!questionResult.is_correct && (
                       <div className="mt-3">
-                        <p className="text-sm font-semibold text-gray-600 mb-2">All Options:</p>
+                        <p className="text-sm font-semibold text-gray-600 mb-2">Variantlar:</p>
                         <div className="grid grid-cols-2 gap-2">
                           {questionResult.all_options.map((option, optIndex) => (
                             <div
@@ -5317,18 +5317,18 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
               </div>
 
               <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-semibold text-blue-800 mb-2">Summary:</h4>
+                <h4 className="font-semibold text-blue-800 mb-2">Yekun:</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
-                    <span className="text-green-600 font-semibold">Correct: </span>
-                    {detailedResults.filter(q => q.is_correct).length} questions
+                    <span className="text-green-600 font-semibold">Düzgün: </span>
+                    {detailedResults.filter(q => q.is_correct).length} Suallar
                   </div>
                   <div>
-                    <span className="text-red-600 font-semibold">Incorrect: </span>
+                    <span className="text-red-600 font-semibold">Səhv: </span>
                     {mistakes.length} questions
                   </div>
                   <div>
-                    <span className="text-blue-600 font-semibold">Accuracy: </span>
+                    <span className="text-blue-600 font-semibold">Boş: </span>
                     {result.percentage.toFixed(1)}%
                   </div>
                 </div>
@@ -5339,11 +5339,11 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
           {/* Leaderboard */}
           {leaderboard && (
             <div className="bg-white rounded-lg shadow-lg p-6">
-              <h3 className="text-2xl font-semibold text-gray-800 mb-6">🏆 Quiz Leaderboard</h3>
+              <h3 className="text-2xl font-semibold text-gray-800 mb-6">🏆 Yüksək nəticələr</h3>
               
               {/* Top 3 */}
               <div className="mb-6">
-                <h4 className="text-lg font-semibold text-gray-700 mb-4">Top 3 Performers</h4>
+                <h4 className="text-lg font-semibold text-gray-700 mb-4">Top 3 nəticə</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {leaderboard.top_3.map((entry, index) => (
                     <div
@@ -5360,7 +5360,7 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
                       <p className="font-semibold text-gray-800">{entry.user_name}</p>
                       <p className="text-lg font-bold text-gray-900">{entry.percentage.toFixed(1)}%</p>
                       <p className="text-sm text-gray-600">
-                        {entry.score}/{entry.total_questions} correct
+                        {entry.score}/{entry.total_questions} Doğru
                       </p>
                     </div>
                   ))}
@@ -5370,10 +5370,10 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
               {/* User's Position */}
               {leaderboard.user_position && (
                 <div className="mb-6 p-4 bg-indigo-50 rounded-lg">
-                  <h4 className="text-lg font-semibold text-indigo-800 mb-2">Your Position</h4>
+                  <h4 className="text-lg font-semibold text-indigo-800 mb-2">Sənin Sıran</h4>
                   <p className="text-indigo-700">
-                    You ranked <span className="font-bold">#{leaderboard.user_position.rank}</span> out of{' '}
-                    <span className="font-bold">{leaderboard.total_participants}</span> participants!
+                    Sənin nəticən <span className="font-bold">#{leaderboard.user_position.rank}</span> {' '}
+                    <span className="font-bold">{leaderboard.total_participants}</span> 
                   </p>
                 </div>
               )}
@@ -5382,15 +5382,15 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                 <div className="p-3 bg-gray-50 rounded-lg">
                   <p className="text-2xl font-bold text-gray-800">{leaderboard.total_participants}</p>
-                  <p className="text-sm text-gray-600">Total Participants</p>
+                  <p className="text-sm text-gray-600">Cəmi iştirakçılar</p>
                 </div>
                 <div className="p-3 bg-gray-50 rounded-lg">
                   <p className="text-2xl font-bold text-gray-800">{leaderboard.quiz_stats.total_attempts}</p>
-                  <p className="text-sm text-gray-600">Total Attempts</p>
+                  <p className="text-sm text-gray-600">Ümumi cəhdlər</p>
                 </div>
                 <div className="p-3 bg-gray-50 rounded-lg">
                   <p className="text-2xl font-bold text-gray-800">{leaderboard.quiz_stats.average_score.toFixed(1)}%</p>
-                  <p className="text-sm text-gray-600">Average Score</p>
+                  <p className="text-sm text-gray-600">Orta nəticə</p>
                 </div>
               </div>
             </div>
@@ -5513,7 +5513,7 @@ function UserHome({ quizzes, startQuiz, startRealTimeQuiz }) {
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-4">
             <CategoryButton onClick={handleBackToSubjects} icon="🏠">
-              All Subjects
+              Bütün Mövzular
             </CategoryButton>
             <span className="text-gray-500">→</span>
             <CategoryButton onClick={handleBackToSubcategories} icon="📚">
@@ -5523,7 +5523,7 @@ function UserHome({ quizzes, startQuiz, startRealTimeQuiz }) {
             <span className="text-lg font-semibold text-gray-800">📂 {selectedSubcategory}</span>
           </div>
           <h2 className="text-3xl font-bold text-gray-800">
-            {selectedSubject} - {selectedSubcategory} Quizzes
+            {selectedSubject} - {selectedSubcategory} Sınaqlar
           </h2>
         </div>
 
@@ -5533,15 +5533,15 @@ function UserHome({ quizzes, startQuiz, startRealTimeQuiz }) {
               <h3 className="text-xl font-semibold text-gray-800 mb-2">{quiz.title}</h3>
               <p className="text-gray-600 mb-4">{quiz.description}</p>
               <div className="flex justify-between items-center mb-4 text-sm text-gray-500">
-                <span>{quiz.total_questions} questions</span>
-                <span>{quiz.total_attempts || 0} attempts</span>
+                <span>{quiz.total_questions} suallar</span>
+                <span>{quiz.total_attempts || 0} cəhdlər</span>
               </div>
               <div className="flex justify-between items-center mb-4">
                 <span className="text-sm text-gray-500">
-                  Category: {quiz.category}
+                 Cateqoriya: {quiz.category}
                 </span>
                 <span className="text-sm text-gray-500">
-                  Avg: {quiz.average_score || 0}%
+                  faiz: {quiz.average_score || 0}%
                 </span>
               </div>
               <div className="flex gap-2">
@@ -5551,7 +5551,7 @@ function UserHome({ quizzes, startQuiz, startRealTimeQuiz }) {
                     onClick={() => startRealTimeQuiz(quiz)}
                     className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition duration-200 font-semibold text-sm"
                   >
-                    ⏱️ Start Timed Quiz
+                    ⏱️ Başla (Zamanlı)
                   </button>
                 ) : (
                   // No time limit → Only show Standard mode
@@ -5559,13 +5559,13 @@ function UserHome({ quizzes, startQuiz, startRealTimeQuiz }) {
                     onClick={() => startQuiz(quiz)}
                     className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-200 font-semibold text-sm"
                   >
-                    📝 Start Quiz
+                    📝 Başla
                   </button>
                 )}
               </div>
               {quiz.time_limit_minutes && (
                 <div className="mt-2 text-xs text-gray-500 text-center">
-                  ⏰ {quiz.time_limit_minutes} minutes with live countdown
+                  ⏰ {quiz.time_limit_minutes} Dəqiqə limit
                 </div>
               )}
             </div>
@@ -5583,13 +5583,13 @@ function UserHome({ quizzes, startQuiz, startRealTimeQuiz }) {
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-4">
             <CategoryButton onClick={handleBackToSubjects} icon="🏠">
-              All Subjects
+              B
             </CategoryButton>
             <span className="text-gray-500">→</span>
             <span className="text-lg font-semibold text-gray-800">📚 {selectedSubject}</span>
           </div>
           <h2 className="text-3xl font-bold text-gray-800">
-            {selectedSubject} Subcategories
+            {selectedSubject} Bölmələr
           </h2>
         </div>
 
@@ -5604,12 +5604,12 @@ function UserHome({ quizzes, startQuiz, startRealTimeQuiz }) {
                 <div className="text-center">
                   <div className="text-4xl mb-3">📂</div>
                   <h3 className="text-lg font-semibold text-gray-800 mb-2">{subcategory}</h3>
-                  <p className="text-gray-500 mb-4">{quizCount} quiz{quizCount !== 1 ? 'es' : ''}</p>
+                  <p className="text-gray-500 mb-4">{quizCount} sınaq{quizCount !== 1 ? 'lar' : ''}</p>
                   <CategoryButton 
                     onClick={() => setSelectedSubcategory(subcategory)}
                     icon="📖"
                   >
-                    View Quizzes
+                    Sınaqları Göstər
                   </CategoryButton>
                 </div>
               </div>
@@ -5623,7 +5623,7 @@ function UserHome({ quizzes, startQuiz, startRealTimeQuiz }) {
   // Show subjects (main view)
   return (
     <div>
-      <h2 className="text-3xl font-bold text-gray-800 mb-6">📚 Quiz Subjects</h2>
+      <h2 className="text-3xl font-bold text-gray-800 mb-6">📚 Test mövzuları</h2>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {subjects.map((subject) => {
           const subcategoryCount = Object.keys(groupedQuizzes[subject]).length;
@@ -5653,13 +5653,13 @@ function UserHome({ quizzes, startQuiz, startRealTimeQuiz }) {
               <div className="text-center">
                 <div className="text-5xl mb-4">{getSubjectIcon(subject)}</div>
                 <h3 className="text-xl font-semibold text-gray-800 mb-2">{subject}</h3>
-                <p className="text-gray-500 mb-2">{subcategoryCount} subcategor{subcategoryCount !== 1 ? 'ies' : 'y'}</p>
-                <p className="text-gray-500 mb-4">{totalQuizCount} quiz{totalQuizCount !== 1 ? 'es' : ''}</p>
+                <p className="text-gray-500 mb-2">{subcategoryCount} Bölmə{subcategoryCount !== 1 ? 'lər' : ''}</p>
+                <p className="text-gray-500 mb-4">{totalQuizCount} Sınaq{totalQuizCount !== 1 ? 'lar' : ''}</p>
                 <CategoryButton 
                   onClick={() => setSelectedSubject(subject)}
                   icon="🗂️"
                 >
-                  Explore {subject}
+                  Araşdır {subject}
                 </CategoryButton>
               </div>
             </div>

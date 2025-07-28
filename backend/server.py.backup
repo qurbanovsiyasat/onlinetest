@@ -1,0 +1,1350 @@
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from dotenv import load_dotenv
+from starlette.middleware.cors import CORSMiddleware
+from motor.motor_asyncio import AsyncIOMotorClient
+import os
+import logging
+from pathlib import Path
+from pydantic import BaseModel, Field, EmailStr
+from typing import List, Optional, Dict
+import uuid
+from datetime import datetime, timedelta
+import jwt
+import bcrypt
+from enum import Enum
+import base64
+
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / '.env')
+
+# MongoDB connection
+mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+db_name = os.environ.get('DB_NAME', 'onlinetestmaker_db')
+client = AsyncIOMotorClient(mongo_url)
+db = client[db_name]
+
+# JWT Settings - Use environment variable or secure default
+JWT_SECRET = os.environ.get('JWT_SECRET', 'OnlineTestMaker_Self_Hosted_Secret_2025_CHANGE_THIS')
+JWT_ALGORITHM = os.environ.get('JWT_ALGORITHM', 'HS256')
+JWT_EXPIRATION_HOURS = int(os.environ.get('JWT_EXPIRATION_HOURS', '24'))
+
+# Create the main app
+app = FastAPI(
+    title="OnlineTestMaker API",
+    description="Self-Hosted Quiz Platform - No External Dependencies",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+api_router = APIRouter(prefix="/api")
+
+# Security
+security = HTTPBearer()
+
+# Enums
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    USER = "user"
+
+class SubjectFolderStatus(str, Enum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+    DRAFT = "draft"
+
+# CORS Configuration for Self-Hosted Deployment
+def get_cors_origins():
+    """Get allowed CORS origins from environment or use secure defaults for self-hosting"""
+    # Get from environment variable (comma-separated)
+    env_origins = os.environ.get('ALLOWED_ORIGINS', '')
+    if env_origins:
+        origins = [origin.strip() for origin in env_origins.split(',') if origin.strip()]
+    else:
+        origins = []
+    
+    # Default self-hosted origins
+    default_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "http://localhost",
+        "http://127.0.0.1",
+    ]
+    
+    # Add server IP addresses for local network access
+    try:
+        import socket
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+        if local_ip and local_ip != '127.0.0.1':
+            default_origins.extend([
+                f"http://{local_ip}:3000",
+                f"http://{local_ip}:3001",
+                f"http://{local_ip}",
+                f"https://{local_ip}:3000", 
+                f"https://{local_ip}:3001",
+                f"https://{local_ip}"
+            ])
+    except Exception as e:
+        logging.warning(f"Could not determine local IP: {e}")
+    
+    # Combine all origins and remove duplicates
+    all_origins = list(set(default_origins + origins))
+    
+    # Remove empty strings
+    all_origins = [origin for origin in all_origins if origin]
+    
+    logging.info(f"CORS allowed origins: {all_origins}")
+    return all_origins
+
+# Apply CORS middleware with comprehensive configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_cors_origins(),
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=[
+        "Accept",
+        "Accept-Language", 
+        "Content-Language",
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "X-CSRF-Token",
+        "Origin",
+        "Referer",
+        "User-Agent"
+    ],
+    expose_headers=["Content-Range", "X-Content-Range"],
+    max_age=3600  # Cache preflight requests for 1 hour
+)
+
+# Health check endpoint
+@api_router.get("/health")
+async def health_check():
+    """Health check endpoint to verify self-hosted backend is running"""
+    try:
+        # Check database connection
+        await db.command("ping")
+        return {
+            "status": "healthy",
+            "message": "OnlineTestMaker backend is running (self-hosted)",
+            "database": "connected",
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": "1.0.0",
+            "hosting": "self-hosted",
+            "external_dependencies": "none"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Health check failed: {str(e)}"
+        )
+
+@api_router.get("/cors-info")
+async def cors_info():
+    """CORS configuration information for debugging self-hosted deployment"""
+    return {
+        "allowed_origins": get_cors_origins(),
+        "allowed_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+        "allowed_headers": [
+            "Accept", "Accept-Language", "Content-Language",
+            "Content-Type", "Authorization", "X-Requested-With", 
+            "X-CSRF-Token", "Origin", "Referer", "User-Agent"
+        ],
+        "credentials_allowed": True,
+        "max_age": 3600,
+        "note": "Self-hosted deployment - no external dependencies",
+        "backend_url": f"http://localhost:{os.environ.get('PORT', '8001')}"
+    }
+
+# Pydantic Models
+class User(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: EmailStr
+    name: str
+    role: UserRole = UserRole.USER
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    name: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    name: str
+    role: UserRole
+    is_active: bool
+    created_at: datetime
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserResponse
+
+# Enhanced Subject Folder Models
+class SubjectFolder(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: Optional[str] = None
+    icon: Optional[str] = None  # Icon name or emoji
+    color: Optional[str] = "#3B82F6"  # Default blue color
+    subcategories: List[str] = []
+    status: SubjectFolderStatus = SubjectFolderStatus.ACTIVE
+    is_public: bool = True
+    allowed_users: List[str] = []
+    display_order: int = 0
+    quiz_count: int = 0  # Calculated field
+    created_by: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class SubjectFolderCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = "#3B82F6"
+    subcategories: List[str] = []
+    is_public: bool = True
+    allowed_users: List[str] = []
+    display_order: int = 0
+
+class SubjectFolderUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    subcategories: Optional[List[str]] = None
+    status: Optional[SubjectFolderStatus] = None
+    is_public: Optional[bool] = None
+    allowed_users: Optional[List[str]] = None
+    display_order: Optional[int] = None
+
+class SubjectFolderWithQuizzes(BaseModel):
+    """Subject folder with nested quiz information"""
+    folder: SubjectFolder
+    subcategories: Dict[str, List[dict]] = {}  # subcategory -> list of quizzes
+    total_quizzes: int = 0
+
+# Quiz-related models (keeping existing structure)
+class QuestionType(str, Enum):
+    MULTIPLE_CHOICE = "multiple_choice"
+    OPEN_ENDED = "open_ended"
+
+class DifficultyLevel(str, Enum):
+    EASY = "easy"
+    MEDIUM = "medium"
+    HARD = "hard"
+
+class QuizOption(BaseModel):
+    text: str
+    is_correct: bool
+
+class OpenEndedAnswer(BaseModel):
+    expected_answers: List[str]
+    keywords: List[str] = []
+    case_sensitive: bool = False
+    partial_credit: bool = True
+
+class QuizQuestion(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    question_text: str
+    question_type: QuestionType = QuestionType.MULTIPLE_CHOICE
+    options: List[QuizOption] = []
+    multiple_correct: bool = False
+    open_ended_answer: Optional[OpenEndedAnswer] = None
+    image_url: Optional[str] = None
+    pdf_url: Optional[str] = None
+    difficulty: Optional[DifficultyLevel] = None
+    points: int = 1
+    is_mandatory: bool = True
+    explanation: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class Quiz(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    description: str
+    category: str
+    subject: str  # Subject folder name
+    subcategory: str = "General"
+    questions: List[QuizQuestion]
+    created_by: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    total_questions: int = 0
+    total_points: int = 0
+    is_active: bool = True
+    is_public: bool = False
+    allowed_users: List[str] = []
+    total_attempts: int = 0
+    average_score: float = 0.0
+    min_pass_percentage: float = 60.0
+    time_limit_minutes: Optional[int] = None
+    shuffle_questions: bool = False
+    shuffle_options: bool = False
+    is_draft: bool = True
+    preview_token: Optional[str] = None
+
+class QuizCreate(BaseModel):
+    title: str
+    description: str
+    category: str
+    subject: str
+    subcategory: str = "General"
+    questions: List[QuizQuestion]
+    is_public: bool = False
+    allowed_users: List[str] = []
+    min_pass_percentage: float = 60.0
+    time_limit_minutes: Optional[int] = None
+    shuffle_questions: bool = False
+    shuffle_options: bool = False
+
+class QuizUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    subject: Optional[str] = None
+    subcategory: Optional[str] = None
+    questions: Optional[List[QuizQuestion]] = None
+    is_public: Optional[bool] = None
+    allowed_users: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+    min_pass_percentage: Optional[float] = None
+    time_limit_minutes: Optional[int] = None
+    shuffle_questions: Optional[bool] = None
+    shuffle_options: Optional[bool] = None
+    is_draft: Optional[bool] = None
+
+class QuizAttempt(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    quiz_id: str
+    user_id: str
+    answers: List[str]
+    correct_answers: List[str] = []
+    question_results: List[dict] = []
+    score: int
+    total_questions: int
+    percentage: float
+    earned_points: int = 0
+    total_possible_points: int = 0
+    points_percentage: float = 0.0
+    passed: bool = False
+    attempted_at: datetime = Field(default_factory=datetime.utcnow)
+    time_taken_minutes: Optional[int] = None
+
+class QuizAttemptCreate(BaseModel):
+    quiz_id: str
+    answers: List[str]
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+# Utility functions
+def hash_password(password: str) -> str:
+    """Hash password using bcrypt"""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def verify_password(password: str, hashed_password: str) -> bool:
+    """Verify password against hash"""
+    return bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+def create_access_token(user_data: dict) -> str:
+    """Create JWT access token"""
+    expire = datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS)
+    user_data.update({"exp": expire})
+    return jwt.encode(user_data, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+def decode_access_token(token: str) -> dict:
+    """Decode JWT access token"""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+# Dependencies
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get current user from JWT token"""
+    token = credentials.credentials
+    payload = decode_access_token(token)
+    
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    user_doc = await db.users.find_one({"id": user_id})
+    if not user_doc:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    return User(**user_doc)
+
+async def get_admin_user(current_user: User = Depends(get_current_user)):
+    """Ensure current user is admin"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
+# Authentication Routes
+@api_router.post("/auth/register", response_model=UserResponse)
+async def register(user_data: UserCreate):
+    """Register new user"""
+    existing_user = await db.users.find_one({"email": user_data.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    hashed_password = hash_password(user_data.password)
+    user = User(email=user_data.email, name=user_data.name, role=UserRole.USER)
+    
+    user_dict = user.dict()
+    user_dict["password"] = hashed_password
+    
+    await db.users.insert_one(user_dict)
+    return UserResponse(**user.dict())
+
+@api_router.post("/auth/login", response_model=Token)
+async def login(login_data: UserLogin):
+    """Login user"""
+    user_doc = await db.users.find_one({"email": login_data.email})
+    if not user_doc:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    if not verify_password(login_data.password, user_doc["password"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    user = User(**user_doc)
+    token_data = {
+        "sub": user.id,
+        "email": user.email,
+        "role": user.role,
+        "name": user.name
+    }
+    access_token = create_access_token(token_data)
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": UserResponse(**user.dict())
+    }
+
+@api_router.get("/auth/me", response_model=UserResponse)
+async def get_me(current_user: User = Depends(get_current_user)):
+    """Get current user info"""
+    return UserResponse(**current_user.dict())
+
+@api_router.post("/auth/change-password")
+async def change_password(password_data: PasswordChange, current_user: User = Depends(get_current_user)):
+    """Change user password"""
+    user_doc = await db.users.find_one({"id": current_user.id})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not verify_password(password_data.current_password, user_doc["password"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    
+    new_hashed_password = hash_password(password_data.new_password)
+    
+    await db.users.update_one(
+        {"id": current_user.id},
+        {"$set": {"password": new_hashed_password}}
+    )
+    
+    return {"message": "Password updated successfully"}
+
+# Enhanced Subject Folder Management Routes
+@api_router.post("/admin/subject-folder", response_model=SubjectFolder)
+async def create_subject_folder(folder_data: SubjectFolderCreate, admin_user: User = Depends(get_admin_user)):
+    """Create new subject folder"""
+    # Check if folder already exists
+    existing = await db.subject_folders.find_one({
+        "name": {"$regex": f"^{folder_data.name}$", "$options": "i"},
+        "status": {"$ne": "archived"}
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Subject folder with this name already exists")
+    
+    folder = SubjectFolder(**folder_data.dict(), created_by=admin_user.id)
+    await db.subject_folders.insert_one(folder.dict())
+    return folder
+
+@api_router.get("/admin/subject-folders", response_model=List[SubjectFolder])
+async def get_admin_subject_folders(admin_user: User = Depends(get_admin_user)):
+    """Get all subject folders for admin management"""
+    folders = await db.subject_folders.find({
+        "status": {"$ne": "archived"}
+    }).sort("display_order", 1).to_list(1000)
+    
+    # Calculate quiz counts for each folder
+    for folder in folders:
+        quiz_count = await db.quizzes.count_documents({
+            "subject": folder["name"],
+            "is_active": True
+        })
+        folder["quiz_count"] = quiz_count
+    
+    return [SubjectFolder(**folder) for folder in folders]
+
+@api_router.put("/admin/subject-folder/{folder_id}", response_model=SubjectFolder)
+async def update_subject_folder(folder_id: str, folder_data: SubjectFolderUpdate, admin_user: User = Depends(get_admin_user)):
+    """Update subject folder"""
+    existing = await db.subject_folders.find_one({
+        "id": folder_id,
+        "status": {"$ne": "archived"}
+    })
+    if not existing:
+        raise HTTPException(status_code=404, detail="Subject folder not found")
+    
+    # Check for name conflicts if name is being changed
+    if folder_data.name and folder_data.name != existing["name"]:
+        name_conflict = await db.subject_folders.find_one({
+            "name": {"$regex": f"^{folder_data.name}$", "$options": "i"},
+            "id": {"$ne": folder_id},
+            "status": {"$ne": "archived"}
+        })
+        if name_conflict:
+            raise HTTPException(status_code=400, detail="Subject folder with this name already exists")
+    
+    update_data = {k: v for k, v in folder_data.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.subject_folders.update_one({"id": folder_id}, {"$set": update_data})
+    
+    updated_folder = await db.subject_folders.find_one({"id": folder_id})
+    return SubjectFolder(**updated_folder)
+
+@api_router.delete("/admin/subject-folder/{folder_id}")
+async def delete_subject_folder(folder_id: str, admin_user: User = Depends(get_admin_user)):
+    """Archive subject folder (soft delete)"""
+    existing = await db.subject_folders.find_one({
+        "id": folder_id,
+        "status": {"$ne": "archived"}
+    })
+    if not existing:
+        raise HTTPException(status_code=404, detail="Subject folder not found")
+    
+    # Check if there are active quizzes in this folder
+    quiz_count = await db.quizzes.count_documents({
+        "subject": existing["name"],
+        "is_active": True
+    })
+    if quiz_count > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot delete folder with {quiz_count} active quizzes. Move or delete quizzes first."
+        )
+    
+    # Archive the folder
+    await db.subject_folders.update_one(
+        {"id": folder_id}, 
+        {"$set": {
+            "status": "archived",
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    return {"message": "Subject folder archived successfully"}
+
+# Public Subject Folders Routes (for users)
+@api_router.get("/subject-folders", response_model=List[SubjectFolderWithQuizzes])
+async def get_public_subject_folders(current_user: User = Depends(get_current_user)):
+    """Get all accessible subject folders with their quizzes organized by subcategories"""
+    # Get active subject folders
+    folders = await db.subject_folders.find({
+        "status": "active",
+        "is_public": True
+    }).sort("display_order", 1).to_list(1000)
+    
+    result = []
+    
+    for folder_doc in folders:
+        folder = SubjectFolder(**folder_doc)
+        
+        # Get all quizzes in this subject
+        quizzes = await db.quizzes.find({
+            "subject": folder.name,
+            "is_active": True,
+            "is_draft": False
+        }).to_list(1000)
+        
+        # Organize quizzes by subcategory
+        subcategories = {}
+        total_quizzes = 0
+        
+        for quiz in quizzes:
+            # Check if user has access to this quiz
+            if not quiz.get("is_public", False):
+                if current_user.id not in quiz.get("allowed_users", []):
+                    continue
+            
+            subcategory = quiz.get("subcategory", "General")
+            if subcategory not in subcategories:
+                subcategories[subcategory] = []
+            
+            quiz_info = {
+                "id": quiz["id"],
+                "title": quiz["title"],
+                "description": quiz["description"],
+                "category": quiz.get("category", ""),
+                "total_questions": quiz.get("total_questions", 0),
+                "total_points": quiz.get("total_points", 0),
+                "difficulty": quiz.get("difficulty", "medium"),
+                "total_attempts": quiz.get("total_attempts", 0),
+                "average_score": quiz.get("average_score", 0.0),
+                "time_limit_minutes": quiz.get("time_limit_minutes"),
+                "created_at": quiz["created_at"],
+                "updated_at": quiz.get("updated_at", quiz["created_at"])
+            }
+            
+            subcategories[subcategory].append(quiz_info)
+            total_quizzes += 1
+        
+        # Sort quizzes within each subcategory by creation date (newest first)
+        for subcategory in subcategories:
+            subcategories[subcategory].sort(key=lambda x: x["updated_at"], reverse=True)
+        
+        # Only include folders that have accessible quizzes
+        if total_quizzes > 0:
+            result.append(SubjectFolderWithQuizzes(
+                folder=folder,
+                subcategories=subcategories,
+                total_quizzes=total_quizzes
+            ))
+    
+    return result
+
+@api_router.get("/subject-folder/{folder_name}/quizzes")
+async def get_subject_folder_quizzes(folder_name: str, current_user: User = Depends(get_current_user)):
+    """Get all quizzes in a specific subject folder"""
+    # Verify folder exists and is accessible
+    folder = await db.subject_folders.find_one({
+        "name": folder_name,
+        "status": "active",
+        "is_public": True
+    })
+    if not folder:
+        raise HTTPException(status_code=404, detail="Subject folder not found or not accessible")
+    
+    # Get quizzes in this subject
+    quizzes = await db.quizzes.find({
+        "subject": folder_name,
+        "is_active": True,
+        "is_draft": False
+    }).to_list(1000)
+    
+    accessible_quizzes = []
+    for quiz in quizzes:
+        # Check access permissions
+        if not quiz.get("is_public", False):
+            if current_user.id not in quiz.get("allowed_users", []):
+                continue
+        
+        quiz_info = {
+            "id": quiz["id"],
+            "title": quiz["title"],
+            "description": quiz["description"],
+            "category": quiz.get("category", ""),
+            "subcategory": quiz.get("subcategory", "General"),
+            "total_questions": quiz.get("total_questions", 0),
+            "total_points": quiz.get("total_points", 0),
+            "total_attempts": quiz.get("total_attempts", 0),
+            "average_score": quiz.get("average_score", 0.0),
+            "time_limit_minutes": quiz.get("time_limit_minutes"),
+            "min_pass_percentage": quiz.get("min_pass_percentage", 60.0),
+            "created_at": quiz["created_at"],
+            "updated_at": quiz.get("updated_at", quiz["created_at"])
+        }
+        accessible_quizzes.append(quiz_info)
+    
+    # Sort by updated date (newest first)
+    accessible_quizzes.sort(key=lambda x: x["updated_at"], reverse=True)
+    
+    return {
+        "folder": SubjectFolder(**folder),
+        "quizzes": accessible_quizzes,
+        "total_count": len(accessible_quizzes)
+    }
+
+# Quiz Routes (keeping existing functionality but enhancing subject integration)
+@api_router.post("/admin/quiz", response_model=Quiz)
+async def create_quiz(quiz_data: QuizCreate, admin_user: User = Depends(get_admin_user)):
+    """Create quiz with subject folder validation"""
+    # Validate that the subject folder exists
+    subject_folder = await db.subject_folders.find_one({
+        "name": quiz_data.subject,
+        "status": "active"
+    })
+    if not subject_folder:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Subject folder '{quiz_data.subject}' not found. Please create the subject folder first."
+        )
+    
+    # Validate subcategory
+    if quiz_data.subcategory not in subject_folder.get("subcategories", ["General"]):
+        # Auto-add subcategory if it doesn't exist
+        await db.subject_folders.update_one(
+            {"name": quiz_data.subject},
+            {"$addToSet": {"subcategories": quiz_data.subcategory}}
+        )
+    
+    # Calculate total points
+    total_points = sum(question.points for question in quiz_data.questions)
+    
+    # Create quiz
+    quiz = Quiz(**quiz_data.dict(), created_by=admin_user.id)
+    quiz.total_questions = len(quiz.questions)
+    quiz.total_points = total_points
+    quiz.updated_at = datetime.utcnow()
+    quiz.is_draft = True
+    
+    await db.quizzes.insert_one(quiz.dict())
+    return quiz
+
+@api_router.get("/admin/quizzes", response_model=List[Quiz])
+async def get_all_quizzes_admin(admin_user: User = Depends(get_admin_user)):
+    """Get all quizzes organized by subject folders"""
+    quizzes = await db.quizzes.find().sort("updated_at", -1).to_list(1000)
+    valid_quizzes = []
+    
+    for quiz in quizzes:
+        # Handle backward compatibility
+        if 'category' not in quiz:
+            quiz['category'] = 'Uncategorized'
+        if 'created_by' not in quiz:
+            quiz['created_by'] = admin_user.id
+        if 'is_active' not in quiz:
+            quiz['is_active'] = True
+        if 'is_public' not in quiz:
+            quiz['is_public'] = False
+        if 'allowed_users' not in quiz:
+            quiz['allowed_users'] = []
+        if 'subject' not in quiz:
+            quiz['subject'] = quiz.get('subject_folder', 'General')
+        if 'subcategory' not in quiz:
+            quiz['subcategory'] = 'General'
+        if 'updated_at' not in quiz:
+            quiz['updated_at'] = quiz.get('created_at', datetime.utcnow())
+        if 'total_attempts' not in quiz:
+            quiz['total_attempts'] = 0
+        if 'average_score' not in quiz:
+            quiz['average_score'] = 0.0
+        
+        try:
+            valid_quizzes.append(Quiz(**quiz))
+        except Exception as e:
+            logging.warning(f"Skipping invalid quiz: {quiz.get('id', 'unknown')} - {str(e)}")
+            continue
+    
+    return valid_quizzes
+
+# User Quiz Routes
+@api_router.get("/quizzes")
+async def get_public_quizzes(current_user: User = Depends(get_current_user)):
+    """Get all accessible quizzes organized by subject folders"""
+    return await get_public_subject_folders(current_user)
+
+@api_router.get("/quiz/{quiz_id}", response_model=Quiz)
+async def get_quiz(quiz_id: str, current_user: User = Depends(get_current_user)):
+    """Get specific quiz with access control"""
+    quiz = await db.quizzes.find_one({"id": quiz_id, "is_active": True})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    # Check access permissions
+    if not quiz.get("is_public", False):
+        if current_user.id not in quiz.get("allowed_users", []):
+            raise HTTPException(status_code=403, detail="You don't have access to this quiz")
+    
+    # Ensure quiz has subject field for backward compatibility
+    if 'subject' not in quiz:
+        quiz['subject'] = quiz.get('subject_folder', 'General')
+    
+    return Quiz(**quiz)
+
+@api_router.post("/quiz/{quiz_id}/attempt", response_model=QuizAttempt)
+async def submit_quiz_attempt(quiz_id: str, attempt_data: QuizAttemptCreate, current_user: User = Depends(get_current_user)):
+    """Submit quiz attempt with enhanced grading"""
+    if current_user.role == UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Admins cannot take quizzes")
+    
+    # Get quiz
+    quiz = await db.quizzes.find_one({"id": quiz_id, "is_active": True, "is_draft": False})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found or not published")
+    
+    # Check access permissions
+    if not quiz.get("is_public", False):
+        if current_user.id not in quiz.get("allowed_users", []):
+            raise HTTPException(status_code=403, detail="You don't have access to this quiz")
+    
+    quiz_obj = Quiz(**quiz)
+    
+    # Calculate score and detailed results
+    score = 0
+    total_possible_points = sum(question.points for question in quiz_obj.questions)
+    earned_points = 0
+    correct_answers = []
+    question_results = []
+    
+    for i, user_answer in enumerate(attempt_data.answers):
+        if i < len(quiz_obj.questions):
+            question = quiz_obj.questions[i]
+            
+            if question.question_type == QuestionType.MULTIPLE_CHOICE:
+                result = grade_multiple_choice_question(question, user_answer, i)
+            elif question.question_type == QuestionType.OPEN_ENDED:
+                result = grade_open_ended_question(question, user_answer, i)
+            else:
+                result = {
+                    "question_number": i + 1,
+                    "question_text": question.question_text,
+                    "question_type": question.question_type,
+                    "user_answer": user_answer,
+                    "correct_answer": "Unknown",
+                    "is_correct": False,
+                    "points_earned": 0,
+                    "points_possible": question.points,
+                    "explanation": "Unknown question type"
+                }
+            
+            question_results.append(result)
+            correct_answers.append(result["correct_answer"])
+            
+            if result["is_correct"]:
+                score += 1
+            
+            earned_points += result["points_earned"]
+    
+    # Calculate percentages
+    percentage = (score / len(quiz_obj.questions) * 100) if len(quiz_obj.questions) > 0 else 0
+    points_percentage = (earned_points / total_possible_points * 100) if total_possible_points > 0 else 0
+    
+    # Determine if user passed
+    passed = points_percentage >= quiz.get("min_pass_percentage", 60.0)
+    
+    # Create attempt record
+    attempt = QuizAttempt(
+        quiz_id=quiz_id,
+        user_id=current_user.id,
+        answers=attempt_data.answers,
+        correct_answers=correct_answers,
+        question_results=question_results,
+        score=score,
+        total_questions=len(quiz_obj.questions),
+        percentage=percentage,
+        earned_points=int(round(earned_points)),
+        total_possible_points=total_possible_points,
+        points_percentage=points_percentage,
+        passed=passed
+    )
+    
+    await db.quiz_attempts.insert_one(attempt.dict())
+    
+    # Update quiz statistics
+    await update_quiz_statistics(quiz_id)
+    
+    return attempt
+
+def grade_multiple_choice_question(question: QuizQuestion, user_answer: str, question_index: int) -> dict:
+    """Grade a multiple choice question"""
+    correct_options = [opt.text for opt in question.options if opt.is_correct]
+    
+    if question.multiple_correct:
+        # For multiple correct answers, user_answer should be comma-separated
+        user_answers = [ans.strip() for ans in user_answer.split(',') if ans.strip()]
+        correct_count = len([ans for ans in user_answers if ans in correct_options])
+        incorrect_count = len([ans for ans in user_answers if ans not in correct_options])
+        
+        # Partial credit calculation
+        if correct_count == len(correct_options) and incorrect_count == 0:
+            points_earned = question.points
+            is_correct = True
+        elif correct_count > 0 and incorrect_count == 0:
+            points_earned = question.points * (correct_count / len(correct_options))
+            is_correct = False
+        else:
+            points_earned = 0
+            is_correct = False
+        
+        correct_answer = ", ".join(correct_options)
+    else:
+        # Single correct answer
+        is_correct = user_answer in correct_options
+        points_earned = question.points if is_correct else 0
+        correct_answer = correct_options[0] if correct_options else "No correct answer"
+    
+    return {
+        "question_number": question_index + 1,
+        "question_text": question.question_text,
+        "question_type": question.question_type,
+        "user_answer": user_answer,
+        "correct_answer": correct_answer,
+        "is_correct": is_correct,
+        "points_earned": points_earned,
+        "points_possible": question.points,
+        "all_options": [opt.text for opt in question.options],
+        "question_image": question.image_url,
+        "question_pdf": question.pdf_url,
+        "explanation": question.explanation,
+        "difficulty": question.difficulty
+    }
+
+def grade_open_ended_question(question: QuizQuestion, user_answer: str, question_index: int) -> dict:
+    """Grade an open-ended question"""
+    if not question.open_ended_answer:
+        return {
+            "question_number": question_index + 1,
+            "question_text": question.question_text,
+            "question_type": question.question_type,
+            "user_answer": user_answer,
+            "correct_answer": "No expected answer defined",
+            "is_correct": False,
+            "points_earned": 0,
+            "points_possible": question.points,
+            "explanation": "Question configuration error"
+        }
+    
+    expected_answers = question.open_ended_answer.expected_answers
+    keywords = question.open_ended_answer.keywords
+    case_sensitive = question.open_ended_answer.case_sensitive
+    partial_credit = question.open_ended_answer.partial_credit
+    
+    user_answer_processed = user_answer if case_sensitive else user_answer.lower()
+    
+    # Check for exact matches
+    is_exact_match = False
+    for expected in expected_answers:
+        expected_processed = expected if case_sensitive else expected.lower()
+        if user_answer_processed.strip() == expected_processed.strip():
+            is_exact_match = True
+            break
+    
+    # Check for keyword matches if partial credit is enabled
+    keyword_matches = 0
+    if keywords and partial_credit:
+        for keyword in keywords:
+            keyword_processed = keyword if case_sensitive else keyword.lower()
+            if keyword_processed in user_answer_processed:
+                keyword_matches += 1
+    
+    # Calculate points
+    if is_exact_match:
+        points_earned = question.points
+        is_correct = True
+    elif keyword_matches > 0 and partial_credit:
+        points_earned = question.points * (keyword_matches / len(keywords)) * 0.5
+        is_correct = False
+    else:
+        points_earned = 0
+        is_correct = False
+    
+    return {
+        "question_number": question_index + 1,
+        "question_text": question.question_text,
+        "question_type": question.question_type,
+        "user_answer": user_answer,
+        "correct_answer": " OR ".join(expected_answers),
+        "is_correct": is_correct,
+        "points_earned": points_earned,
+        "points_possible": question.points,
+        "keyword_matches": keyword_matches,
+        "total_keywords": len(keywords),
+        "question_image": question.image_url,
+        "question_pdf": question.pdf_url,
+        "explanation": question.explanation,
+        "difficulty": question.difficulty
+    }
+
+async def update_quiz_statistics(quiz_id: str):
+    """Update quiz statistics after a new attempt"""
+    attempts = await db.quiz_attempts.find({"quiz_id": quiz_id}).to_list(1000)
+    
+    if attempts:
+        total_attempts = len(attempts)
+        total_percentage = sum(attempt["percentage"] for attempt in attempts)
+        average_score = total_percentage / total_attempts
+        
+        await db.quizzes.update_one(
+            {"id": quiz_id},
+            {
+                "$set": {
+                    "total_attempts": total_attempts,
+                    "average_score": round(average_score, 1),
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+
+# Admin Quiz Management Routes
+@api_router.put("/admin/quiz/{quiz_id}", response_model=Quiz)
+async def update_quiz(quiz_id: str, quiz_data: QuizUpdate, admin_user: User = Depends(get_admin_user)):
+    """Update quiz with subject folder validation"""
+    existing_quiz = await db.quizzes.find_one({"id": quiz_id})
+    if not existing_quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    if existing_quiz["created_by"] != admin_user.id:
+        raise HTTPException(status_code=403, detail="You can only edit quizzes you created")
+    
+    # Validate subject folder if being changed
+    if quiz_data.subject:
+        subject_folder = await db.subject_folders.find_one({
+            "name": quiz_data.subject,
+            "status": "active"
+        })
+        if not subject_folder:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Subject folder '{quiz_data.subject}' not found"
+            )
+    
+    update_data = {k: v for k, v in quiz_data.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.utcnow()
+    
+    # Recalculate totals if questions updated
+    if "questions" in update_data:
+        update_data["total_questions"] = len(update_data["questions"])
+        update_data["total_points"] = sum(q.get("points", 1) for q in update_data["questions"])
+        update_data["total_attempts"] = 0
+        update_data["average_score"] = 0.0
+    
+    await db.quizzes.update_one({"id": quiz_id}, {"$set": update_data})
+    
+    updated_quiz = await db.quizzes.find_one({"id": quiz_id})
+    return Quiz(**updated_quiz)
+
+@api_router.post("/admin/quiz/{quiz_id}/publish")
+async def publish_quiz(quiz_id: str, admin_user: User = Depends(get_admin_user)):
+    """Publish quiz (make it available to users)"""
+    quiz = await db.quizzes.find_one({"id": quiz_id})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    if quiz["created_by"] != admin_user.id:
+        raise HTTPException(status_code=403, detail="You can only publish quizzes you created")
+    
+    await db.quizzes.update_one(
+        {"id": quiz_id},
+        {"$set": {
+            "is_draft": False,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    return {"message": "Quiz published successfully"}
+
+@api_router.delete("/admin/quiz/{quiz_id}")
+async def delete_quiz(quiz_id: str, admin_user: User = Depends(get_admin_user)):
+    """Delete quiz"""
+    quiz = await db.quizzes.find_one({"id": quiz_id})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    if quiz["created_by"] != admin_user.id:
+        raise HTTPException(status_code=403, detail="You can only delete quizzes you created")
+    
+    result = await db.quizzes.delete_one({"id": quiz_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    return {"message": "Quiz deleted successfully"}
+
+@api_router.post("/admin/quiz/{quiz_id}/move-folder")
+async def move_quiz_to_folder(
+    quiz_id: str, 
+    new_subject: str, 
+    new_subcategory: str = "General", 
+    admin_user: User = Depends(get_admin_user)
+):
+    """Move quiz to different subject folder"""
+    quiz = await db.quizzes.find_one({"id": quiz_id})
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    if quiz["created_by"] != admin_user.id:
+        raise HTTPException(status_code=403, detail="You can only move quizzes you created")
+    
+    # Validate target folder exists
+    target_folder = await db.subject_folders.find_one({
+        "name": new_subject,
+        "status": "active"
+    })
+    if not target_folder:
+        raise HTTPException(status_code=404, detail="Target subject folder not found")
+    
+    # Add subcategory to folder if it doesn't exist
+    if new_subcategory not in target_folder.get("subcategories", []):
+        await db.subject_folders.update_one(
+            {"name": new_subject},
+            {"$addToSet": {"subcategories": new_subcategory}}
+        )
+    
+    # Update quiz location
+    await db.quizzes.update_one(
+        {"id": quiz_id},
+        {"$set": {
+            "subject": new_subject,
+            "subcategory": new_subcategory,
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    
+    return {"message": f"Quiz moved to {new_subject} → {new_subcategory}"}
+
+# File Upload Routes
+@api_router.post("/admin/upload-file")
+async def upload_file(file: UploadFile = File(...), admin_user: User = Depends(get_admin_user)):
+    """Upload file (image or PDF) for quiz questions"""
+    # Read file content
+    content = await file.read()
+    
+    # Validate file type
+    allowed_image_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+    allowed_pdf_types = ['application/pdf']
+    allowed_types = allowed_image_types + allowed_pdf_types
+    
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"File type not supported. Allowed types: {', '.join(allowed_types)}"
+        )
+    
+    # Validate file size (max 10MB)
+    max_size = 10 * 1024 * 1024  # 10MB
+    if len(content) > max_size:
+        raise HTTPException(status_code=400, detail="File too large. Maximum size: 10MB")
+    
+    # Validate image format if it's an image
+    if file.content_type in allowed_image_types:
+        try:
+            import imghdr
+            file_type = imghdr.what(None, h=content)
+            if file_type not in ['jpeg', 'png', 'gif', 'webp']:
+                raise HTTPException(status_code=400, detail="Invalid image format")
+        except ImportError:
+            # Fallback validation if imghdr not available
+            if not any(content.startswith(sig) for sig in [
+                b'\xff\xd8\xff',        # JPEG
+                b'\x89PNG\r\n\x1a\n',  # PNG
+                b'GIF87a', b'GIF89a',  # GIF
+            ]):
+                raise HTTPException(status_code=400, detail="Invalid image format")
+    
+    # Generate unique filename
+    file_id = str(uuid.uuid4())
+    file_extension = file.filename.split('.')[-1] if '.' in file.filename else 'bin'
+    filename = f"{file_id}.{file_extension}"
+    
+    # Convert to base64 for self-hosted storage
+    base64_content = base64.b64encode(content).decode('utf-8')
+    
+    # Determine file category
+    file_category = 'pdf' if file.content_type in allowed_pdf_types else 'image'
+    
+    # Store file metadata in database
+    file_data = {
+        "id": file_id,
+        "filename": filename,
+        "original_name": file.filename,
+        "content_type": file.content_type,
+        "category": file_category,
+        "size": len(content),
+        "base64_data": base64_content,
+        "uploaded_by": admin_user.id,
+        "uploaded_at": datetime.utcnow()
+    }
+    
+    await db.files.insert_one(file_data)
+    
+    # Return file URL (base64 data URL)
+    data_url = f"data:{file.content_type};base64,{base64_content}"
+    
+    return {
+        "id": file_id,
+        "filename": filename,
+        "original_name": file.filename,
+        "url": data_url,
+        "size": len(content),
+        "category": file_category,
+        "content_type": file.content_type
+    }
+
+@api_router.get("/file/{file_id}")
+async def get_file(file_id: str):
+    """Get file by ID (public access for quiz files)"""
+    file_doc = await db.files.find_one({"id": file_id})
+    if not file_doc:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Return base64 data URL
+    data_url = f"data:{file_doc['content_type']};base64,{file_doc['base64_data']}"
+    return {
+        "url": data_url,
+        "filename": file_doc['filename'],
+        "original_name": file_doc['original_name'],
+        "content_type": file_doc['content_type'],
+        "size": file_doc['size']
+    }
+
+# Analytics and User Management Routes
+@api_router.get("/admin/users", response_model=List[UserResponse])
+async def get_all_users(admin_user: User = Depends(get_admin_user)):
+    """Get all users"""
+    users = await db.users.find().to_list(1000)
+    return [UserResponse(**user) for user in users]
+
+@api_router.get("/admin/analytics/summary")
+async def get_analytics_summary(admin_user: User = Depends(get_admin_user)):
+    """Get analytics summary for admin dashboard"""
+    total_users = await db.users.count_documents({"role": "user"})
+    total_quizzes = await db.quizzes.count_documents({"is_active": True})
+    total_attempts = await db.quiz_attempts.count_documents({})
+    
+    # Calculate average score
+    attempts = await db.quiz_attempts.find().to_list(1000)
+    avg_score = 0
+    if attempts:
+        total_percentage = sum(attempt["percentage"] for attempt in attempts)
+        avg_score = total_percentage / len(attempts)
+    
+    # Get most popular quiz
+    quiz_attempt_counts = {}
+    for attempt in attempts:
+        quiz_id = attempt["quiz_id"]
+        quiz_attempt_counts[quiz_id] = quiz_attempt_counts.get(quiz_id, 0) + 1
+    
+    most_popular_quiz = "None"
+    if quiz_attempt_counts:
+        most_popular_quiz_id = max(quiz_attempt_counts, key=quiz_attempt_counts.get)
+        quiz = await db.quizzes.find_one({"id": most_popular_quiz_id})
+        if quiz:
+            most_popular_quiz = quiz.get("title", "Unknown Quiz")
+    
+    return {
+        "total_users": total_users,
+        "total_quizzes": total_quizzes,
+        "total_attempts": total_attempts,
+        "average_score": round(avg_score, 1),
+        "most_popular_quiz": most_popular_quiz
+    }
+
+@api_router.get("/my-attempts", response_model=List[QuizAttempt])
+async def get_my_attempts(current_user: User = Depends(get_current_user)):
+    """Get current user's quiz attempts"""
+    attempts = await db.quiz_attempts.find({"user_id": current_user.id}).to_list(1000)
+    return [QuizAttempt(**attempt) for attempt in attempts]
+
+# Initialization Route
+@api_router.post("/init-admin")
+async def initialize_admin():
+    """Initialize admin user (run once)"""
+    admin_exists = await db.users.find_one({"role": "admin"})
+    if admin_exists:
+        raise HTTPException(status_code=400, detail="Admin already exists")
+    
+    # Create admin user
+    admin_password = hash_password("admin123")  # Change this in production
+    admin_user = User(
+        email="admin@onlinetestmaker.com",
+        name="System Administrator",
+        role=UserRole.ADMIN
+    )
+    
+    admin_dict = admin_user.dict()
+    admin_dict["password"] = admin_password
+    
+    await db.users.insert_one(admin_dict)
+    
+    # Create default subject folders
+    default_subjects = [
+        {"name": "Mathematics", "icon": "🔢", "color": "#3B82F6", "subcategories": ["Algebra", "Geometry", "Calculus", "Statistics"]},
+        {"name": "Science", "icon": "🔬", "color": "#10B981", "subcategories": ["Physics", "Chemistry", "Biology"]},
+        {"name": "History", "icon": "📚", "color": "#F59E0B", "subcategories": ["Ancient History", "Modern History", "World Wars"]},
+        {"name": "Language", "icon": "💬", "color": "#EF4444", "subcategories": ["Grammar", "Literature", "Vocabulary"]},
+        {"name": "General", "icon": "🌟", "color": "#8B5CF6", "subcategories": ["General Knowledge", "Mixed Topics"]}
+    ]
+    
+    for i, subject_data in enumerate(default_subjects):
+        subject_folder = SubjectFolder(
+            **subject_data,
+            display_order=i,
+            created_by=admin_user.id
+        )
+        await db.subject_folders.insert_one(subject_folder.dict())
+    
+    return {
+        "message": "Admin user and default subject folders created successfully",
+        "email": "admin@onlinetestmaker.com",
+        "password": "admin123",
+        "default_subjects": [s["name"] for s in default_subjects]
+    }
+
+# Root route
+@api_router.get("/")
+async def root():
+    return {
+        "message": "OnlineTestMaker API - Self-Hosted Version", 
+        "version": "1.0.0",
+        "hosting": "self-hosted",
+        "external_dependencies": "none",
+        "features": [
+            "Subject folder organization",
+            "Flexible question types",
+            "File uploads (base64 storage)",
+            "Advanced grading system",
+            "User access control",
+            "Analytics dashboard"
+        ]
+    }
+
+# Include router in app
+app.include_router(api_router)
+
+# Logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+@app.on_event("startup")
+async def startup_event():
+    """Log startup information"""
+    logger.info("OnlineTestMaker API started - Self-Hosted Mode")
+    logger.info(f"Database: {mongo_url}")
+    logger.info(f"CORS Origins: {get_cors_origins()}")
+    logger.info("No external dependencies - fully self-hosted")
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    """Close database connection on shutdown"""
+    client.close()
+    logger.info("Database connection closed")
+
+# Add a middleware to log requests (optional)
+@app.middleware("http")
+async def log_requests(request, call_next):
+    """Log all HTTP requests for debugging"""
+    start_time = datetime.utcnow()
+    response = await call_next(request)
+    process_time = (datetime.utcnow() - start_time).total_seconds()
+    
+    logger.info(
+        f"{request.method} {request.url.path} - "
+        f"Status: {response.status_code} - "
+        f"Time: {process_time:.3f}s"
+    )
+    
+    return response
