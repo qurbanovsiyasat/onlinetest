@@ -5226,7 +5226,7 @@ function UserResult({ result, quiz, setCurrentView, startQuiz, startRealTimeQuiz
                 🏠 Sınaqlara qayıt
               </button>
               <button
-                onClick={() => startQuiz(quiz)}
+                onClick={() => isTimedQuiz ? startRealTimeQuiz(quiz) : startQuiz(quiz)}
                 className="bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition duration-200 font-semibold"
               >
                 🔄 Yenidən işlə
