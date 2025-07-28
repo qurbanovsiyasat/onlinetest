@@ -6026,46 +6026,13 @@ function UserHome({ quizzes, startQuiz, startRealTimeQuiz, currentUser }) {
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {subcategoryQuizzes.map((quiz) => (
-            <div key={quiz.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition duration-200">
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">{quiz.title}</h3>
-              <p className="text-gray-600 mb-4">{quiz.description}</p>
-              <div className="flex justify-between items-center mb-4 text-sm text-gray-500">
-                <span>{quiz.total_questions} suallar</span>
-                <span>{quiz.total_attempts || 0} cəhdlər</span>
-              </div>
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-sm text-gray-500">
-                 Cateqoriya: {quiz.category}
-                </span>
-                <span className="text-sm text-gray-500">
-                  faiz: {quiz.average_score || 0}%
-                </span>
-              </div>
-              <div className="flex gap-2">
-                {quiz.time_limit_minutes ? (
-                  // Time limit is set → Only show Timed mode
-                  <button
-                    onClick={() => startRealTimeQuiz(quiz)}
-                    className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition duration-200 font-semibold text-sm"
-                  >
-                    ⏱️ Başla (Zamanlı)
-                  </button>
-                ) : (
-                  // No time limit → Only show Standard mode
-                  <button
-                    onClick={() => startQuiz(quiz)}
-                    className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition duration-200 font-semibold text-sm"
-                  >
-                    📝 Başla
-                  </button>
-                )}
-              </div>
-              {quiz.time_limit_minutes && (
-                <div className="mt-2 text-xs text-gray-500 text-center">
-                  ⏰ {quiz.time_limit_minutes} Dəqiqə limit
-                </div>
-              )}
-            </div>
+            <QuizCard 
+              key={quiz.id} 
+              quiz={quiz} 
+              startQuiz={startQuiz}
+              startRealTimeQuiz={startRealTimeQuiz}
+              currentUser={currentUser}
+            />
           ))}
         </div>
       </div>
