@@ -4234,24 +4234,48 @@ async def get_user_follow_stats(
     current_user: User = Depends(get_current_user)
 ):
     """Get follow statistics for a user"""
-    followers_count = await db.follows.count_documents({"following_id": user_id})
-    following_count = await db.follows.count_documents({"follower_id": user_id})
+    # Only count approved follows for public stats
+    followers_count = await db.follows.count_documents({
+        "following_id": user_id,
+        "status": FollowStatus.APPROVED
+    })
+    following_count = await db.follows.count_documents({
+        "follower_id": user_id,
+        "status": FollowStatus.APPROVED
+    })
     
-    is_following = await db.follows.find_one({
+    # For the user's own stats, also show pending requests
+    pending_requests_count = 0
+    if current_user.id == user_id:
+        pending_requests_count = await db.follows.count_documents({
+            "following_id": user_id,
+            "status": FollowStatus.PENDING
+        })
+    
+    # Check current user's relationship with this user
+    follow_relationship = await db.follows.find_one({
         "follower_id": current_user.id,
         "following_id": user_id
-    }) is not None
+    })
     
-    is_followed_by = await db.follows.find_one({
+    is_following = follow_relationship is not None and follow_relationship.get("status") == FollowStatus.APPROVED
+    is_pending_approval = follow_relationship is not None and follow_relationship.get("status") == FollowStatus.PENDING
+    
+    # Check reverse relationship
+    reverse_follow = await db.follows.find_one({
         "follower_id": user_id,
-        "following_id": current_user.id
-    }) is not None
+        "following_id": current_user.id,
+        "status": FollowStatus.APPROVED
+    })
+    is_followed_by = reverse_follow is not None
     
     return UserFollowStats(
         followers_count=followers_count,
         following_count=following_count,
+        pending_requests_count=pending_requests_count,
         is_following=is_following,
-        is_followed_by=is_followed_by
+        is_followed_by=is_followed_by,
+        is_pending_approval=is_pending_approval
     )
 
 @api_router.get("/following")
