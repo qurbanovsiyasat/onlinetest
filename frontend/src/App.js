@@ -3162,6 +3162,7 @@ function UserDashboard({ currentView, setCurrentView }) {
     setCurrentQuestionIndex(0);
     setUserAnswers([]);
     setQuizResult(null);
+    setIsTimedQuiz(false);
     setCurrentView('take-quiz');
   };
 
