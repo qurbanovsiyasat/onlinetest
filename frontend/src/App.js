@@ -3304,6 +3304,14 @@ function UserDashboard({ currentView, setCurrentView }) {
               🏠 Sınaqlar
             </button>
             <button
+              onClick={() => setCurrentView('qa-forum')}
+              className={`px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm ${
+                currentView === 'qa-forum' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              💬 Q&A Forum
+            </button>
+            <button
               onClick={() => setCurrentView('my-attempts')}
               className={`px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm ${
                 currentView === 'my-attempts' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
