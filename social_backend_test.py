@@ -480,11 +480,11 @@ class SocialBackendTester:
         
         # Unfollow all relationships
         if self.user1_token and self.user2_id:
-            self.make_request("POST", "/unfollow", {"user_id": self.user2_id}, token=self.user1_token)
+            self.make_request("DELETE", f"/follow/{self.user2_id}", token=self.user1_token)
         if self.user1_token and self.user3_id:
-            self.make_request("POST", "/unfollow", {"user_id": self.user3_id}, token=self.user1_token)
+            self.make_request("DELETE", f"/follow/{self.user3_id}", token=self.user1_token)
         if self.user2_token and self.user3_id:
-            self.make_request("POST", "/unfollow", {"user_id": self.user3_id}, token=self.user2_token)
+            self.make_request("DELETE", f"/follow/{self.user3_id}", token=self.user2_token)
         
         self.log_test("Cleanup Test Data", True, "Test relationships cleaned up")
     
