@@ -3440,6 +3440,297 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Startup event - Initialize admin user
+# =====================================
+# USER PROFILE SYSTEM
+# =====================================
+
+class UserProfile(BaseModel):
+    id: str
+    email: str
+    name: str
+    role: UserRole
+    avatar: Optional[str] = None  # Base64 encoded image
+    bio: Optional[str] = None
+    location: Optional[str] = None
+    website: Optional[str] = None
+    is_active: bool
+    created_at: datetime
+    
+    # Statistics
+    questions_count: int = 0
+    answers_count: int = 0
+    quizzes_taken: int = 0
+    total_quiz_score: float = 0.0
+    avg_quiz_score: float = 0.0
+    accepted_answers: int = 0
+
+class UserProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    bio: Optional[str] = None
+    location: Optional[str] = None
+    website: Optional[str] = None
+    avatar: Optional[str] = None
+
+class NotificationType(str, Enum):
+    NEW_ANSWER = "new_answer"
+    ANSWER_ACCEPTED = "answer_accepted"
+    REPLY_TO_ANSWER = "reply_to_answer"
+    QUIZ_RESULT = "quiz_result"
+    LEADERBOARD_UPDATE = "leaderboard_update"
+    QUESTION_VOTE = "question_vote"
+    ANSWER_VOTE = "answer_vote"
+
+class Notification(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    type: NotificationType
+    title: str
+    message: str
+    related_id: Optional[str] = None  # ID of related question, answer, quiz, etc.
+    is_read: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class NotificationCreate(BaseModel):
+    user_id: str
+    type: NotificationType
+    title: str
+    message: str
+    related_id: Optional[str] = None
+
+# =====================================
+# USER PROFILE ENDPOINTS
+# =====================================
+
+@api_router.get("/users/{user_id}/profile", response_model=UserProfile)
+async def get_user_profile(user_id: str):
+    """Get user profile with statistics (public endpoint)"""
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Calculate user statistics
+    questions_count = await db.questions.count_documents({"user_id": user_id})
+    answers_count = await db.answers.count_documents({"user_id": user_id})
+    accepted_answers = await db.answers.count_documents({"user_id": user_id, "is_accepted": True})
+    
+    # Quiz statistics
+    quiz_attempts = await db.quiz_attempts.find({"user_id": user_id}).to_list(1000)
+    quizzes_taken = len(quiz_attempts)
+    total_quiz_score = sum(attempt.get("percentage", 0) for attempt in quiz_attempts)
+    avg_quiz_score = total_quiz_score / quizzes_taken if quizzes_taken > 0 else 0.0
+    
+    return UserProfile(
+        id=user["id"],
+        email=user["email"],
+        name=user["name"],
+        role=user["role"],
+        avatar=user.get("avatar"),
+        bio=user.get("bio"),
+        location=user.get("location"),
+        website=user.get("website"),
+        is_active=user["is_active"],
+        created_at=user["created_at"],
+        questions_count=questions_count,
+        answers_count=answers_count,
+        quizzes_taken=quizzes_taken,
+        total_quiz_score=total_quiz_score,
+        avg_quiz_score=round(avg_quiz_score, 1),
+        accepted_answers=accepted_answers
+    )
+
+@api_router.get("/profile", response_model=UserProfile)
+async def get_my_profile(current_user: User = Depends(get_current_user)):
+    """Get current user's profile"""
+    return await get_user_profile(current_user.id)
+
+@api_router.put("/profile", response_model=UserProfile)
+async def update_my_profile(
+    profile_data: UserProfileUpdate, 
+    current_user: User = Depends(get_current_user)
+):
+    """Update current user's profile"""
+    update_data = {k: v for k, v in profile_data.dict().items() if v is not None}
+    
+    if update_data:
+        await db.users.update_one(
+            {"id": current_user.id}, 
+            {"$set": update_data}
+        )
+    
+    return await get_user_profile(current_user.id)
+
+@api_router.get("/users/{user_id}/questions")
+async def get_user_questions(user_id: str, skip: int = 0, limit: int = 20):
+    """Get questions posted by a specific user"""
+    questions = await db.questions.find({"user_id": user_id}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    enriched_questions = []
+    for question in questions:
+        user_info = await get_user_info(question["user_id"])
+        question["user"] = user_info
+        enriched_questions.append(question)
+    
+    return {"questions": enriched_questions}
+
+@api_router.get("/users/{user_id}/answers")
+async def get_user_answers(user_id: str, skip: int = 0, limit: int = 20):
+    """Get answers posted by a specific user"""
+    answers = await db.answers.find({"user_id": user_id}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    enriched_answers = []
+    for answer in answers:
+        user_info = await get_user_info(answer["user_id"])
+        answer["user"] = user_info
+        
+        # Get question info
+        question = await db.questions.find_one({"id": answer["question_id"]})
+        answer["question"] = {"id": question["id"], "title": question["title"]} if question else None
+        
+        enriched_answers.append(answer)
+    
+    return {"answers": enriched_answers}
+
+@api_router.get("/users/{user_id}/quiz-attempts")
+async def get_user_quiz_attempts(user_id: str, skip: int = 0, limit: int = 20):
+    """Get quiz attempts by a specific user"""
+    attempts = await db.quiz_attempts.find({"user_id": user_id}).sort("attempted_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    enriched_attempts = []
+    for attempt in attempts:
+        # Get quiz info
+        quiz = await db.quizzes.find_one({"id": attempt["quiz_id"]})
+        attempt["quiz"] = {"id": quiz["id"], "title": quiz["title"]} if quiz else None
+        enriched_attempts.append(attempt)
+    
+    return {"quiz_attempts": enriched_attempts}
+
+# =====================================
+# NOTIFICATION SYSTEM
+# =====================================
+
+async def create_notification(notification_data: NotificationCreate):
+    """Helper function to create a notification"""
+    notification = Notification(**notification_data.dict())
+    await db.notifications.insert_one(notification.dict())
+    return notification
+
+@api_router.get("/notifications", response_model=List[Notification])
+async def get_my_notifications(
+    current_user: User = Depends(get_current_user),
+    skip: int = 0,
+    limit: int = 50,
+    unread_only: bool = False
+):
+    """Get current user's notifications"""
+    query = {"user_id": current_user.id}
+    if unread_only:
+        query["is_read"] = False
+    
+    notifications = await db.notifications.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    return [Notification(**notification) for notification in notifications]
+
+@api_router.get("/notifications/count")
+async def get_notification_count(current_user: User = Depends(get_current_user)):
+    """Get notification counts"""
+    total_count = await db.notifications.count_documents({"user_id": current_user.id})
+    unread_count = await db.notifications.count_documents({"user_id": current_user.id, "is_read": False})
+    
+    return {
+        "total_count": total_count,
+        "unread_count": unread_count
+    }
+
+@api_router.put("/notifications/{notification_id}/read")
+async def mark_notification_read(
+    notification_id: str, 
+    current_user: User = Depends(get_current_user)
+):
+    """Mark a notification as read"""
+    result = await db.notifications.update_one(
+        {"id": notification_id, "user_id": current_user.id},
+        {"$set": {"is_read": True}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    return {"message": "Notification marked as read"}
+
+@api_router.put("/notifications/mark-all-read")
+async def mark_all_notifications_read(current_user: User = Depends(get_current_user)):
+    """Mark all notifications as read for current user"""
+    await db.notifications.update_many(
+        {"user_id": current_user.id, "is_read": False},
+        {"$set": {"is_read": True}}
+    )
+    
+    return {"message": "All notifications marked as read"}
+
+@api_router.delete("/notifications/{notification_id}")
+async def delete_notification(
+    notification_id: str, 
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a notification"""
+    result = await db.notifications.delete_one(
+        {"id": notification_id, "user_id": current_user.id}
+    )
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    return {"message": "Notification deleted"}
+
+# =====================================
+# NOTIFICATION TRIGGERS
+# =====================================
+
+async def notify_question_answered(question_id: str, answerer_name: str):
+    """Notify question author when someone answers their question"""
+    question = await db.questions.find_one({"id": question_id})
+    if not question:
+        return
+    
+    notification = NotificationCreate(
+        user_id=question["user_id"],
+        type=NotificationType.NEW_ANSWER,
+        title="New Answer",
+        message=f"{answerer_name} answered your question: {question['title'][:50]}...",
+        related_id=question_id
+    )
+    await create_notification(notification)
+
+async def notify_answer_accepted(answer_id: str):
+    """Notify user when their answer is accepted"""
+    answer = await db.answers.find_one({"id": answer_id})
+    if not answer:
+        return
+    
+    question = await db.questions.find_one({"id": answer["question_id"]})
+    if not question:
+        return
+    
+    notification = NotificationCreate(
+        user_id=answer["user_id"],
+        type=NotificationType.ANSWER_ACCEPTED,
+        title="Answer Accepted!",
+        message=f"Your answer to '{question['title'][:50]}...' was accepted as the best answer!",
+        related_id=answer["question_id"]
+    )
+    await create_notification(notification)
+
+async def notify_quiz_result(user_id: str, quiz_title: str, score: float, passed: bool):
+    """Notify user about their quiz result"""
+    status = "passed" if passed else "failed"
+    notification = NotificationCreate(
+        user_id=user_id,
+        type=NotificationType.QUIZ_RESULT,
+        title="Quiz Completed",
+        message=f"You {status} '{quiz_title}' with a score of {score}%",
+        related_id=None
+    )
+    await create_notification(notification)
+
 @app.on_event("startup")
 async def startup_initialize():
     """Initialize application on startup"""
