@@ -403,15 +403,15 @@ class SocialBackendTester:
         # Test 1: Admin social overview
         response = self.make_request("GET", "/admin/social-overview", token=self.admin_token)
         if response:
-            required_fields = ["total_users", "total_follows", "total_pending_requests", "private_users_count"]
+            required_fields = ["total_approved_follows", "pending_follow_requests", "private_accounts", "public_accounts"]
             missing_fields = [field for field in required_fields if field not in response]
             
             if not missing_fields:
                 self.log_test("Admin Social Overview", True, 
-                            f"Social stats: {response.get('total_users')} users, "
-                            f"{response.get('total_follows')} follows, "
-                            f"{response.get('total_pending_requests')} pending requests, "
-                            f"{response.get('private_users_count')} private users")
+                            f"Social stats: {response.get('public_accounts')} public users, "
+                            f"{response.get('private_accounts')} private users, "
+                            f"{response.get('total_approved_follows')} follows, "
+                            f"{response.get('pending_follow_requests')} pending requests")
             else:
                 self.log_test("Admin Social Overview", False, f"Missing fields: {missing_fields}")
         else:
