@@ -3553,7 +3553,7 @@ logger = logging.getLogger(__name__)
 
 class UserProfile(BaseModel):
     id: str
-    email: str
+    email: Optional[str] = None  # Hidden for non-admin viewers of private profiles
     name: str
     role: UserRole
     avatar: Optional[str] = None  # Base64 encoded image
@@ -3563,13 +3563,30 @@ class UserProfile(BaseModel):
     is_active: bool
     created_at: datetime
     
-    # Statistics
+    # Privacy and social features
+    is_private: bool = False
+    follower_count: int = 0
+    following_count: int = 0
+    
+    # Activity statistics
     questions_count: int = 0
     answers_count: int = 0
     quizzes_taken: int = 0
     total_quiz_score: float = 0.0
     avg_quiz_score: float = 0.0
     accepted_answers: int = 0
+    
+    # Social relationship status with current viewer
+    is_following: bool = False
+    is_pending_approval: bool = False
+    can_view_activity: bool = True  # Whether current user can see this user's activity
+    
+    # Admin features
+    is_admin: bool = False
+    admin_badge: Optional[str] = None  # Admin badge text/emoji
+    
+    # Profile visibility for current viewer
+    profile_visible: bool = True  # Whether current user can see full profile
 
 class UserProfileUpdate(BaseModel):
     name: Optional[str] = None
