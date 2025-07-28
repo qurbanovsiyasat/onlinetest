@@ -343,9 +343,9 @@ function AuthScreen() {
   const initializeAdmin = async () => {
     try {
       const response = await axios.post(`${API}/init-admin`);
-      alert(`Admin created successfully!\nEmail: admin@squiz.com\nPassword: admin123`);
+      // Admin initialization successful - no alert needed
     } catch (error) {
-      alert(error.response?.data?.detail || 'Admin already exists or error occurred');
+      // Admin already exists or error occurred - no alert needed
     }
   };
 
