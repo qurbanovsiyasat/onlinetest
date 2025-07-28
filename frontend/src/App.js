@@ -871,7 +871,7 @@ function AdminDashboard({ currentView, setCurrentView }) {
         {currentView === 'qa-management' && <AdminQAManagement />}
         {currentView === 'create-quiz' && <AdminCreateQuiz setCurrentView={setCurrentView} />}
       </div>
-    </div>
+    </PageTransition>
   );
 }
 
