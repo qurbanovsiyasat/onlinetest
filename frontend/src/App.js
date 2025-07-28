@@ -859,7 +859,7 @@ function AdminDashboard({ currentView, setCurrentView }) {
             }`}
           >
             ➕ Create Quiz
-          </button>
+          </motion.button>
         </div>
 
         {/* Content */}
