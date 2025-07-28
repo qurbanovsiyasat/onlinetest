@@ -3705,7 +3705,7 @@ function UserDashboard({ currentView, setCurrentView }) {
           userName={user.name}
         />
       )}
-    </div>
+    </PageTransition>
   );
 }
 
