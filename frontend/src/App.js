@@ -3278,6 +3278,8 @@ function UserDashboard({ currentView, setCurrentView }) {
       quiz={selectedQuiz}
       setCurrentView={setCurrentView}
       startQuiz={startQuiz}
+      startRealTimeQuiz={startRealTimeQuiz}
+      isTimedQuiz={isTimedQuiz}
     />;
   }
 
