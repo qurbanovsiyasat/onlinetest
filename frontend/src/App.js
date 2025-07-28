@@ -5402,7 +5402,7 @@ function UserResult({ result, quiz, setCurrentView, startQuiz }) {
 }
 
 // User Home Component with Hierarchical Subject/Subcategory Structure
-function UserHome({ quizzes, startQuiz }) {
+function UserHome({ quizzes, startQuiz, startRealTimeQuiz }) {
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState(null);
 
