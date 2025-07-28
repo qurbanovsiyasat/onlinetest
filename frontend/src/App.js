@@ -8386,4 +8386,727 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
 // END Q&A DISCUSSION SYSTEM COMPONENTS
 // ====================================================================
 
+// ====================================================================
+// USER PROFILE & NOTIFICATION SYSTEM COMPONENTS
+// ====================================================================
+
+// Notification Bell Component
+const NotificationBell = ({ setCurrentView, currentView }) => {
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    fetchNotificationCount();
+    fetchRecentNotifications();
+  }, []);
+
+  const fetchNotificationCount = async () => {
+    try {
+      const response = await apiCall('/notifications/count');
+      setNotificationCount(response.data.unread_count);
+    } catch (error) {
+      console.error('Error fetching notification count:', error);
+    }
+  };
+
+  const fetchRecentNotifications = async () => {
+    try {
+      const response = await apiCall('/notifications?limit=5');
+      setNotifications(response.data);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const markAsRead = async (notificationId) => {
+    try {
+      await apiCall(`/notifications/${notificationId}/read`, { method: 'PUT' });
+      await fetchNotificationCount();
+      await fetchRecentNotifications();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setIsOpen(!isOpen)}
+        className={`p-2 rounded-lg relative transition-colors ${
+          currentView === 'notifications' 
+            ? 'bg-indigo-600 dark:bg-indigo-500 text-white' 
+            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+        }`}
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+        {notificationCount > 0 && (
+          <motion.span
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center"
+          >
+            {notificationCount > 9 ? '9+' : notificationCount}
+          </motion.span>
+        )}
+      </motion.button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+          >
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-gray-800 dark:text-gray-200">Bildirişlər</h3>
+                <button
+                  onClick={() => {
+                    setCurrentView('notifications');
+                    setIsOpen(false);
+                  }}
+                  className="text-indigo-600 dark:text-indigo-400 text-sm hover:underline"
+                >
+                  Hamısını gör
+                </button>
+              </div>
+            </div>
+            
+            <div className="max-h-96 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                  Bildirişiniz yoxdur
+                </div>
+              ) : (
+                notifications.map((notification) => (
+                  <motion.div
+                    key={notification.id}
+                    whileHover={{ backgroundColor: "rgba(99, 102, 241, 0.05)" }}
+                    className={`p-3 border-b border-gray-100 dark:border-gray-700 cursor-pointer ${
+                      !notification.is_read ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''
+                    }`}
+                    onClick={() => markAsRead(notification.id)}
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0">
+                        <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-800 rounded-full flex items-center justify-center">
+                          {notification.type === 'new_answer' && '💬'}
+                          {notification.type === 'answer_accepted' && '✅'}
+                          {notification.type === 'quiz_result' && '📊'}
+                          {notification.type === 'reply_to_answer' && '↩️'}
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                          {notification.title}
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                          {new Date(notification.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {!notification.is_read && (
+                        <div className="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0"></div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// User Profile Component
+const UserProfile = ({ user }) => {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [editData, setEditData] = useState({});
+  const [userQuestions, setUserQuestions] = useState([]);
+  const [userAnswers, setUserAnswers] = useState([]);
+  const [userQuizAttempts, setUserQuizAttempts] = useState([]);
+  const [activeTab, setActiveTab] = useState('overview');
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await apiCall('/profile');
+      setProfile(response.data);
+      setEditData({
+        name: response.data.name,
+        bio: response.data.bio || '',
+        location: response.data.location || '',
+        website: response.data.website || ''
+      });
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUserActivity = async (type) => {
+    try {
+      const response = await apiCall(`/users/${user.id}/${type}`);
+      if (type === 'questions') setUserQuestions(response.data.questions);
+      if (type === 'answers') setUserAnswers(response.data.answers);
+      if (type === 'quiz-attempts') setUserQuizAttempts(response.data.quiz_attempts);
+    } catch (error) {
+      console.error(`Error fetching user ${type}:`, error);
+    }
+  };
+
+  const updateProfile = async () => {
+    try {
+      const response = await apiCall('/profile', {
+        method: 'PUT',
+        data: editData
+      });
+      setProfile(response.data);
+      setEditing(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+    }
+  };
+
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setEditData({ ...editData, avatar: e.target.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  if (loading) {
+    return (
+      <PageTransition className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </PageTransition>
+    );
+  }
+
+  return (
+    <PageTransition className="max-w-4xl mx-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+        {/* Profile Header */}
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-8">
+          <div className="flex items-center space-x-6">
+            <div className="relative">
+              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center">
+                {profile.avatar ? (
+                  <img src={profile.avatar} alt="Avatar" className="w-20 h-20 rounded-full object-cover" />
+                ) : (
+                  <span className="text-2xl font-bold text-indigo-600">
+                    {profile.name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              {editing && (
+                <label className="absolute -bottom-2 -right-2 bg-indigo-600 text-white p-2 rounded-full cursor-pointer hover:bg-indigo-700">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                </label>
+              )}
+            </div>
+            
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  {editing ? (
+                    <input
+                      type="text"
+                      value={editData.name}
+                      onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                      className="text-2xl font-bold text-white bg-transparent border-b border-white/30 focus:border-white outline-none"
+                    />
+                  ) : (
+                    <h1 className="text-2xl font-bold text-white">{profile.name}</h1>
+                  )}
+                  <p className="text-indigo-100">{profile.email}</p>
+                  <div className="flex items-center space-x-4 mt-2 text-indigo-100">
+                    <span className="text-sm">👤 {profile.role === 'admin' ? 'Admin' : 'User'}</span>
+                    <span className="text-sm">📅 {new Date(profile.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                
+                <div className="text-right">
+                  {editing ? (
+                    <div className="space-x-2">
+                      <button
+                        onClick={updateProfile}
+                        className="bg-white text-indigo-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                      >
+                        Yadda saxla
+                      </button>
+                      <button
+                        onClick={() => setEditing(false)}
+                        className="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors"
+                      >
+                        Ləğv et
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setEditing(true)}
+                      className="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors"
+                    >
+                      ✏️ Profili redaktə et
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Bio Section */}
+          <div className="mt-4">
+            {editing ? (
+              <textarea
+                value={editData.bio}
+                onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
+                placeholder="Özünüz haqqında məlumat yazın..."
+                className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-white/70 resize-none"
+                rows="3"
+              />
+            ) : (
+              <p className="text-indigo-100">{profile.bio || 'Profil məlumatı əlavə edilməyib'}</p>
+            )}
+          </div>
+          
+          {/* Location and Website */}
+          {editing && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <input
+                type="text"
+                value={editData.location}
+                onChange={(e) => setEditData({ ...editData, location: e.target.value })}
+                placeholder="📍 Məkan"
+                className="p-3 rounded-lg bg-white/20 text-white placeholder-white/70"
+              />
+              <input
+                type="url"
+                value={editData.website}
+                onChange={(e) => setEditData({ ...editData, website: e.target.value })}
+                placeholder="🌐 Veb sayt"
+                className="p-3 rounded-lg bg-white/20 text-white placeholder-white/70"
+              />
+            </div>
+          )}
+          
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">{profile.questions_count}</div>
+              <div className="text-indigo-100 text-sm">Suallar</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">{profile.answers_count}</div>
+              <div className="text-indigo-100 text-sm">Cavablar</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">{profile.accepted_answers}</div>
+              <div className="text-indigo-100 text-sm">Qəbul olunan</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">{profile.quizzes_taken}</div>
+              <div className="text-indigo-100 text-sm">Testlər</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">{profile.avg_quiz_score}%</div>
+              <div className="text-indigo-100 text-sm">Orta nəticə</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Tabs */}
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <nav className="flex space-x-8 px-6">
+            {[
+              { id: 'overview', label: 'Ümumi', icon: '📊' },
+              { id: 'questions', label: 'Suallar', icon: '❓' },
+              { id: 'answers', label: 'Cavablar', icon: '💬' },
+              { id: 'quizzes', label: 'Test nəticələri', icon: '🏆' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id !== 'overview') fetchUserActivity(tab.id);
+                }}
+                className={`py-4 px-2 border-b-2 font-medium text-sm ${
+                  activeTab === tab.id
+                    ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+              >
+                {tab.icon} {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Tab Content */}
+        <div className="p-6">
+          {activeTab === 'overview' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-lg">
+                <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Q&A Fəaliyyəti</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Suallar:</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">{profile.questions_count}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Cavablar:</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">{profile.answers_count}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Qəbul olunan cavablar:</span>
+                    <span className="font-semibold text-green-600">{profile.accepted_answers}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-lg">
+                <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-4">Test Statistikası</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Cəhd edilən testlər:</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">{profile.quizzes_taken}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Orta nəticə:</span>
+                    <span className="font-semibold text-blue-600">{profile.avg_quiz_score}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Ümumi xal:</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">{profile.total_quiz_score.toFixed(1)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'questions' && (
+            <div className="space-y-4">
+              {userQuestions.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  Hələ sual verilməyib
+                </div>
+              ) : (
+                userQuestions.map((question) => (
+                  <div key={question.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-2">{question.title}</h4>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{question.content.substring(0, 150)}...</p>
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>👍 {question.upvotes} 👎 {question.downvotes}</span>
+                      <span>{new Date(question.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {activeTab === 'answers' && (
+            <div className="space-y-4">
+              {userAnswers.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  Hələ cavab verilməyib
+                </div>
+              ) : (
+                userAnswers.map((answer) => (
+                  <div key={answer.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-1">
+                        <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{answer.content.substring(0, 200)}...</p>
+                        {answer.question && (
+                          <p className="text-xs text-indigo-600 dark:text-indigo-400 mb-2">
+                            Sual: {answer.question.title}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span>👍 {answer.upvotes} 👎 {answer.downvotes}</span>
+                          <span>{new Date(answer.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      {answer.is_accepted && (
+                        <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                          ✅ Qəbul edilib
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {activeTab === 'quizzes' && (
+            <div className="space-y-4">
+              {userQuizAttempts.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  Hələ test cəhdi yoxdur
+                </div>
+              ) : (
+                userQuizAttempts.map((attempt) => (
+                  <div key={attempt.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold text-gray-800 dark:text-gray-200">
+                          {attempt.quiz ? attempt.quiz.title : 'Test'}
+                        </h4>
+                        <div className="flex items-center space-x-4 mt-2 text-sm">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Xal: {attempt.score}/{attempt.total_questions}
+                          </span>
+                          <span className={`font-semibold ${
+                            attempt.percentage >= 80 ? 'text-green-600' :
+                            attempt.percentage >= 60 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {attempt.percentage.toFixed(1)}%
+                          </span>
+                          {attempt.passed && (
+                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                              Keçdi
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right text-sm text-gray-500">
+                        {new Date(attempt.attempted_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </PageTransition>
+  );
+};
+
+// Notification Center Component
+const NotificationCenter = ({ user }) => {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [filter]);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      const unreadOnly = filter === 'unread';
+      const response = await apiCall(`/notifications?unread_only=${unreadOnly}&limit=50`);
+      setNotifications(response.data);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAsRead = async (notificationId) => {
+    try {
+      await apiCall(`/notifications/${notificationId}/read`, { method: 'PUT' });
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await apiCall('/notifications/mark-all-read', { method: 'PUT' });
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
+  const deleteNotification = async (notificationId) => {
+    try {
+      await apiCall(`/notifications/${notificationId}`, { method: 'DELETE' });
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
+  const getNotificationIcon = (type) => {
+    const iconMap = {
+      new_answer: '💬',
+      answer_accepted: '✅',
+      reply_to_answer: '↩️',
+      quiz_result: '📊',
+      leaderboard_update: '🏆',
+      question_vote: '👍',
+      answer_vote: '❤️'
+    };
+    return iconMap[type] || '📢';
+  };
+
+  const getNotificationColor = (type) => {
+    const colorMap = {
+      new_answer: 'blue',
+      answer_accepted: 'green',
+      reply_to_answer: 'purple',
+      quiz_result: 'indigo',
+      leaderboard_update: 'yellow',
+      question_vote: 'pink',
+      answer_vote: 'red'
+    };
+    return colorMap[type] || 'gray';
+  };
+
+  if (loading) {
+    return (
+      <PageTransition className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </PageTransition>
+    );
+  }
+
+  return (
+    <PageTransition className="max-w-4xl mx-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-white">🔔 Bildirişlər</h1>
+              <p className="text-indigo-100">Fəaliyyətləriniz haqqında yeniliklər</p>
+            </div>
+            <button
+              onClick={markAllAsRead}
+              className="bg-white/20 text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors"
+            >
+              Hamısını oxunmuş kimi qeyd et
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Tabs */}
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <nav className="flex space-x-8 px-6">
+            {[
+              { id: 'all', label: 'Hamısı' },
+              { id: 'unread', label: 'Oxunmamış' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setFilter(tab.id)}
+                className={`py-4 px-2 border-b-2 font-medium text-sm ${
+                  filter === tab.id
+                    ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Notifications List */}
+        <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          {notifications.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🔕</div>
+              <p className="text-gray-500 dark:text-gray-400 text-lg">
+                {filter === 'unread' ? 'Oxunmamış bildirişiniz yoxdur' : 'Bildirişiniz yoxdur'}
+              </p>
+            </div>
+          ) : (
+            notifications.map((notification) => {
+              const color = getNotificationColor(notification.type);
+              return (
+                <motion.div
+                  key={notification.id}
+                  whileHover={{ backgroundColor: "rgba(99, 102, 241, 0.02)" }}
+                  className={`p-6 ${!notification.is_read ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}
+                >
+                  <div className="flex items-start space-x-4">
+                    <div className={`flex-shrink-0 w-12 h-12 bg-${color}-100 dark:bg-${color}-800 rounded-full flex items-center justify-center`}>
+                      <span className="text-xl">{getNotificationIcon(notification.type)}</span>
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
+                          {notification.title}
+                        </p>
+                        <div className="flex items-center space-x-2">
+                          {!notification.is_read && (
+                            <button
+                              onClick={() => markAsRead(notification.id)}
+                              className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm"
+                            >
+                              Oxunmuş
+                            </button>
+                          )}
+                          <button
+                            onClick={() => deleteNotification(notification.id)}
+                            className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm"
+                          >
+                            Sil
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <p className="text-gray-600 dark:text-gray-400 mt-1">
+                        {notification.message}
+                      </p>
+                      
+                      <div className="flex items-center justify-between mt-3">
+                        <span className="text-sm text-gray-500 dark:text-gray-500">
+                          {new Date(notification.created_at).toLocaleString()}
+                        </span>
+                        {!notification.is_read && (
+                          <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </PageTransition>
+  );
+};
+
+// ====================================================================
+// END USER PROFILE & NOTIFICATION SYSTEM COMPONENTS
+// ====================================================================
+
 export default App;
