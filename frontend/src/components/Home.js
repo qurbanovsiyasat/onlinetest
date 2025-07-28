@@ -194,7 +194,7 @@ const Home = () => {
                             >
                               <span>{question.author_name}</span>
                               {question.author_is_admin && (
-                                <FaShield className="w-3 h-3 text-yellow-500" title="Admin" />
+                                <FaShieldAlt className="w-3 h-3 text-yellow-500" title="Admin" />
                               )}
                             </Link>
                             <span>•</span>
