@@ -331,7 +331,7 @@ class SquizProductionTester:
         # Test user registration
         user_data = {
             "name": f"Production Test User {self.test_user_id}",
-            "email": f"testuser{self.test_user_id}@squiz.test",
+            "email": f"testuser{self.test_user_id}@example.com",
             "password": "testpass123"
         }
         
