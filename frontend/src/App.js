@@ -462,9 +462,16 @@ const apiCall = async (url, options = {}) => {
 
 function App() {
   return (
-    <AuthProvider>
-      <MainApp />
-    </AuthProvider>
+    <DarkModeProvider>
+      <AuthProvider>
+        <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+          <AnimatePresence mode="wait">
+            <MainApp />
+          </AnimatePresence>
+          <ScrollToTop />
+        </div>
+      </AuthProvider>
+    </DarkModeProvider>
   );
 }
 
