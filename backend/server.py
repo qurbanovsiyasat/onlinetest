@@ -2947,6 +2947,10 @@ async def update_answer(
     # Update question stats
     await update_question_stats(question_id)
     
+    # Notify user if their answer was accepted
+    if answer_data.is_accepted and answer["user_id"] != current_user.id:
+        await notify_answer_accepted(answer_id)
+    
     # Return updated answer
     updated_answer = await db.answers.find_one({"id": answer_id})
     return Answer(**updated_answer)
