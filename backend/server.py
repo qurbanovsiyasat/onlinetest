@@ -2902,6 +2902,10 @@ async def create_answer(
     # Update question stats
     await update_question_stats(question_id)
     
+    # Notify question author about new answer (if not answering own question)
+    if question["user_id"] != current_user.id:
+        await notify_question_answered(question_id, current_user.name)
+    
     return answer
 
 @api_router.put("/questions/{question_id}/answers/{answer_id}", response_model=Answer)
