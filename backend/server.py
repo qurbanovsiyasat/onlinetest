@@ -32,18 +32,28 @@ JWT_EXPIRATION_HOURS = 24
 # Create the main app
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
+# YALNIZ BİR DƏFƏ import edin
 from fastapi.middleware.cors import CORSMiddleware
 
+app = FastAPI()
+
+# CORS Middleware-i ƏN ƏVVƏL ƏLAVƏ EDİN
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://squiz-k5qa.onrender.com",  # frontend hosted domain
-        "http://localhost:3000",  # local dev
+        "https://squiz-k5qa.onrender.com",  # Frontend ünvanı
+        "http://localhost:3000",            # Lokal inkişaf üçün
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],                    # Bütün metodlara icazə
+    allow_headers=["*"],                    # Bütün başlıqlara icazə
+    expose_headers=["*"]                    # Bütün cavab başlıqlarını göstər
 )
+
+# OPTIONS sorğuları üçün xüsusi handler
+@app.options("/api/{path:path}")
+async def options_handler():
+    return {"message": "CORS preflight"}
 # Security
 security = HTTPBearer()
 
