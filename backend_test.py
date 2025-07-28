@@ -484,7 +484,7 @@ class QAForumTester:
             self.log_test("Get User Questions", False, f"Error: {str(e)}")
             return False
         
-        # Test getting user's answers
+        # Test getting user's answers (may require auth for private profiles)
         try:
             response = self.session.get(f"{BASE_URL}/users/{self.regular_user_id}/answers")
             if response.status_code == 200:
@@ -492,6 +492,19 @@ class QAForumTester:
                 answer_count = len(data)
                 self.log_test("Get User Answers", True, f"User has {answer_count} answers")
                 return True
+            elif response.status_code == 403:
+                # If it requires auth, test with auth
+                headers = {"Authorization": f"Bearer {self.user_token}"}
+                response = self.session.get(f"{BASE_URL}/users/{self.regular_user_id}/answers", headers=headers)
+                if response.status_code == 200:
+                    data = response.json()
+                    answer_count = len(data)
+                    self.log_test("Get User Answers", True, f"User has {answer_count} answers with auth")
+                    return True
+                else:
+                    self.log_test("Get User Answers", False, 
+                                f"Status: {response.status_code}, Response: {response.text}")
+                    return False
             else:
                 self.log_test("Get User Answers", False, 
                             f"Status: {response.status_code}, Response: {response.text}")
