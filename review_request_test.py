@@ -18,7 +18,7 @@ import uuid
 
 class ReviewRequestTester:
     def __init__(self):
-        self.base_url = "https://8d749dd5-630f-42ba-a628-0ac62571f743.preview.emergentagent.com"
+        self.base_url = "https://069e9c64-0f14-4fb8-845b-f58d41e6c770.preview.emergentagent.com"
         self.api_url = f"{self.base_url}/api"
         self.admin_token = None
         self.user_token = None
