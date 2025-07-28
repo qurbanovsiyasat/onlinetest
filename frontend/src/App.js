@@ -7429,11 +7429,11 @@ function QuestionCard({ question, onClick, currentUser }) {
               <div className="flex items-center space-x-4">
                 <span className="flex items-center space-x-1">
                   <span>💬</span>
-                  <span>{question.answer_count} answers</span>
+                  <span>{question.answer_count || 0} answers</span>
                 </span>
                 <span className="flex items-center space-x-1">
                   <span>👤</span>
-                  <span>{question.user.name}</span>
+                  <span>{question.user ? question.user.name : 'Unknown User'}</span>
                 </span>
               </div>
               <span>{getTimeSince(question.created_at)}</span>
