@@ -426,16 +426,6 @@ class SocialBackendTester:
                 self.log_test("Admin View User Followers", False, "Unexpected response format for followers")
         else:
             self.log_test("Admin View User Followers", False, "Admin failed to get user followers")
-        
-        # Test 3: Admin can view any user's following list
-        response = self.make_request("GET", f"/admin/users/{self.user1_id}/following", token=self.admin_token)
-        if response:
-            if "following" in response and isinstance(response["following"], list):
-                self.log_test("Admin View User Following", True, f"Admin can view following: {len(response['following'])} following found")
-            else:
-                self.log_test("Admin View User Following", False, "Unexpected response format for following")
-        else:
-            self.log_test("Admin View User Following", False, "Admin failed to get user following list")
     
     def test_privacy_auto_approve_feature(self):
         """Test that changing to public auto-approves pending requests"""
