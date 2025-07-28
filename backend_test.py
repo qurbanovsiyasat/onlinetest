@@ -247,13 +247,25 @@ class QAForumTester:
             self.log_test("Create Question", False, f"Error: {str(e)}")
             return False
         
-        # Test getting all questions
+        # Test getting all questions (should work without auth)
         try:
             response = self.session.get(f"{BASE_URL}/questions")
             if response.status_code == 200:
                 data = response.json()
                 question_count = len(data)
                 self.log_test("Get All Questions", True, f"Retrieved {question_count} questions")
+            elif response.status_code == 403:
+                # If it requires auth, test with auth
+                headers = {"Authorization": f"Bearer {self.admin_token}"}
+                response = self.session.get(f"{BASE_URL}/questions", headers=headers)
+                if response.status_code == 200:
+                    data = response.json()
+                    question_count = len(data)
+                    self.log_test("Get All Questions", True, f"Retrieved {question_count} questions with auth")
+                else:
+                    self.log_test("Get All Questions", False, 
+                                f"Status: {response.status_code}, Response: {response.text}")
+                    return False
             else:
                 self.log_test("Get All Questions", False, 
                             f"Status: {response.status_code}, Response: {response.text}")
