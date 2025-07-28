@@ -724,7 +724,7 @@ class QADiscussionAPITester:
             return self.log_test("Admin Pin Question", False, f"Error: {str(e)}")
 
     def test_admin_delete_content(self):
-        """Test admin deleting Q&A content"""
+        """Test admin deleting Q&A content via DELETE endpoint"""
         if not self.admin_token:
             return self.log_test("Admin Delete Content", False, "No admin token available")
         
@@ -752,7 +752,7 @@ class QADiscussionAPITester:
             
             # Admin delete the question
             response = requests.delete(
-                f"{self.api_url}/admin/questions/{test_question_id}",
+                f"{self.api_url}/questions/{test_question_id}",
                 headers=self.get_auth_headers(self.admin_token),
                 timeout=10
             )
