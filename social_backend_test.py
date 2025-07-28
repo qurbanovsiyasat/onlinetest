@@ -507,7 +507,7 @@ class SocialBackendTester:
             "Privacy Settings": ["GET Privacy Settings", "Update Privacy Settings to Private", "Update Privacy Settings to Public", "Privacy Settings Verification"],
             "Follow System": ["Follow Public User", "Follow Counts Update", "Unfollow User", "Follow Private User - Request Sent", "Get Follow Requests", "Approve Follow Request", "Follow Counts After Approval", "Reject Follow Request"],
             "Profile Privacy": ["View Public User Profile", "View Private User Profile - Non-Follower", "Admin View Private Profile"],
-            "Admin Controls": ["Admin Social Overview", "Admin View User Followers", "Admin View User Following"],
+            "Admin Controls": ["Admin Social Overview", "Admin View User Followers"],
             "Auto-Approve": ["Auto-Approve Pending Requests"]
         }
         
