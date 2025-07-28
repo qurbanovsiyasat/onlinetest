@@ -8980,6 +8980,16 @@ const UserProfile = ({ user }) => {
               <div className="text-indigo-100 text-sm">İzlədikləri</div>
             </div>
           </div>
+          
+          {/* Follow/Unfollow Button */}
+          <div className="mt-6 flex justify-center">
+            <FollowButton 
+              userId={user.id} 
+              initialStats={followStats}
+              onFollowChange={fetchFollowStats}
+              className="text-sm"
+            />
+          </div>
         </div>
 
         {/* Navigation Tabs */}
