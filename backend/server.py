@@ -105,6 +105,11 @@ class User(BaseModel):
     role: UserRole = UserRole.USER
     is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Privacy and social settings
+    is_private: bool = False  # Private profile toggle
+    follower_count: int = 0  # Number of followers
+    following_count: int = 0  # Number of users this user follows
 
 class UserCreate(BaseModel):
     email: EmailStr
