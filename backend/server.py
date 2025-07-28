@@ -3829,6 +3829,118 @@ async def get_user_answers(user_id: str, skip: int = 0, limit: int = 20, current
         "can_view": True
     }
 
+@api_router.get("/users/{user_id}/followers")
+async def get_user_followers(user_id: str, skip: int = 0, limit: int = 20, current_user: User = Depends(get_current_user)):
+    """Get user's followers list (respects privacy settings)"""
+    # Check if user exists
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if current user can view this user's followers
+    is_admin = current_user.role == UserRole.ADMIN
+    is_own_profile = current_user.id == user_id
+    is_target_private = user.get("is_private", False)
+    
+    can_view_followers = is_admin or is_own_profile or not is_target_private
+    
+    # For private profiles, check follow relationship
+    if is_target_private and not is_admin and not is_own_profile:
+        follow_relation = await db.user_follows.find_one({
+            "follower_id": current_user.id,
+            "following_id": user_id,
+            "status": "approved"
+        })
+        can_view_followers = bool(follow_relation)
+    
+    if not can_view_followers:
+        return {
+            "followers": [],
+            "message": "This user's followers list is private",
+            "can_view": False
+        }
+    
+    # Get followers
+    follow_relations = await db.user_follows.find({
+        "following_id": user_id,
+        "status": "approved"
+    }).skip(skip).limit(limit).to_list(limit)
+    
+    followers = []
+    for relation in follow_relations:
+        follower = await db.users.find_one({"id": relation["follower_id"]})
+        if follower:
+            followers.append({
+                "id": follower["id"],
+                "name": follower["name"],
+                "role": follower.get("role", "user"),
+                "is_admin": follower.get("role") == "admin",
+                "admin_badge": "🛡️ Admin" if follower.get("role") == "admin" else None,
+                "avatar": follower.get("avatar"),
+                "followed_at": relation.get("approved_at") or relation.get("created_at")
+            })
+    
+    return {
+        "followers": followers,
+        "can_view": True
+    }
+
+@api_router.get("/users/{user_id}/following")
+async def get_user_following(user_id: str, skip: int = 0, limit: int = 20, current_user: User = Depends(get_current_user)):
+    """Get user's following list (respects privacy settings)"""
+    # Check if user exists
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if current user can view this user's following list
+    is_admin = current_user.role == UserRole.ADMIN
+    is_own_profile = current_user.id == user_id
+    is_target_private = user.get("is_private", False)
+    
+    can_view_following = is_admin or is_own_profile or not is_target_private
+    
+    # For private profiles, check follow relationship
+    if is_target_private and not is_admin and not is_own_profile:
+        follow_relation = await db.user_follows.find_one({
+            "follower_id": current_user.id,
+            "following_id": user_id,
+            "status": "approved"
+        })
+        can_view_following = bool(follow_relation)
+    
+    if not can_view_following:
+        return {
+            "following": [],
+            "message": "This user's following list is private",
+            "can_view": False
+        }
+    
+    # Get following
+    follow_relations = await db.user_follows.find({
+        "follower_id": user_id,
+        "status": "approved"
+    }).skip(skip).limit(limit).to_list(limit)
+    
+    following = []
+    for relation in follow_relations:
+        followed_user = await db.users.find_one({"id": relation["following_id"]})
+        if followed_user:
+            following.append({
+                "id": followed_user["id"],
+                "name": followed_user["name"],
+                "role": followed_user.get("role", "user"),
+                "is_admin": followed_user.get("role") == "admin",
+                "admin_badge": "🛡️ Admin" if followed_user.get("role") == "admin" else None,
+                "avatar": followed_user.get("avatar"),
+                "followed_at": relation.get("approved_at") or relation.get("created_at")
+            })
+    
+    return {
+        "following": following,
+        "can_view": True
+    }
+
 @api_router.get("/users/{user_id}/quiz-attempts")
 async def get_user_quiz_attempts(user_id: str, skip: int = 0, limit: int = 20):
     """Get quiz attempts by a specific user"""
