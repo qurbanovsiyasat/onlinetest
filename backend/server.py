@@ -811,6 +811,8 @@ async def create_quiz(quiz_data: QuizCreate, admin_user: User = Depends(get_admi
     quiz.quiz_owner_id = admin_user.id
     
     await db.quizzes.insert_one(quiz.dict())
+    
+    # Note: We'll notify followers when the quiz is published, not when created as draft
     return quiz
 
 @api_router.post("/admin/quiz/{quiz_id}/publish")
