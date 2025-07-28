@@ -5144,7 +5144,7 @@ function RealTimeQuizSession({ quiz, setCurrentView, user }) {
   );
 }
 
-function UserResult({ result, quiz, setCurrentView, startQuiz }) {
+function UserResult({ result, quiz, setCurrentView, startQuiz, startRealTimeQuiz, isTimedQuiz }) {
   const [detailedResults, setDetailedResults] = useState(null);
   const [leaderboard, setLeaderboard] = useState(null);
   const [showMistakes, setShowMistakes] = useState(false);
