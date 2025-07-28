@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
-import { FaUser, FaSignOutAlt, FaPlus, FaSearch, FaShield } from 'react-icons/fa';
+import { FaUser, FaSignOutAlt, FaPlus, FaSearch, FaShieldAlt } from 'react-icons/fa';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
