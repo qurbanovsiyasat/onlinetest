@@ -693,9 +693,9 @@ function AdminResultsView({ results }) {
   };
 
   const getScoreBadge = (percentage) => {
-    if (percentage >= 80) return 'Excellent';
-    if (percentage >= 60) return 'Good';
-    return 'Needs Improvement';
+    if (percentage >= 80) return 'Əla';
+    if (percentage >= 60) return 'Yaxşı';
+    return 'Təkmilləşdirməyə ehtiyac var';
   };
 
   return (
@@ -3292,7 +3292,7 @@ function UserDashboard({ currentView, setCurrentView }) {
         <div className="container mx-auto px-4 py-4 flex flex-col lg:flex-row justify-between items-start lg:items-center">
           <div className="mb-4 lg:mb-0">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-800">📝 Squiz</h1>
-            <p className="text-gray-600 text-sm sm:text-base">Welcome, {user.name}</p>
+            <p className="text-gray-600 text-sm sm:text-base">Xoş gəldin, {user.name}</p>
           </div>
           <div className="flex flex-wrap gap-2 sm:gap-4">
             <button
@@ -4195,8 +4195,8 @@ function UserTakeQuiz({ quiz, currentQuestionIndex, setCurrentQuestionIndex, use
           </div>
           
           <div className="flex justify-between items-center text-xs sm:text-sm text-gray-600">
-            <span>Question {currentQuestionIndex + 1} of {quiz.questions.length}</span>
-            <span>Answered: {getAnsweredCount()}/{quiz.questions.length}</span>
+            <span>Sual{currentQuestionIndex + 1} / {quiz.questions.length}</span>
+            <span>Cavablanan: {getAnsweredCount()}/{quiz.questions.length}</span>
           </div>
         </header>
 
@@ -4865,7 +4865,7 @@ function RealTimeQuizSession({ quiz, setCurrentView, user, setQuizResult, setIsT
           </div>
           
           <div className="flex justify-between items-center text-xs sm:text-sm text-gray-600">
-            <span>Sual {currentQuestionIndex + 1} of {quiz.questions.length}</span>
+            <span>Sual {currentQuestionIndex + 1} / {quiz.questions.length}</span>
             <span>Cavablanan: {userAnswers.filter(a => a && a.trim()).length}/{quiz.questions.length}</span>
           </div>
         </header>
@@ -5185,9 +5185,9 @@ function UserResult({ result, quiz, setCurrentView, startQuiz, startRealTimeQuiz
   };
 
   const getPerformanceBadge = (percentage) => {
-    if (percentage >= 80) return { text: 'Excellent!', color: 'bg-green-500' };
-    if (percentage >= 60) return { text: 'Good Job!', color: 'bg-yellow-500' };
-    return { text: 'Keep Trying!', color: 'bg-red-500' };
+    if (percentage >= 80) return { text: 'Əla!', color: 'bg-green-500' };
+    if (percentage >= 60) return { text: 'Yaxşı!', color: 'bg-yellow-500' };
+    return { text: 'Cəhd etməyə davam et!', color: 'bg-red-500' };
   };
 
   const badge = getPerformanceBadge(result.percentage);
