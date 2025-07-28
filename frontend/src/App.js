@@ -8911,7 +8911,10 @@ const UserProfile = ({ user }) => {
               { id: 'overview', label: 'Ümumi', icon: '📊' },
               { id: 'questions', label: 'Suallar', icon: '❓' },
               { id: 'answers', label: 'Cavablar', icon: '💬' },
-              { id: 'quizzes', label: 'Test nəticələri', icon: '🏆' }
+              { id: 'quizzes', label: 'Test nəticələri', icon: '🏆' },
+              { id: 'bookmarks', label: 'Əlfəcinlər', icon: '🔖' },
+              { id: 'following', label: 'İzlədikləri', icon: '👥' },
+              { id: 'followers', label: 'İzləyicilər', icon: '👤' }
             ].map((tab) => (
               <button
                 key={tab.id}
