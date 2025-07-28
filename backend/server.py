@@ -3742,6 +3742,357 @@ async def notify_quiz_result(user_id: str, quiz_title: str, score: float, passed
     )
     await create_notification(notification)
 
+# =====================================
+# BOOKMARKS SYSTEM
+# =====================================
+
+class BookmarkType(str, Enum):
+    QUESTION = "question"
+    QUIZ = "quiz"
+
+class Bookmark(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    item_id: str  # ID of question or quiz
+    item_type: BookmarkType
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class BookmarkCreate(BaseModel):
+    item_id: str
+    item_type: BookmarkType
+
+# =====================================
+# FOLLOWING SYSTEM
+# =====================================
+
+class Follow(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    follower_id: str  # User who follows
+    following_id: str  # User being followed
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class FollowCreate(BaseModel):
+    user_id: str  # User to follow
+
+class UserFollowStats(BaseModel):
+    followers_count: int = 0
+    following_count: int = 0
+    is_following: bool = False  # Whether current user follows this user
+    is_followed_by: bool = False  # Whether this user follows current user
+
+# =====================================
+# BOOKMARKS ENDPOINTS
+# =====================================
+
+@api_router.post("/bookmarks")
+async def create_bookmark(
+    bookmark_data: BookmarkCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a bookmark for a question or quiz"""
+    # Check if bookmark already exists
+    existing_bookmark = await db.bookmarks.find_one({
+        "user_id": current_user.id,
+        "item_id": bookmark_data.item_id,
+        "item_type": bookmark_data.item_type
+    })
+    
+    if existing_bookmark:
+        raise HTTPException(status_code=400, detail="Item already bookmarked")
+    
+    # Verify the item exists
+    if bookmark_data.item_type == BookmarkType.QUESTION:
+        item = await db.questions.find_one({"id": bookmark_data.item_id})
+        if not item:
+            raise HTTPException(status_code=404, detail="Question not found")
+    elif bookmark_data.item_type == BookmarkType.QUIZ:
+        item = await db.quizzes.find_one({"id": bookmark_data.item_id})
+        if not item:
+            raise HTTPException(status_code=404, detail="Quiz not found")
+    
+    bookmark = Bookmark(
+        user_id=current_user.id,
+        item_id=bookmark_data.item_id,
+        item_type=bookmark_data.item_type
+    )
+    
+    await db.bookmarks.insert_one(bookmark.dict())
+    return {"message": "Item bookmarked successfully", "bookmark": bookmark}
+
+@api_router.delete("/bookmarks/{item_id}")
+async def remove_bookmark(
+    item_id: str,
+    item_type: BookmarkType,
+    current_user: User = Depends(get_current_user)
+):
+    """Remove a bookmark"""
+    result = await db.bookmarks.delete_one({
+        "user_id": current_user.id,
+        "item_id": item_id,
+        "item_type": item_type
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Bookmark not found")
+    
+    return {"message": "Bookmark removed successfully"}
+
+@api_router.get("/bookmarks")
+async def get_my_bookmarks(
+    current_user: User = Depends(get_current_user),
+    item_type: Optional[BookmarkType] = None,
+    skip: int = 0,
+    limit: int = 20
+):
+    """Get current user's bookmarks with enriched content"""
+    query = {"user_id": current_user.id}
+    if item_type:
+        query["item_type"] = item_type
+    
+    bookmarks = await db.bookmarks.find(query).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    enriched_bookmarks = []
+    for bookmark in bookmarks:
+        enriched_bookmark = bookmark.copy()
+        
+        if bookmark["item_type"] == BookmarkType.QUESTION:
+            # Get question details
+            question = await db.questions.find_one({"id": bookmark["item_id"]})
+            if question:
+                user_info = await get_user_info(question["user_id"])
+                question["user"] = user_info
+                enriched_bookmark["item"] = question
+            
+        elif bookmark["item_type"] == BookmarkType.QUIZ:
+            # Get quiz details
+            quiz = await db.quizzes.find_one({"id": bookmark["item_id"]})
+            if quiz:
+                enriched_bookmark["item"] = quiz
+        
+        enriched_bookmarks.append(enriched_bookmark)
+    
+    return {"bookmarks": enriched_bookmarks}
+
+@api_router.get("/bookmarks/check/{item_id}")
+async def check_bookmark_status(
+    item_id: str,
+    item_type: BookmarkType,
+    current_user: User = Depends(get_current_user)
+):
+    """Check if an item is bookmarked by current user"""
+    bookmark = await db.bookmarks.find_one({
+        "user_id": current_user.id,
+        "item_id": item_id,
+        "item_type": item_type
+    })
+    
+    return {"is_bookmarked": bookmark is not None}
+
+# =====================================
+# FOLLOWING ENDPOINTS
+# =====================================
+
+@api_router.post("/follow")
+async def follow_user(
+    follow_data: FollowCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Follow another user"""
+    if current_user.id == follow_data.user_id:
+        raise HTTPException(status_code=400, detail="Cannot follow yourself")
+    
+    # Check if user exists
+    user_to_follow = await db.users.find_one({"id": follow_data.user_id})
+    if not user_to_follow:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if already following
+    existing_follow = await db.follows.find_one({
+        "follower_id": current_user.id,
+        "following_id": follow_data.user_id
+    })
+    
+    if existing_follow:
+        raise HTTPException(status_code=400, detail="Already following this user")
+    
+    follow = Follow(
+        follower_id=current_user.id,
+        following_id=follow_data.user_id
+    )
+    
+    await db.follows.insert_one(follow.dict())
+    
+    # Create notification for the followed user
+    await create_notification(NotificationCreate(
+        user_id=follow_data.user_id,
+        type=NotificationType.NEW_ANSWER,  # We'll add a new type later
+        title="New Follower",
+        message=f"{current_user.name} started following you",
+        related_id=current_user.id
+    ))
+    
+    return {"message": "User followed successfully"}
+
+@api_router.delete("/follow/{user_id}")
+async def unfollow_user(
+    user_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Unfollow a user"""
+    result = await db.follows.delete_one({
+        "follower_id": current_user.id,
+        "following_id": user_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Not following this user")
+    
+    return {"message": "User unfollowed successfully"}
+
+@api_router.get("/users/{user_id}/follow-stats", response_model=UserFollowStats)
+async def get_user_follow_stats(
+    user_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get follow statistics for a user"""
+    followers_count = await db.follows.count_documents({"following_id": user_id})
+    following_count = await db.follows.count_documents({"follower_id": user_id})
+    
+    is_following = await db.follows.find_one({
+        "follower_id": current_user.id,
+        "following_id": user_id
+    }) is not None
+    
+    is_followed_by = await db.follows.find_one({
+        "follower_id": user_id,
+        "following_id": current_user.id
+    }) is not None
+    
+    return UserFollowStats(
+        followers_count=followers_count,
+        following_count=following_count,
+        is_following=is_following,
+        is_followed_by=is_followed_by
+    )
+
+@api_router.get("/following")
+async def get_my_following(
+    current_user: User = Depends(get_current_user),
+    skip: int = 0,
+    limit: int = 20
+):
+    """Get list of users current user is following"""
+    follows = await db.follows.find({"follower_id": current_user.id}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    following_users = []
+    for follow in follows:
+        user = await db.users.find_one({"id": follow["following_id"]})
+        if user:
+            user_info = await get_user_info(follow["following_id"])
+            following_users.append({
+                "user": user_info,
+                "followed_at": follow["created_at"]
+            })
+    
+    return {"following": following_users}
+
+@api_router.get("/followers")
+async def get_my_followers(
+    current_user: User = Depends(get_current_user),
+    skip: int = 0,
+    limit: int = 20
+):
+    """Get list of users following current user"""
+    follows = await db.follows.find({"following_id": current_user.id}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    followers = []
+    for follow in follows:
+        user = await db.users.find_one({"id": follow["follower_id"]})
+        if user:
+            user_info = await get_user_info(follow["follower_id"])
+            followers.append({
+                "user": user_info,
+                "followed_at": follow["created_at"]
+            })
+    
+    return {"followers": followers}
+
+@api_router.get("/users/{user_id}/followers")
+async def get_user_followers(
+    user_id: str,
+    skip: int = 0,
+    limit: int = 20
+):
+    """Get followers of a specific user (public endpoint)"""
+    follows = await db.follows.find({"following_id": user_id}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    followers = []
+    for follow in follows:
+        user_info = await get_user_info(follow["follower_id"])
+        followers.append({
+            "user": user_info,
+            "followed_at": follow["created_at"]
+        })
+    
+    return {"followers": followers}
+
+@api_router.get("/users/{user_id}/following")
+async def get_user_following(
+    user_id: str,
+    skip: int = 0,
+    limit: int = 20
+):
+    """Get who a specific user is following (public endpoint)"""
+    follows = await db.follows.find({"follower_id": user_id}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    following_users = []
+    for follow in follows:
+        user_info = await get_user_info(follow["following_id"])
+        following_users.append({
+            "user": user_info,
+            "followed_at": follow["created_at"]
+        })
+    
+    return {"following": following_users}
+
+# =====================================
+# ENHANCED NOTIFICATION TRIGGERS FOR FOLLOWING
+# =====================================
+
+async def notify_followers_of_new_question(user_id: str, question_title: str, question_id: str):
+    """Notify followers when a user posts a new question"""
+    # Get all followers of this user
+    follows = await db.follows.find({"following_id": user_id}).to_list(1000)
+    
+    user_info = await get_user_info(user_id)
+    
+    for follow in follows:
+        notification = NotificationCreate(
+            user_id=follow["follower_id"],
+            type=NotificationType.NEW_ANSWER,  # We'll add specific types later
+            title="New Question from Followed User",
+            message=f"{user_info['name']} posted a new question: {question_title[:50]}...",
+            related_id=question_id
+        )
+        await create_notification(notification)
+
+async def notify_followers_of_new_quiz(user_id: str, quiz_title: str, quiz_id: str):
+    """Notify followers when a user creates a new quiz"""
+    # Get all followers of this user
+    follows = await db.follows.find({"following_id": user_id}).to_list(1000)
+    
+    user_info = await get_user_info(user_id)
+    
+    for follow in follows:
+        notification = NotificationCreate(
+            user_id=follow["follower_id"],
+            type=NotificationType.NEW_ANSWER,  # We'll add specific types later
+            title="New Quiz from Followed User",
+            message=f"{user_info['name']} created a new quiz: {quiz_title[:50]}...",
+            related_id=quiz_id
+        )
+        await create_notification(notification)
+
 @app.on_event("startup")
 async def startup_initialize():
     """Initialize application on startup"""
