@@ -1260,6 +1260,9 @@ async def submit_quiz_attempt(quiz_id: str, attempt_data: QuizAttemptCreate, cur
     # Update quiz statistics
     await update_quiz_statistics(quiz_id)
     
+    # Notify user about quiz result
+    await notify_quiz_result(current_user.id, quiz["title"], percentage, passed)
+    
     return attempt
 
 def grade_multiple_choice_question(question: QuizQuestion, user_answer: str, question_index: int) -> dict:
