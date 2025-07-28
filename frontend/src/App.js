@@ -8654,8 +8654,86 @@ const NotificationBell = ({ setCurrentView, currentView }) => {
   );
 };
 
+// Follow Button Component
+const FollowButton = ({ userId, initialStats = null, className = '', onFollowChange = null }) => {
+  const { currentUser } = useAuth();
+  const [following, setFollowing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState(initialStats);
+
+  useEffect(() => {
+    if (currentUser && userId && userId !== currentUser.id) {
+      fetchFollowStatus();
+    }
+  }, [userId, currentUser]);
+
+  const fetchFollowStatus = async () => {
+    try {
+      const response = await apiCall(`/users/${userId}/follow-stats`);
+      setStats(response.data);
+      setFollowing(response.data.is_following);
+    } catch (error) {
+      console.error('Error fetching follow status:', error);
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!currentUser || loading) return;
+    
+    setLoading(true);
+    try {
+      if (following) {
+        await apiCall(`/follow/${userId}`, { method: 'DELETE' });
+        setFollowing(false);
+        if (stats) {
+          setStats(prev => ({ ...prev, followers_count: prev.followers_count - 1, is_following: false }));
+        }
+      } else {
+        await apiCall('/follow', {
+          method: 'POST',
+          data: { user_id: userId }
+        });
+        setFollowing(true);
+        if (stats) {
+          setStats(prev => ({ ...prev, followers_count: prev.followers_count + 1, is_following: true }));
+        }
+      }
+      
+      // Call callback if provided
+      if (onFollowChange) {
+        onFollowChange();
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+      alert('Failed to update follow status: ' + (error.response?.data?.detail || 'Unknown error'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Don't show button for current user's own profile
+  if (!currentUser || !userId || userId === currentUser.id) {
+    return null;
+  }
+
+  return (
+    <button
+      onClick={handleFollowToggle}
+      disabled={loading}
+      className={`px-4 py-2 rounded-lg font-semibold transition duration-200 ${
+        following
+          ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          : 'bg-blue-600 text-white hover:bg-blue-700'
+      } ${loading ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
+    >
+      {loading ? '⏳' : following ? '✅ Following' : '➕ Follow'}
+    </button>
+  );
+};
+
 // User Profile Component
 const UserProfile = ({ user }) => {
+  const { currentUser } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -8666,7 +8744,7 @@ const UserProfile = ({ user }) => {
   const [userBookmarks, setUserBookmarks] = useState([]);
   const [userFollowing, setUserFollowing] = useState([]);
   const [userFollowers, setUserFollowers] = useState([]);
-  const [followStats, setFollowStats] = useState({ followers_count: 0, following_count: 0 });
+  const [followStats, setFollowStats] = useState({ followers_count: 0, following_count: 0, is_following: false, is_followed_by: false });
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
