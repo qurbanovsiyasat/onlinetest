@@ -553,6 +553,14 @@ function AdminDashboard({ currentView, setCurrentView }) {
             🗂️ Categories
           </button>
           <button
+            onClick={() => setCurrentView('qa-management')}
+            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition duration-200 text-xs sm:text-sm whitespace-nowrap ${
+              currentView === 'qa-management' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            💬 Q&A Forum
+          </button>
+          <button
             onClick={() => setCurrentView('create-quiz')}
             className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition duration-200 text-xs sm:text-sm whitespace-nowrap ${
               currentView === 'create-quiz' ? 'bg-green-600 text-white' : 'bg-green-600 text-white hover:bg-green-700'
