@@ -5899,7 +5899,7 @@ function QuizCard({ quiz, startQuiz, startRealTimeQuiz, currentUser }) {
 }
 
 // User Home Component with Hierarchical Subject/Subcategory Structure
-function UserHome({ quizzes, startQuiz, startRealTimeQuiz }) {
+function UserHome({ quizzes, startQuiz, startRealTimeQuiz, currentUser }) {
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState(null);
 
