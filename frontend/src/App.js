@@ -7899,10 +7899,18 @@ function QuestionCard({ question, onClick, currentUser }) {
                   <span>💬</span>
                   <span>{question.answer_count || 0} answers</span>
                 </span>
-                <span className="flex items-center space-x-1">
-                  <span>👤</span>
-                  <span>{question.user ? question.user.name : 'Unknown User'}</span>
-                </span>
+                <div className="flex items-center space-x-2">
+                  <span className="flex items-center space-x-1">
+                    <span>👤</span>
+                    <span>{question.user ? question.user.name : 'Unknown User'}</span>
+                  </span>
+                  {question.user && (
+                    <FollowButton 
+                      userId={question.user.id} 
+                      className="text-xs px-2 py-1"
+                    />
+                  )}
+                </div>
                 {currentUser && (
                   <button
                     onClick={handleBookmark}
