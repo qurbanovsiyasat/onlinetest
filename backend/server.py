@@ -448,6 +448,29 @@ class VoteType(str, Enum):
 class VoteRequest(BaseModel):
     vote_type: VoteType
 
+# Emoji Reaction Models
+class EmojiType(str, Enum):
+    THUMBS_UP = "👍"
+    HEART = "❤️"
+    LAUGH = "😂"
+    THINKING = "🤔"
+    CELEBRATE = "🎉"
+
+class AnswerReaction(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    answer_id: str
+    user_id: str
+    emoji: EmojiType
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class EmojiReactionRequest(BaseModel):
+    emoji: EmojiType
+
+class EmojiReactionStats(BaseModel):
+    emoji: str
+    count: int
+    user_reacted: bool = False
+
 class Category(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
