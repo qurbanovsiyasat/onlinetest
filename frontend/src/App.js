@@ -3635,21 +3635,23 @@ function UserDashboard({ currentView, setCurrentView }) {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setCurrentView('home')}
-              className={`px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm ${
+              className={`px-2 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm whitespace-nowrap ${
                 currentView === 'home' ? 'bg-indigo-600 dark:bg-indigo-500 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
-              🏠 Sınaqlar
+              <span className="sm:hidden">🏠</span>
+              <span className="hidden sm:inline">🏠 Quizzes</span>
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setCurrentView('qa-forum')}
-              className={`px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm ${
+              className={`px-2 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm whitespace-nowrap ${
                 currentView === 'qa-forum' ? 'bg-indigo-600 dark:bg-indigo-500 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
-              💬 Q&A Forum
+              <span className="sm:hidden">💬</span>
+              <span className="hidden sm:inline">💬 Q&A</span>
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -3666,11 +3668,12 @@ function UserDashboard({ currentView, setCurrentView }) {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setCurrentView('profile')}
-              className={`px-3 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm ${
+              className={`px-2 sm:px-4 py-2 rounded-lg transition duration-200 text-xs sm:text-sm whitespace-nowrap ${
                 currentView === 'profile' ? 'bg-indigo-600 dark:bg-indigo-500 text-white' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
-              👤 Profil
+              <span className="sm:hidden">👤</span>
+              <span className="hidden sm:inline">👤 Profile</span>
             </motion.button>
             <NotificationBell setCurrentView={setCurrentView} currentView={currentView} />
             <motion.button
