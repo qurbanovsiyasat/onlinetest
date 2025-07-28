@@ -4203,12 +4203,12 @@ async def follow_user(
             is_pending=False
         )
 
-@api_router.delete("/follow/{user_id}")
+@api_router.delete("/follow/{user_id}", response_model=FollowResponse)
 async def unfollow_user(
     user_id: str,
     current_user: User = Depends(get_current_user)
 ):
-    """Unfollow a user"""
+    """Unfollow a user or cancel follow request"""
     result = await db.follows.delete_one({
         "follower_id": current_user.id,
         "following_id": user_id
@@ -4217,7 +4217,16 @@ async def unfollow_user(
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Not following this user")
     
-    return {"message": "User unfollowed successfully"}
+    # Update follow counts
+    await update_user_follow_counts(current_user.id)
+    await update_user_follow_counts(user_id)
+    
+    return FollowResponse(
+        action="unfollowed",
+        message="User unfollowed successfully",
+        is_following=False,
+        is_pending=False
+    )
 
 @api_router.get("/users/{user_id}/follow-stats", response_model=UserFollowStats)
 async def get_user_follow_stats(
