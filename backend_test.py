@@ -553,6 +553,53 @@ class QAForumTester:
             self.log_test("Auth Required - Create Question", False, f"Error: {str(e)}")
             return False
     
+    def test_additional_scenarios(self):
+        """Test additional scenarios like category filtering and admin access"""
+        # Test category filtering
+        try:
+            response = self.session.get(f"{BASE_URL}/questions?category=Science", 
+                                      headers={"Authorization": f"Bearer {self.admin_token}"})
+            if response.status_code == 200:
+                data = response.json()
+                science_questions = len(data)
+                self.log_test("Category Filtering", True, f"Found {science_questions} Science questions")
+            else:
+                self.log_test("Category Filtering", False, 
+                            f"Status: {response.status_code}, Response: {response.text}")
+        except Exception as e:
+            self.log_test("Category Filtering", False, f"Error: {str(e)}")
+        
+        # Test admin access to private profile
+        headers = {"Authorization": f"Bearer {self.admin_token}"}
+        try:
+            response = self.session.get(f"{BASE_URL}/users/{self.regular_user_id}", headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                is_private = data.get("is_private", False)
+                self.log_test("Admin Access Private Profile", True, 
+                            f"Admin can access private profile (private: {is_private})")
+            else:
+                self.log_test("Admin Access Private Profile", False, 
+                            f"Status: {response.status_code}, Response: {response.text}")
+        except Exception as e:
+            self.log_test("Admin Access Private Profile", False, f"Error: {str(e)}")
+        
+        # Test duplicate like (should unlike)
+        try:
+            response = self.session.post(f"{BASE_URL}/questions/{self.question_id}/like", 
+                                       headers={"Authorization": f"Bearer {self.user_token}"})
+            if response.status_code == 200:
+                data = response.json()
+                message = data.get("message", "")
+                self.log_test("Toggle Like System", True, f"Like toggle result: {message}")
+            else:
+                self.log_test("Toggle Like System", False, 
+                            f"Status: {response.status_code}, Response: {response.text}")
+        except Exception as e:
+            self.log_test("Toggle Like System", False, f"Error: {str(e)}")
+        
+        return True
+    
     def run_all_tests(self):
         """Run all backend API tests"""
         print("=" * 80)
