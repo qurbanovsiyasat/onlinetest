@@ -246,8 +246,7 @@ class SocialBackendTester:
                         f"User2 followers={user2_info.get('follower_count') if user2_info else 'N/A'}")
         
         # Test 3: Test unfollow functionality
-        unfollow_data = {"user_id": self.user2_id}
-        response = self.make_request("POST", "/unfollow", unfollow_data, token=self.user1_token)
+        response = self.make_request("DELETE", f"/follow/{self.user2_id}", token=self.user1_token)
         
         if response:
             expected_action = "unfollowed"
