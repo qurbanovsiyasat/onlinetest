@@ -8250,6 +8250,9 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
                   className="mt-3 max-w-md max-h-64 rounded-lg shadow-sm"
                 />
               )}
+              
+              {/* Emoji Reactions */}
+              <EmojiReactions answerId={answer.id} currentUser={currentUser} />
             </div>
           ))}
         </div>
