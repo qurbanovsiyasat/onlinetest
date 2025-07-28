@@ -3323,7 +3323,7 @@ function UserDashboard({ currentView, setCurrentView }) {
 
       <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
         {currentView === 'home' && (
-          <UserHome quizzes={quizzes} startQuiz={startQuiz} />
+          <UserHome quizzes={quizzes} startQuiz={startQuiz} startRealTimeQuiz={startRealTimeQuiz} />
         )}
 
         {/* User creation components removed - admin-only functionality */}
