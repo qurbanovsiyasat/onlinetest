@@ -7069,9 +7069,9 @@ function AdminQAManagement() {
                     <p className="text-gray-600 text-sm mb-2 line-clamp-2">{question.content}</p>
                     
                     <div className="flex items-center text-sm text-gray-500 space-x-4">
-                      <span>👤 {question.user.name}</span>
-                      <span>💬 {question.answer_count} answers</span>
-                      <span>👍 {question.upvotes - question.downvotes} votes</span>
+                      <span>👤 {question.user ? question.user.name : 'Unknown User'}</span>
+                      <span>💬 {question.answer_count || 0} answers</span>
+                      <span>👍 {(question.upvotes || 0) - (question.downvotes || 0)} votes</span>
                       <span>{new Date(question.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
