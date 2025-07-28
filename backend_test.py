@@ -576,7 +576,8 @@ class QAForumTester:
             self.test_categories,
             self.test_user_activity,
             self.test_private_profile_restrictions,
-            self.test_authentication_required_endpoints
+            self.test_authentication_required_endpoints,
+            self.test_additional_scenarios
         ]
         
         for test in tests:
