@@ -264,6 +264,8 @@ class QADiscussionAPITester:
                 details += f", Response: {response.text[:200]}"
                 
             return self.log_test("Get Questions List", success, details)
+        except requests.exceptions.RequestException as e:
+            return self.log_test("Get Questions List", False, f"Request Error: {str(e)}")
         except Exception as e:
             return self.log_test("Get Questions List", False, f"Error: {str(e)}")
 
