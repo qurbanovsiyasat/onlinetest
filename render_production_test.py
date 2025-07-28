@@ -345,7 +345,13 @@ class SquizProductionTester:
             )
             
             if reg_response.status_code != 200:
-                return self.log_test("User Registration & Login", False, f"Registration failed: {reg_response.status_code}")
+                error_details = f"Registration failed: {reg_response.status_code}"
+                try:
+                    error_data = reg_response.json()
+                    error_details += f", Error: {error_data}"
+                except:
+                    error_details += f", Response: {reg_response.text[:200]}"
+                return self.log_test("User Registration & Login", False, error_details)
             
             # Login user
             login_data = {
