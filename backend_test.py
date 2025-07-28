@@ -124,6 +124,13 @@ class QAForumTester:
                 self.admin_token = data["access_token"]
                 token_type = data.get("token_type", "")
                 self.log_test("Admin Login", True, f"Admin token received, type: {token_type}")
+                
+                # Get admin user ID from /auth/me
+                headers = {"Authorization": f"Bearer {self.admin_token}"}
+                me_response = self.session.get(f"{BASE_URL}/auth/me", headers=headers)
+                if me_response.status_code == 200:
+                    me_data = me_response.json()
+                    self.admin_user_id = me_data["id"]
             else:
                 self.log_test("Admin Login", False, 
                             f"Status: {response.status_code}, Response: {response.text}")
@@ -145,6 +152,13 @@ class QAForumTester:
                 self.user_token = data["access_token"]
                 token_type = data.get("token_type", "")
                 self.log_test("Regular User Login", True, f"User token received, type: {token_type}")
+                
+                # Get regular user ID from /auth/me
+                headers = {"Authorization": f"Bearer {self.user_token}"}
+                me_response = self.session.get(f"{BASE_URL}/auth/me", headers=headers)
+                if me_response.status_code == 200:
+                    me_data = me_response.json()
+                    self.regular_user_id = me_data["id"]
                 return True
             else:
                 self.log_test("Regular User Login", False, 
