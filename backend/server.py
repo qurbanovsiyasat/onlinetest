@@ -4519,6 +4519,206 @@ async def get_user_profile(
     return await get_user_profile_for_viewer(user_id, current_user.id)
 
 # =====================================
+# ACTIVITY FEED ENDPOINTS
+# =====================================
+
+class ActivityType(str, Enum):
+    QUIZ_PUBLISHED = "quiz_published"
+    QUESTION_POSTED = "question_posted"
+    ANSWER_POSTED = "answer_posted"
+    QUIZ_COMPLETED = "quiz_completed"
+    USER_FOLLOWED = "user_followed"
+
+class ActivityItem(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    activity_type: ActivityType
+    user_id: str
+    user_name: str
+    title: str
+    description: str
+    related_id: Optional[str] = None  # ID of quiz, question, etc.
+    created_at: datetime
+    metadata: dict = {}  # Additional data like score, quiz title, etc.
+
+@api_router.get("/user/activity-feed")
+async def get_activity_feed(
+    limit: int = 20,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user)
+):
+    """Get activity feed from followed users"""
+    try:
+        # Get all users that current user follows
+        follows = await db.follows.find({
+            "follower_id": current_user.id,
+            "status": FollowStatus.APPROVED
+        }).to_list(1000)
+        
+        if not follows:
+            return {
+                "activities": [],
+                "total": 0,
+                "has_more": False
+            }
+        
+        followed_user_ids = [follow["following_id"] for follow in follows]
+        
+        activities = []
+        
+        # Get recent quiz publications from followed users
+        recent_quizzes = await db.quizzes.find({
+            "$or": [
+                {"created_by": {"$in": followed_user_ids}, "is_draft": False},
+                {"quiz_owner_id": {"$in": followed_user_ids}, "is_draft": False}
+            ]
+        }).sort("created_at", -1).limit(50).to_list(50)
+        
+        for quiz in recent_quizzes:
+            # Get user info
+            user_info = await db.users.find_one({"id": quiz["created_by"]})
+            if user_info:
+                activities.append({
+                    "id": f"quiz_{quiz['id']}",
+                    "activity_type": ActivityType.QUIZ_PUBLISHED,
+                    "user_id": user_info["id"],
+                    "user_name": user_info["name"],
+                    "title": f"Published a new quiz",
+                    "description": f'Created "{quiz["title"]}" in {quiz.get("subject", "General")}',
+                    "related_id": quiz["id"],
+                    "created_at": quiz["created_at"],
+                    "metadata": {
+                        "quiz_title": quiz["title"],
+                        "subject": quiz.get("subject", "General"),
+                        "total_questions": quiz.get("total_questions", 0)
+                    }
+                })
+        
+        # Get recent questions from followed users
+        recent_questions = await db.questions.find({
+            "user_id": {"$in": followed_user_ids}
+        }).sort("created_at", -1).limit(30).to_list(30)
+        
+        for question in recent_questions:
+            user_info = await db.users.find_one({"id": question["user_id"]})
+            if user_info:
+                activities.append({
+                    "id": f"question_{question['id']}",
+                    "activity_type": ActivityType.QUESTION_POSTED,
+                    "user_id": user_info["id"],
+                    "user_name": user_info["name"],
+                    "title": f"Posted a question",
+                    "description": question["title"][:100] + ("..." if len(question["title"]) > 100 else ""),
+                    "related_id": question["id"],
+                    "created_at": question["created_at"],
+                    "metadata": {
+                        "question_title": question["title"],
+                        "subject": question.get("subject", "General"),
+                        "tags": question.get("tags", [])
+                    }
+                })
+        
+        # Get recent answers from followed users
+        recent_answers = await db.answers.find({
+            "user_id": {"$in": followed_user_ids}
+        }).sort("created_at", -1).limit(20).to_list(20)
+        
+        for answer in recent_answers:
+            # Get the question title for context
+            question = await db.questions.find_one({"id": answer["question_id"]})
+            user_info = await db.users.find_one({"id": answer["user_id"]})
+            
+            if user_info and question:
+                activities.append({
+                    "id": f"answer_{answer['id']}",
+                    "activity_type": ActivityType.ANSWER_POSTED,
+                    "user_id": user_info["id"],
+                    "user_name": user_info["name"],
+                    "title": f"Answered a question",
+                    "description": f'Answered "{question["title"][:80]}..."',
+                    "related_id": question["id"],
+                    "created_at": answer["created_at"],
+                    "metadata": {
+                        "question_title": question["title"],
+                        "answer_preview": answer["content"][:100],
+                        "is_accepted": answer.get("is_accepted", False)
+                    }
+                })
+        
+        # Get recent quiz completions from followed users (high scores only)
+        recent_attempts = await db.quiz_attempts.find({
+            "user_id": {"$in": followed_user_ids},
+            "percentage": {"$gte": 80}  # Only show high-score completions
+        }).sort("attempted_at", -1).limit(15).to_list(15)
+        
+        for attempt in recent_attempts:
+            user_info = await db.users.find_one({"id": attempt["user_id"]})
+            quiz_info = await db.quizzes.find_one({"id": attempt["quiz_id"]})
+            
+            if user_info and quiz_info:
+                activities.append({
+                    "id": f"attempt_{attempt['id']}",
+                    "activity_type": ActivityType.QUIZ_COMPLETED,
+                    "user_id": user_info["id"],
+                    "user_name": user_info["name"],
+                    "title": f"Completed a quiz with high score",
+                    "description": f'Scored {attempt["percentage"]:.1f}% on "{quiz_info["title"]}"',
+                    "related_id": quiz_info["id"],
+                    "created_at": attempt["attempted_at"],
+                    "metadata": {
+                        "quiz_title": quiz_info["title"],
+                        "score": attempt["percentage"],
+                        "passed": attempt.get("passed", False)
+                    }
+                })
+        
+        # Get recent follow activities
+        recent_follows = await db.follows.find({
+            "follower_id": {"$in": followed_user_ids},
+            "status": FollowStatus.APPROVED
+        }).sort("created_at", -1).limit(10).to_list(10)
+        
+        for follow in recent_follows:
+            follower_info = await db.users.find_one({"id": follow["follower_id"]})
+            followed_info = await db.users.find_one({"id": follow["following_id"]})
+            
+            if follower_info and followed_info:
+                activities.append({
+                    "id": f"follow_{follow['id']}",
+                    "activity_type": ActivityType.USER_FOLLOWED,
+                    "user_id": follower_info["id"],
+                    "user_name": follower_info["name"],
+                    "title": f"Started following someone",
+                    "description": f'Started following {followed_info["name"]}',
+                    "related_id": followed_info["id"],
+                    "created_at": follow["created_at"],
+                    "metadata": {
+                        "followed_user_name": followed_info["name"]
+                    }
+                })
+        
+        # Sort all activities by creation time (newest first)
+        activities.sort(key=lambda x: x["created_at"], reverse=True)
+        
+        # Apply pagination
+        total_activities = len(activities)
+        paginated_activities = activities[offset:offset + limit]
+        has_more = offset + limit < total_activities
+        
+        return {
+            "activities": paginated_activities,
+            "total": total_activities,
+            "has_more": has_more,
+            "offset": offset,
+            "limit": limit
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching activity feed: {str(e)}"
+        )
+
+# =====================================
 # ENHANCED ADMIN CONTROLS FOR SOCIAL FEATURES
 # =====================================
 
