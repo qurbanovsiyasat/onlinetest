@@ -3737,8 +3737,36 @@ async def update_my_profile(
     return await get_user_profile(current_user.id)
 
 @api_router.get("/users/{user_id}/questions")
-async def get_user_questions(user_id: str, skip: int = 0, limit: int = 20):
-    """Get questions posted by a specific user"""
+async def get_user_questions(user_id: str, skip: int = 0, limit: int = 20, current_user: User = Depends(get_current_user)):
+    """Get questions posted by a specific user (respects privacy settings)"""
+    # Check if user exists
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if current user can view this user's activity
+    is_admin = current_user.role == UserRole.ADMIN
+    is_own_profile = current_user.id == user_id
+    is_target_private = user.get("is_private", False)
+    
+    can_view_activity = is_admin or is_own_profile or not is_target_private
+    
+    # For private profiles, check follow relationship
+    if is_target_private and not is_admin and not is_own_profile:
+        follow_relation = await db.user_follows.find_one({
+            "follower_id": current_user.id,
+            "following_id": user_id,
+            "status": "approved"
+        })
+        can_view_activity = bool(follow_relation)
+    
+    if not can_view_activity:
+        return {
+            "questions": [],
+            "message": "This user's activity is private",
+            "can_view": False
+        }
+    
     questions = await db.questions.find({"user_id": user_id}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
     enriched_questions = []
@@ -3747,11 +3775,42 @@ async def get_user_questions(user_id: str, skip: int = 0, limit: int = 20):
         question["user"] = user_info
         enriched_questions.append(question)
     
-    return {"questions": enriched_questions}
+    return {
+        "questions": enriched_questions,
+        "can_view": True
+    }
 
 @api_router.get("/users/{user_id}/answers")
-async def get_user_answers(user_id: str, skip: int = 0, limit: int = 20):
-    """Get answers posted by a specific user"""
+async def get_user_answers(user_id: str, skip: int = 0, limit: int = 20, current_user: User = Depends(get_current_user)):
+    """Get answers posted by a specific user (respects privacy settings)"""
+    # Check if user exists
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if current user can view this user's activity
+    is_admin = current_user.role == UserRole.ADMIN
+    is_own_profile = current_user.id == user_id
+    is_target_private = user.get("is_private", False)
+    
+    can_view_activity = is_admin or is_own_profile or not is_target_private
+    
+    # For private profiles, check follow relationship
+    if is_target_private and not is_admin and not is_own_profile:
+        follow_relation = await db.user_follows.find_one({
+            "follower_id": current_user.id,
+            "following_id": user_id,
+            "status": "approved"
+        })
+        can_view_activity = bool(follow_relation)
+    
+    if not can_view_activity:
+        return {
+            "answers": [],
+            "message": "This user's activity is private",
+            "can_view": False
+        }
+    
     answers = await db.answers.find({"user_id": user_id}).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
     
     enriched_answers = []
@@ -3765,7 +3824,10 @@ async def get_user_answers(user_id: str, skip: int = 0, limit: int = 20):
         
         enriched_answers.append(answer)
     
-    return {"answers": enriched_answers}
+    return {
+        "answers": enriched_answers,
+        "can_view": True
+    }
 
 @api_router.get("/users/{user_id}/quiz-attempts")
 async def get_user_quiz_attempts(user_id: str, skip: int = 0, limit: int = 20):
