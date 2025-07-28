@@ -4604,9 +4604,18 @@ function RealTimeQuizSession({ quiz, setCurrentView, user, setQuizResult, setIsT
         clearInterval(timerRef.current);
       }
       
+      // Set the quiz result data for the parent component
+      if (setQuizResult) {
+        setQuizResult(result);
+      }
+      
+      // Mark this as a timed quiz for proper display
+      if (setIsTimedQuiz) {
+        setIsTimedQuiz(true);
+      }
+      
       // Navigate to results
       setCurrentView('result');
-      // You might want to pass the result to a parent component here
       
     } catch (error) {
       setError(error.response?.data?.detail || 'Failed to submit quiz');
