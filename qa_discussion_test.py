@@ -244,12 +244,23 @@ class QADiscussionAPITester:
             
             if success:
                 data = response.json()
-                details += f", Questions Count: {len(data)}"
-                if len(data) > 0:
-                    first_question = data[0]
-                    details += f", First Q: {first_question.get('title', 'Unknown')[:20]}..."
-                    details += f", Upvotes: {first_question.get('upvotes', 0)}"
-                    details += f", Status: {first_question.get('status', 'Unknown')}"
+                # Handle both list and object response formats
+                if isinstance(data, dict) and 'questions' in data:
+                    questions = data['questions']
+                    details += f", Questions Count: {len(questions)}"
+                    details += f", Total: {data.get('total', 'Unknown')}"
+                    if len(questions) > 0:
+                        first_question = questions[0]
+                        details += f", First Q: {first_question.get('title', 'Unknown')[:20]}..."
+                        details += f", Upvotes: {first_question.get('upvotes', 0)}"
+                        details += f", Status: {first_question.get('status', 'Unknown')}"
+                elif isinstance(data, list):
+                    details += f", Questions Count: {len(data)}"
+                    if len(data) > 0:
+                        first_question = data[0]
+                        details += f", First Q: {first_question.get('title', 'Unknown')[:20]}..."
+                        details += f", Upvotes: {first_question.get('upvotes', 0)}"
+                        details += f", Status: {first_question.get('status', 'Unknown')}"
                 
                 # Test filtering by subject
                 filter_response = requests.get(
@@ -259,7 +270,10 @@ class QADiscussionAPITester:
                 )
                 if filter_response.status_code == 200:
                     filtered_data = filter_response.json()
-                    details += f", Filtered Count: {len(filtered_data)}"
+                    if isinstance(filtered_data, dict) and 'questions' in filtered_data:
+                        details += f", Filtered Count: {len(filtered_data['questions'])}"
+                    elif isinstance(filtered_data, list):
+                        details += f", Filtered Count: {len(filtered_data)}"
             else:
                 details += f", Response: {response.text[:200]}"
                 
