@@ -2491,7 +2491,32 @@ async def get_predefined_subjects(admin_user: User = Depends(get_admin_user)):
         admin_subjects[subject_name] = custom.get("subcategories", ["General"])
     
     return admin_subjects
+@api_router.post("/init-admin")
+async def initialize_admin(_: User = Depends(get_admin_user)): # Requires admin user
+    """Initialize admin user (run once)"""
+    # Check if admin already exists
+    admin_exists = await db.users.find_one({"role": "admin"})
+    if admin_exists:
+        raise HTTPException(status_code=400, detail="Admin already exists")
 
+    # Create admin user
+    admin_password = hash_password("admin123")  # Change this in production!
+    admin_user = User(
+        email="admin@squiz.com",
+        name="System Administrator",
+        role=UserRole.ADMIN
+    )
+
+    admin_dict = admin_user.dict()
+    admin_dict["password"] = admin_password
+
+    await db.users.insert_one(admin_dict)
+
+    return {
+        "message": "Admin user created successfully",
+        "email": "admin@squiz.com",
+        "password": "admin123"  # Remove this in production!
+    }
 @api_router.get("/admin/user/{user_id}/details")
 async def get_user_details(user_id: str, admin_user: User = Depends(get_admin_user)):
     """Get detailed user information including quiz history and mistakes"""
