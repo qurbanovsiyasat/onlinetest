@@ -8671,6 +8671,7 @@ const UserProfile = ({ user }) => {
 
   useEffect(() => {
     fetchProfile();
+    fetchFollowStats();
   }, []);
 
   const fetchProfile = async () => {
