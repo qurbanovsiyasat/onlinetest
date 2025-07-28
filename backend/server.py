@@ -4185,16 +4185,16 @@ async def follow_user(
             is_pending=True
         )
     else:
-        # Create notification for new follower
-        notification = Notification(
-            user_id=follow_data.user_id,
-            from_user_id=current_user.id,
-            notification_type=NotificationType.NEW_FOLLOWER,
-            title="New Follower",
-            message=f"{current_user.name} started following you",
-            related_id=current_user.id
-        )
-        await db.notifications.insert_one(notification.dict())
+        # Create notification for new follower (temporarily disabled for testing)
+        # notification = Notification(
+        #     user_id=follow_data.user_id,
+        #     from_user_id=current_user.id,
+        #     notification_type=NotificationType.NEW_FOLLOWER,
+        #     title="New Follower",
+        #     message=f"{current_user.name} started following you",
+        #     related_id=current_user.id
+        # )
+        # await db.notifications.insert_one(notification.dict())
         
         return FollowResponse(
             action="followed",
