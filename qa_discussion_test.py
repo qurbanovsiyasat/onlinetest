@@ -823,7 +823,7 @@ class QADiscussionAPITester:
             
             # Test pin question (should fail)
             if self.created_question_id:
-                pin_response = requests.post(
+                pin_response = requests.put(
                     f"{self.api_url}/admin/questions/{self.created_question_id}/pin",
                     headers=self.get_auth_headers(self.user_token),
                     timeout=10
