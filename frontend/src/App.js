@@ -3712,6 +3712,10 @@ function UserDashboard({ currentView, setCurrentView }) {
           <QAForum user={user} />
         )}
 
+        {currentView === 'activity-feed' && (
+          <ActivityFeed user={user} />
+        )}
+
         {currentView === 'profile' && (
           <UserProfile user={user} />
         )}
