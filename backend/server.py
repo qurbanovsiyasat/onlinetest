@@ -3628,6 +3628,11 @@ class NotificationCreate(BaseModel):
 # USER PROFILE ENDPOINTS
 # =====================================
 
+@api_router.get("/profile", response_model=UserProfile)
+async def get_my_profile(current_user: User = Depends(get_current_user)):
+    """Get current user's own profile"""
+    return await get_user_profile(current_user.id, current_user)
+
 @api_router.get("/users/{user_id}/profile", response_model=UserProfile)
 async def get_user_profile(user_id: str, current_user: User = Depends(get_current_user)):
     """Get user profile with admin access to private profiles"""
