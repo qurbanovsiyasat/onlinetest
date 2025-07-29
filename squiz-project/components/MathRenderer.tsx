@@ -1,12 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-
-declare global {
-  interface Window {
-    MathJax: any
-  }
-}
+import { useEffect, useRef, useState } from 'react'
 
 interface MathRendererProps {
   math: string
@@ -15,70 +9,68 @@ interface MathRendererProps {
 }
 
 export default function MathRenderer({ math, display = false, className = '' }: MathRendererProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-
+  const [rendered, setRendered] = useState('')
+  
   useEffect(() => {
-    const loadMathJax = async () => {
-      if (!window.MathJax) {
-        // Load MathJax via CDN
-        const script = document.createElement('script')
-        script.src = 'https://polyfill.io/v3/polyfill.min.js?features=es6'
-        document.head.appendChild(script)
-        
-        const mathJaxScript = document.createElement('script')
-        mathJaxScript.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'
-        mathJaxScript.async = true
-        
-        // Configure MathJax
-        window.MathJax = {
-          tex: {
-            inlineMath: [['$', '$'], ['\\(', '\\)']],
-            displayMath: [['$$', '$$'], ['\\[', '\\]']],
-            processEscapes: true,
-            processEnvironments: true
-          },
-          options: {
-            skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
-            ignoreHtmlClass: 'tex2jax_ignore',
-            processHtmlClass: 'tex2jax_process'
-          }
-        }
-        
-        document.head.appendChild(mathJaxScript)
-        
-        mathJaxScript.onload = () => {
-          renderMath()
-        }
-      } else {
-        renderMath()
-      }
+    // Simple math renderer for common symbols
+    const renderSimpleMath = (mathText: string) => {
+      return mathText
+        .replace(/\^{([^}]+)}/g, '<sup>$1</sup>')
+        .replace(/\^(\w+)/g, '<sup>$1</sup>')
+        .replace(/_{([^}]+)}/g, '<sub>$1</sub>')
+        .replace(/_(\w+)/g, '<sub>$1</sub>')
+        .replace(/\\frac{([^}]+)}{([^}]+)}/g, '<span class="fraction"><span class="numerator">$1</span><span class="denominator">$2</span></span>')
+        .replace(/\\sqrt{([^}]+)}/g, '√($1)')
+        .replace(/\\pi/g, 'π')
+        .replace(/\\alpha/g, 'α')
+        .replace(/\\beta/g, 'β')
+        .replace(/\\gamma/g, 'γ')
+        .replace(/\\delta/g, 'δ')
+        .replace(/\\theta/g, 'θ')
+        .replace(/\\lambda/g, 'λ')
+        .replace(/\\mu/g, 'μ')
+        .replace(/\\sigma/g, 'σ')
+        .replace(/\\omega/g, 'ω')
+        .replace(/\\sum/g, '∑')
+        .replace(/\\int/g, '∫')
+        .replace(/\\infty/g, '∞')
+        .replace(/\\pm/g, '±')
+        .replace(/\\times/g, '×')
+        .replace(/\\div/g, '÷')
+        .replace(/\\leq/g, '≤')
+        .replace(/\\geq/g, '≥')
+        .replace(/\\neq/g, '≠')
+        .replace(/\\approx/g, '≈')
     }
-
-    const renderMath = () => {
-      if (window.MathJax && containerRef.current) {
-        // Clear previous content
-        containerRef.current.innerHTML = ''
-        
-        // Add the math content
-        const mathElement = document.createElement(display ? 'div' : 'span')
-        mathElement.textContent = display ? `$$${math}$$` : `$${math}$`
-        containerRef.current.appendChild(mathElement)
-        
-        // Process the math
-        window.MathJax.typesetPromise([containerRef.current]).catch((err: any) => {
-          console.error('MathJax rendering error:', err)
-        })
-      }
-    }
-
-    loadMathJax()
-  }, [math, display])
+    
+    setRendered(renderSimpleMath(math))
+  }, [math])
 
   return (
-    <div 
-      ref={containerRef} 
-      className={`math-renderer ${display ? 'block text-center' : 'inline'} ${className}`}
-    />
+    <>
+      <style jsx>{`
+        .fraction {
+          display: inline-block;
+          vertical-align: middle;
+          text-align: center;
+        }
+        .numerator {
+          display: block;
+          border-bottom: 1px solid currentColor;
+          font-size: 0.8em;
+          line-height: 1.2;
+        }
+        .denominator {
+          display: block;
+          font-size: 0.8em;
+          line-height: 1.2;
+        }
+      `}</style>
+      <span 
+        className={`math-renderer ${display ? 'block text-center text-lg' : 'inline'} ${className}`}
+        dangerouslySetInnerHTML={{ __html: rendered }}
+      />
+    </>
   )
 }
 
