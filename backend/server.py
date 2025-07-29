@@ -1027,7 +1027,7 @@ async def publish_quiz(
 
 @app.get("/api/admin/quizzes")
 async def get_all_quizzes(admin_user: dict = Depends(get_admin_user)):
-    quizzes = await db.quizzes.find({}, {"questions": 0}).sort("created_at", -1).to_list(None)
+    quizzes = await db.quizzes.find({}, {"questions": 0, "_id": 0}).sort("created_at", -1).to_list(None)
     return quizzes
 
 @app.get("/api/admin/quiz-results")
