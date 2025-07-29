@@ -9302,7 +9302,8 @@ const UserProfile = ({ user, viewingUserId = null }) => {
         name: response.data.name,
         bio: response.data.bio || '',
         location: response.data.location || '',
-        website: response.data.website || ''
+        website: response.data.website || '',
+        is_private: response.data.is_private || false
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -9481,7 +9482,11 @@ const UserProfile = ({ user, viewingUserId = null }) => {
                         className="text-2xl font-bold text-white bg-transparent border-b border-white/30 focus:border-white outline-none"
                       />
                     ) : (
-                      <h1 className="text-2xl font-bold text-white">{profile.name}</h1>
+                      <h1 className="text-2xl font-bold text-white">
+                        {(profile.is_private && !isOwnProfile && !isAdminViewing && !profile.is_following) 
+                          ? 'abituriyent' 
+                          : profile.name}
+                      </h1>
                     )}
                     {profile.is_admin && (
                       <span className="bg-yellow-400 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
@@ -9554,6 +9559,34 @@ const UserProfile = ({ user, viewingUserId = null }) => {
               <p className="text-indigo-100">{profile.bio || 'No bio added yet'}</p>
             )}
           </div>
+
+          {/* Privacy Settings - Only for own profile */}
+          {editing && isOwnProfile && (
+            <div className="mt-4 p-4 bg-white/10 rounded-lg">
+              <h4 className="text-white font-semibold mb-3">🔒 Gizlilik Parametrləri</h4>
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-white font-medium">Gizli Profil</label>
+                  <p className="text-indigo-100 text-sm">Profiliniz gizli olduqda, adınız "abituriyent" kimi göstərilir və profil səhifəniz digərləri üçün əlçatmazdır.</p>
+                </div>
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editData.is_private || false}
+                    onChange={(e) => setEditData({ ...editData, is_private: e.target.checked })}
+                    className="sr-only"
+                  />
+                  <div className={`relative w-12 h-6 rounded-full transition-colors ${
+                    editData.is_private ? 'bg-green-500' : 'bg-gray-400'
+                  }`}>
+                    <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                      editData.is_private ? 'translate-x-6' : 'translate-x-0'
+                    }`}></div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          )}
           
           {/* Location and Website */}
           {editing && isOwnProfile && (

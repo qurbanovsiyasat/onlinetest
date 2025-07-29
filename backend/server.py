@@ -2799,17 +2799,36 @@ async def get_user_details(user_id: str, admin_user: User = Depends(get_admin_us
 # ====================================================================
 
 # Helper functions for Q&A system
-async def get_user_info(user_id: str):
-    """Get basic user information for Q&A responses"""
+async def get_user_info(user_id: str, requesting_user_id: str = None):
+    """Get basic user information for Q&A responses, respecting privacy settings"""
     user = await db.users.find_one({"id": user_id})
     if user:
+        # Check if user has private profile and requesting user is different
+        is_private = user.get("is_private", False)
+        
+        # If profile is private and requesting user is not the owner or admin, show anonymous name
+        if is_private and requesting_user_id and requesting_user_id != user_id:
+            # Check if requesting user is admin
+            requesting_user = await db.users.find_one({"id": requesting_user_id})
+            is_admin = requesting_user and requesting_user.get("role") == "admin"
+            
+            if not is_admin:
+                return {
+                    "id": user["id"],
+                    "name": "abituriyen",  # Anonymous name for private profiles
+                    "role": user.get("role", "user"),
+                    "is_admin": user.get("role") == "admin",
+                    "is_private": True
+                }
+        
         return {
             "id": user["id"],
             "name": user["name"],
             "role": user.get("role", "user"),
-            "is_admin": user.get("role") == "admin"
+            "is_admin": user.get("role") == "admin",
+            "is_private": user.get("is_private", False)
         }
-    return {"id": user_id, "name": "Unknown User", "role": "user", "is_admin": False}
+    return {"id": user_id, "name": "Unknown User", "role": "user", "is_admin": False, "is_private": False}
 
 async def update_question_stats(question_id: str):
     """Update question statistics after changes"""
@@ -2839,7 +2858,8 @@ async def get_questions(
     page: int = 1,
     limit: int = 20,
     sort_by: str = "created_at",  # created_at, upvotes, answer_count, updated_at
-    sort_order: str = "desc"
+    sort_order: str = "desc",
+    current_user: User = Depends(get_current_user)
 ):
     """Get all questions with optional filtering and pagination"""
     skip = (page - 1) * limit
@@ -2863,7 +2883,7 @@ async def get_questions(
     # Enrich with user information
     enriched_questions = []
     for question in questions:
-        user_info = await get_user_info(question["user_id"])
+        user_info = await get_user_info(question["user_id"], current_user.id)
         question["user"] = user_info
         enriched_questions.append(Question(**question))
     
@@ -2876,7 +2896,7 @@ async def get_questions(
     }
 
 @api_router.get("/questions/{question_id}")
-async def get_question_detail(question_id: str):
+async def get_question_detail(question_id: str, current_user: User = Depends(get_current_user)):
     """Get detailed question with answers and discussions"""
     # Get question
     question = await db.questions.find_one({"id": question_id})
@@ -2884,14 +2904,14 @@ async def get_question_detail(question_id: str):
         raise HTTPException(status_code=404, detail="Question not found")
     
     # Get question user info
-    question_user = await get_user_info(question["user_id"])
+    question_user = await get_user_info(question["user_id"], current_user.id)
     question["user"] = question_user
     
     # Get answers
     answers = await db.answers.find({"question_id": question_id}).sort("created_at", -1).to_list(100)
     enriched_answers = []
     for answer in answers:
-        user_info = await get_user_info(answer["user_id"])
+        user_info = await get_user_info(answer["user_id"], current_user.id)
         answer["user"] = user_info
         enriched_answers.append(Answer(**answer))
     
@@ -2899,9 +2919,15 @@ async def get_question_detail(question_id: str):
     discussions = await db.discussions.find({"question_id": question_id}).sort("created_at", 1).to_list(100)
     enriched_discussions = []
     for discussion in discussions:
-        user_info = await get_user_info(discussion["user_id"])
+        user_info = await get_user_info(discussion["user_id"], current_user.id)
         discussion["user"] = user_info
         enriched_discussions.append(Discussion(**discussion))
+    
+    return {
+        "question": Question(**question),
+        "answers": enriched_answers,
+        "discussions": enriched_discussions
+    }
     
     return {
         "question": Question(**question),
@@ -3628,6 +3654,11 @@ class NotificationCreate(BaseModel):
 # USER PROFILE ENDPOINTS
 # =====================================
 
+@api_router.get("/profile", response_model=UserProfile)
+async def get_my_profile(current_user: User = Depends(get_current_user)):
+    """Get current user's own profile"""
+    return await get_user_profile(current_user.id, current_user)
+
 @api_router.get("/users/{user_id}/profile", response_model=UserProfile)
 async def get_user_profile(user_id: str, current_user: User = Depends(get_current_user)):
     """Get user profile with admin access to private profiles"""
@@ -3718,7 +3749,7 @@ async def get_user_profile(user_id: str, current_user: User = Depends(get_curren
 @api_router.get("/profile", response_model=UserProfile)
 async def get_my_profile(current_user: User = Depends(get_current_user)):
     """Get current user's profile"""
-    return await get_user_profile(current_user.id)
+    return await get_user_profile(current_user.id, current_user)
 
 @api_router.put("/profile", response_model=UserProfile)
 async def update_my_profile(
@@ -3734,7 +3765,7 @@ async def update_my_profile(
             {"$set": update_data}
         )
     
-    return await get_user_profile(current_user.id)
+    return await get_user_profile(current_user.id, current_user)
 
 @api_router.get("/users/{user_id}/questions")
 async def get_user_questions(user_id: str, skip: int = 0, limit: int = 20, current_user: User = Depends(get_current_user)):
