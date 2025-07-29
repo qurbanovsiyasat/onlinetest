@@ -8512,12 +8512,13 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
               <div className="flex items-center space-x-2">
                 <span className="flex items-center space-x-1">
                   <span>👤</span>
-                  <span>{question.user ? question.user.name : 'Unknown User'}</span>
+                  <AdminName 
+                    name={question.user ? question.user.name : 'Unknown User'}
+                    role={question.user?.role}
+                  />
                 </span>
                 {question.user && question.user.role === 'admin' && (
-                  <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-sm">
-                    🛡️ Admin
-                  </span>
+                  <AdminBadge size="default" />
                 )}
               </div>
               <span>Asked {new Date(question.created_at).toLocaleDateString()}</span>
