@@ -7947,6 +7947,11 @@ function QuestionCard({ question, onClick, currentUser }) {
                     <span>👤</span>
                     <span>{question.user ? question.user.name : 'Unknown User'}</span>
                   </span>
+                  {question.user && question.user.role === 'admin' && (
+                    <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-sm">
+                      🛡️ Admin
+                    </span>
+                  )}
                   {question.user && (
                     <FollowButton 
                       userId={question.user.id} 
