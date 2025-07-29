@@ -1,8 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-// This would be imported from the main quizzes route in a real app
-// For now, we'll maintain a simple in-memory store
-let quizzes: any[] = []
+import { getQuizzes, saveQuizzes } from "@/lib/storage"
 
 // GET - Get single quiz by ID
 export async function GET(
@@ -10,16 +7,17 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const quizzes = getQuizzes()
     const quiz = quizzes.find(q => q.id === params.id)
     
     if (!quiz) {
-      return NextResponse.json({ detail: "Quiz bulunamadı" }, { status: 404 })
+      return NextResponse.json({ detail: "Quiz tapılmadı" }, { status: 404 })
     }
 
     return NextResponse.json(quiz)
   } catch (error) {
-    console.error("Quiz getirme xətası:", error)
-    return NextResponse.json({ detail: "Sunucu hatası" }, { status: 500 })
+    console.error("Quiz əldə etmə xətası:", error)
+    return NextResponse.json({ detail: "Server xətası" }, { status: 500 })
   }
 }
 
@@ -30,23 +28,34 @@ export async function PUT(
 ) {
   try {
     const quizData = await request.json()
+    const quizzes = getQuizzes()
     const quizIndex = quizzes.findIndex(q => q.id === params.id)
     
     if (quizIndex === -1) {
-      return NextResponse.json({ detail: "Quiz bulunamadı" }, { status: 404 })
+      return NextResponse.json({ detail: "Quiz tapılmadı" }, { status: 404 })
     }
+
+    // Calculate updated statistics
+    const totalQuestions = quizData.questions?.length || quizzes[quizIndex].total_questions
+    const totalPoints = quizData.questions?.reduce((sum: number, q: any) => sum + q.points, 0) || 
+                       quizzes[quizIndex].total_points
 
     // Update quiz
     quizzes[quizIndex] = {
       ...quizzes[quizIndex],
       ...quizData,
+      total_questions: totalQuestions,
+      total_points: totalPoints,
       updated_at: new Date().toISOString()
     }
 
+    // Save to persistent storage
+    saveQuizzes(quizzes)
+
     return NextResponse.json(quizzes[quizIndex])
   } catch (error) {
-    console.error("Quiz güncelleme xətası:", error)
-    return NextResponse.json({ detail: "Sunucu hatası" }, { status: 500 })
+    console.error("Quiz yenilənmə xətası:", error)
+    return NextResponse.json({ detail: "Server xətası" }, { status: 500 })
   }
 }
 
@@ -56,17 +65,21 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const quizzes = getQuizzes()
     const quizIndex = quizzes.findIndex(q => q.id === params.id)
     
     if (quizIndex === -1) {
-      return NextResponse.json({ detail: "Quiz bulunamadı" }, { status: 404 })
+      return NextResponse.json({ detail: "Quiz tapılmadı" }, { status: 404 })
     }
 
     quizzes.splice(quizIndex, 1)
 
-    return NextResponse.json({ detail: "Quiz başarıyla silindi" })
+    // Save to persistent storage
+    saveQuizzes(quizzes)
+
+    return NextResponse.json({ detail: "Quiz uğurla silindi" })
   } catch (error) {
-    console.error("Quiz silme xətası:", error)
-    return NextResponse.json({ detail: "Sunucu hatası" }, { status: 500 })
+    console.error("Quiz silmə xətası:", error)
+    return NextResponse.json({ detail: "Server xətası" }, { status: 500 })
   }
 }
