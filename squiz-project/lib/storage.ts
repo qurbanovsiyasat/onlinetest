@@ -4,6 +4,8 @@ import path from 'path'
 const DATA_DIR = path.join(process.cwd(), 'data')
 const USERS_FILE = path.join(DATA_DIR, 'users.json')
 const QUIZZES_FILE = path.join(DATA_DIR, 'quizzes.json')
+const RESULTS_FILE = path.join(DATA_DIR, 'quiz-results.json')
+const ATTEMPTS_FILE = path.join(DATA_DIR, 'quiz-attempts.json')
 
 // Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
