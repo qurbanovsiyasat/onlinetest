@@ -14,25 +14,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Yalnız şəkil faylları qəbul edilir" }, { status: 400 })
     }
 
-    // Fayl ölçüsünü yoxla (10MB maksimum)
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: "Fayl ölçüsü 10MB-dan böyük ola bilməz" }, { status: 400 })
+    // Fayl ölçüsünü yoxla (5MB maksimum)
+    if (file.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: "Fayl ölçüsü 5MB-dan böyük ola bilməz" }, { status: 400 })
     }
 
-    // Mock implementation - real implementation would upload to cloud storage
-    // For now, we'll create a blob URL
+    // Convert image to base64 for frontend display
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-
-    // In a real implementation, you would upload to AWS S3, Cloudinary, etc.
-    // For demo purposes, we'll return a placeholder URL
-    const mockUrl = `/placeholder.svg?height=400&width=600&text=${encodeURIComponent(file.name)}`
+    const base64 = buffer.toString('base64')
+    const base64Url = `data:${file.type};base64,${base64}`
 
     return NextResponse.json({
-      url: mockUrl,
+      url: base64Url,
       filename: file.name,
       size: file.size,
       type: file.type,
+      success: true
     })
   } catch (error) {
     console.error("Şəkil yükləmə xətası:", error)
