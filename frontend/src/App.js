@@ -8902,7 +8902,8 @@ function ActivityFeed({ user }) {
           )}
         </div>
       </div>
-    </motion.div>
+      </motion.div>
+    </AdminPostContainer>
   );
 
   if (loading && activities.length === 0) {
