@@ -143,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const changePassword = async (currentPassword: string, newPassword: string) => {
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch("/api/auth/change-password", {
+      const response = await fetch(`${window.location.origin}/api/auth/change-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
