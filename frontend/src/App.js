@@ -8687,6 +8687,11 @@ function ActivityFeed({ user }) {
             <div className="flex-1 min-w-0">
               <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-gray-100 leading-snug">
                 <span className="font-semibold text-indigo-600 dark:text-indigo-400">{activity.user_name}</span>
+                {activity.user_role === 'admin' && (
+                  <span className="ml-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-sm">
+                    🛡️ Admin
+                  </span>
+                )}
                 <span className="ml-1">{activity.title}</span>
               </p>
             </div>
