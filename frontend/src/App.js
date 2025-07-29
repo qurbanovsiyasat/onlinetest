@@ -8495,9 +8495,17 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
               )}
             </div>
 
-            <h1 className="text-2xl font-bold text-gray-800 mb-4">{question.title}</h1>
+            <h1 className={`text-2xl font-bold mb-4 ${
+              question.user && question.user.role === 'admin'
+                ? 'text-purple-800 dark:text-purple-300 font-extrabold'
+                : 'text-gray-800 dark:text-gray-200'
+            }`}>{question.title}</h1>
             
-            <div className="prose max-w-none mb-4">
+            <div className={`prose max-w-none mb-4 ${
+              question.user && question.user.role === 'admin'
+                ? 'text-purple-700 dark:text-purple-400 font-medium'
+                : 'text-gray-700 dark:text-gray-300'
+            }`}>
               <div className="text-gray-700 whitespace-pre-wrap">{question.content}</div>
             </div>
 
