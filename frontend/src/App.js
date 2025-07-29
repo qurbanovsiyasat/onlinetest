@@ -879,6 +879,7 @@ function AdminDashboard({ currentView, setCurrentView }) {
         {currentView === 'results' && <AdminResultsView results={quizResults} />}
         {currentView === 'categories' && <AdminCategoriesView categories={categories} fetchCategories={fetchCategories} />}
         {currentView === 'qa-management' && <AdminQAManagement />}
+        {currentView === 'profile' && <UserProfile user={user} />}
         {currentView === 'create-quiz' && <AdminCreateQuiz setCurrentView={setCurrentView} />}
       </div>
     </PageTransition>
