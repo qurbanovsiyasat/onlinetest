@@ -7579,11 +7579,11 @@ function AdminQAManagement() {
             </div>
           ) : (
             questions.map((question) => (
-              <div key={question.id} className={`border rounded-lg p-4 ${
-                question.user && question.user.role === 'admin' 
-                  ? 'border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 shadow-md' 
-                  : 'border-gray-200'
-              }`}>
+              <AdminPostContainer
+                key={question.id}
+                isAdmin={question.user && question.user.role === 'admin'}
+                className="border rounded-lg p-4 mb-4"
+              >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -7604,21 +7604,32 @@ function AdminQAManagement() {
                       )}
                     </div>
                     
-                    <h3 className="font-semibold text-gray-800 mb-2">{question.title}</h3>
-                    <p className="text-gray-600 text-sm mb-2 line-clamp-2">{question.content}</p>
+                    <h3 className={`font-semibold mb-2 ${
+                      question.user && question.user.role === 'admin'
+                        ? 'text-purple-800 dark:text-purple-300 font-bold'
+                        : 'text-gray-800 dark:text-gray-200'
+                    }`}>{question.title}</h3>
                     
-                    <div className="flex items-center text-sm text-gray-500 space-x-4">
+                    <p className={`text-sm mb-2 line-clamp-2 ${
+                      question.user && question.user.role === 'admin'
+                        ? 'text-purple-700 dark:text-purple-400 font-medium'
+                        : 'text-gray-600 dark:text-gray-400'
+                    }`}>{question.content}</p>
+                    
+                    <div className="flex items-center text-sm space-x-4">
                       <div className="flex items-center space-x-2">
-                        <span>👤 {question.user ? question.user.name : 'Unknown User'}</span>
+                        <span>👤</span>
+                        <AdminName 
+                          name={question.user ? question.user.name : 'Unknown User'}
+                          role={question.user?.role}
+                        />
                         {question.user && question.user.role === 'admin' && (
-                          <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-sm">
-                            🛡️ Admin
-                          </span>
+                          <AdminBadge size="default" />
                         )}
                       </div>
-                      <span>💬 {question.answer_count || 0} answers</span>
-                      <span>👍 {(question.upvotes || 0) - (question.downvotes || 0)} votes</span>
-                      <span>{new Date(question.created_at).toLocaleDateString()}</span>
+                      <span className="text-gray-500">💬 {question.answer_count || 0} answers</span>
+                      <span className="text-gray-500">👍 {(question.upvotes || 0) - (question.downvotes || 0)} votes</span>
+                      <span className="text-gray-500">{new Date(question.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
 
