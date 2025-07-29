@@ -205,7 +205,7 @@ async def create_indexes():
 
 async def create_admin_user():
     """Create default admin user if not exists"""
-    admin_exists = await db.users.find_one({"email": "admin@squiz.com"})
+    admin_exists = await db.users.find_one({"email": "admin@squiz.com"}, {"_id": 0})
     if not admin_exists:
         admin_user = {
             "id": str(uuid.uuid4()),
