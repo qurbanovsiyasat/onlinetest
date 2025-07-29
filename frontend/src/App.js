@@ -7652,7 +7652,7 @@ function AdminQAManagement() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </AdminPostContainer>
             ))
           )}
         </div>
