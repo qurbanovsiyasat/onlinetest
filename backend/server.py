@@ -866,7 +866,7 @@ async def create_answer(
     current_user: dict = Depends(get_current_user)
 ):
     # Check if question exists
-    question = await db.questions.find_one({"id": question_id})
+    question = await db.questions.find_one({"id": question_id}, {"_id": 0})
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
     
