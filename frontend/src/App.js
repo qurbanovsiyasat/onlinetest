@@ -8803,10 +8803,8 @@ function ActivityFeed({ user }) {
                   {activity.user_role === 'admin' && (
                     <AdminBadge size="default" className="ml-2" />
                   )}
-                  </span>
-                )}
-                <span className="ml-1">{activity.title}</span>
-              </p>
+                  <span className="ml-1">{activity.title}</span>
+                </p>
             </div>
             <div className="flex-shrink-0 ml-2">
               <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full">
