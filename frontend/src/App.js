@@ -214,6 +214,82 @@ const EmojiReactions = ({ answerId, currentUser }) => {
   );
 };
 
+// Enhanced Admin Badge Component with Tooltip
+const AdminBadge = ({ size = 'default', showTooltip = true, className = '' }) => {
+  const [showTooltipState, setShowTooltipState] = useState(false);
+  
+  const sizeClasses = {
+    small: 'text-xs px-2 py-0.5',
+    default: 'text-xs px-2.5 py-1', 
+    large: 'text-sm px-3 py-1.5'
+  };
+  
+  const iconSizes = {
+    small: 'text-xs',
+    default: 'text-sm',
+    large: 'text-base'
+  };
+  
+  return (
+    <div className="relative inline-block">
+      <span
+        className={`bg-gradient-to-r from-purple-600 to-pink-600 text-white ${sizeClasses[size]} rounded-full font-bold shadow-sm border border-purple-300 flex items-center gap-1 ${className}`}
+        onMouseEnter={() => showTooltip && setShowTooltipState(true)}
+        onMouseLeave={() => setShowTooltipState(false)}
+      >
+        <span className={iconSizes[size]}>🛡️</span>
+        <span>Admin</span>
+      </span>
+      
+      {/* Tooltip */}
+      {showTooltip && showTooltipState && (
+        <motion.div
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -5 }}
+          className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded shadow-lg whitespace-nowrap z-50"
+        >
+          This user is a verified administrator
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+        </motion.div>
+      )}
+    </div>
+  );
+};
+
+// Enhanced Admin Name Component
+const AdminName = ({ name, role, className = '' }) => {
+  const isAdmin = role === 'admin';
+  
+  return (
+    <span className={`${isAdmin ? 'font-bold text-purple-700 dark:text-purple-400' : 'font-medium text-gray-900 dark:text-gray-100'} ${className}`}>
+      {name}
+    </span>
+  );
+};
+
+// Enhanced Admin Post Container
+const AdminPostContainer = ({ children, isAdmin, className = '' }) => {
+  if (!isAdmin) {
+    return <div className={className}>{children}</div>;
+  }
+  
+  return (
+    <div className={`relative ${className}`}>
+      {/* Purple border and enhanced background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-2 border-purple-300 dark:border-purple-600 rounded-lg shadow-md"></div>
+      
+      {/* Optional crown icon in corner */}
+      <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-white text-xs shadow-sm">
+        👑
+      </div>
+      
+      {/* Content */}
+      <div className="relative">{children}</div>
+    </div>
+  );
+};
+
 // Dark Mode Toggle Component
 const DarkModeToggle = () => {
   const { isDark, toggleDarkMode } = useDarkMode();
