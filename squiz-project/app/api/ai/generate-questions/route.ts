@@ -274,8 +274,8 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Generate questions using real AI (with fallback to enhanced mock)
-    const generatedQuestions = await generateAIQuestions(requestData)
+    // Generate questions using enhanced mock (bypass OpenAI for now)
+    const generatedQuestions = generateEnhancedQuestions(requestData)
     
     return NextResponse.json({
       success: true,
