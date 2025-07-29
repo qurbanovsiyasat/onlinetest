@@ -19,7 +19,7 @@ interface AuthModalProps {
   onToggleMode: () => void
 }
 
-export default function AuthModal({ mode, onClose, onSwitchMode }: AuthModalProps) {
+export default function AuthModal({ isOpen, mode, onClose, onToggleMode }: AuthModalProps) {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
