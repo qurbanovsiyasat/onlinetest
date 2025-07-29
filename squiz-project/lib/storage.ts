@@ -137,3 +137,82 @@ export function saveQuizzes(quizzes: any[]) {
     return false
   }
 }
+
+// Quiz Results Functions
+export function getQuizResults() {
+  try {
+    if (fs.existsSync(RESULTS_FILE)) {
+      const data = fs.readFileSync(RESULTS_FILE, 'utf8')
+      return JSON.parse(data)
+    } else {
+      fs.writeFileSync(RESULTS_FILE, JSON.stringify([], null, 2))
+      return []
+    }
+  } catch (error) {
+    console.error('Error reading quiz results:', error)
+    return []
+  }
+}
+
+export function saveQuizResults(results: any[]) {
+  try {
+    fs.writeFileSync(RESULTS_FILE, JSON.stringify(results, null, 2))
+    return true
+  } catch (error) {
+    console.error('Error saving quiz results:', error)
+    return false
+  }
+}
+
+// Quiz Attempts Functions
+export function getQuizAttempts() {
+  try {
+    if (fs.existsSync(ATTEMPTS_FILE)) {
+      const data = fs.readFileSync(ATTEMPTS_FILE, 'utf8')
+      return JSON.parse(data)
+    } else {
+      fs.writeFileSync(ATTEMPTS_FILE, JSON.stringify([], null, 2))
+      return []
+    }
+  } catch (error) {
+    console.error('Error reading quiz attempts:', error)
+    return []
+  }
+}
+
+export function saveQuizAttempts(attempts: any[]) {
+  try {
+    fs.writeFileSync(ATTEMPTS_FILE, JSON.stringify(attempts, null, 2))
+    return true
+  } catch (error) {
+    console.error('Error saving quiz attempts:', error)
+    return false
+  }
+}
+
+// User Progress Functions
+export function getUserProgress(userId: string) {
+  try {
+    const results = getQuizResults()
+    const userResults = results.filter(result => result.userId === userId)
+    
+    return {
+      totalAttempts: userResults.length,
+      passedQuizzes: userResults.filter(r => r.passed).length,
+      averageScore: userResults.length > 0 
+        ? Math.round(userResults.reduce((sum, r) => sum + r.scorePercentage, 0) / userResults.length)
+        : 0,
+      totalPoints: userResults.reduce((sum, r) => sum + r.earnedPoints, 0),
+      recentResults: userResults.slice(-5).reverse()
+    }
+  } catch (error) {
+    console.error('Error getting user progress:', error)
+    return {
+      totalAttempts: 0,
+      passedQuizzes: 0,
+      averageScore: 0,
+      totalPoints: 0,
+      recentResults: []
+    }
+  }
+}
