@@ -13,9 +13,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/hooks/useAuth"
 
 interface AuthModalProps {
+  isOpen: boolean
   mode: "login" | "register"
   onClose: () => void
-  onSwitchMode: (mode: "login" | "register") => void
+  onToggleMode: () => void
 }
 
 export default function AuthModal({ mode, onClose, onSwitchMode }: AuthModalProps) {
