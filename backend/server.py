@@ -341,7 +341,7 @@ async def get_quizzes(
     # Get quizzes without questions for listing
     quizzes = await db.quizzes.find(
         filter_query,
-        {"questions": 0}  # Exclude questions array for performance
+        {"questions": 0, "_id": 0}  # Exclude questions array and _id for performance
     ).sort("created_at", -1).skip(offset).limit(limit).to_list(limit)
     
     return quizzes
