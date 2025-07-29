@@ -7859,7 +7859,11 @@ function QuestionCard({ question, onClick, currentUser }) {
 
   return (
     <div 
-      className="bg-white rounded-lg shadow-sm border hover:shadow-md transition duration-200 cursor-pointer"
+      className={`bg-white rounded-lg shadow-sm border hover:shadow-md transition duration-200 cursor-pointer ${
+        question.user && question.user.role === 'admin' 
+          ? 'border-purple-200 shadow-lg bg-gradient-to-br from-purple-50 to-pink-50' 
+          : ''
+      }`}
       onClick={onClick}
     >
       <div className="p-6">
