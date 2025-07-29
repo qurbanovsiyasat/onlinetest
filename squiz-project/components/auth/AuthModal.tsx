@@ -336,7 +336,7 @@ export default function AuthModal({ isOpen, mode, onClose, onToggleMode }: AuthM
                 {mode === "login" ? "Hesabınız yoxdur?" : "Artıq hesabınız var?"}{" "}
                 <Button
                   variant="link"
-                  onClick={() => onSwitchMode(mode === "login" ? "register" : "login")}
+                  onClick={onToggleMode}
                   className="p-0 h-auto font-semibold text-blue-600 hover:text-blue-700"
                 >
                   {mode === "login" ? "Hesab yarat" : "Daxil ol"}
