@@ -9482,7 +9482,11 @@ const UserProfile = ({ user, viewingUserId = null }) => {
                         className="text-2xl font-bold text-white bg-transparent border-b border-white/30 focus:border-white outline-none"
                       />
                     ) : (
-                      <h1 className="text-2xl font-bold text-white">{profile.name}</h1>
+                      <h1 className="text-2xl font-bold text-white">
+                        {(profile.is_private && !isOwnProfile && !isAdminViewing && !profile.is_following) 
+                          ? 'abituriyent' 
+                          : profile.name}
+                      </h1>
                     )}
                     {profile.is_admin && (
                       <span className="bg-yellow-400 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
