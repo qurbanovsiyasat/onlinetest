@@ -1200,7 +1200,8 @@ async def get_user_stats(current_user: dict = Depends(get_current_user)):
             "quiz_title": 1,
             "score": 1,
             "percentage": 1,
-            "attempted_at": 1
+            "attempted_at": 1,
+            "_id": 0
         }}
     ]
     
