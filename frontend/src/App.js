@@ -8536,7 +8536,7 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
             </div>
           </div>
         </div>
-      </div>
+      </AdminPostContainer>
 
       {/* Answers Section */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
