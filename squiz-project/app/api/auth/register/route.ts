@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
       is_private: false,
       follower_count: 0,
       following_count: 0,
+      can_create_quiz: true,
     }
 
     users.push(newUser)
