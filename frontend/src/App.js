@@ -8671,7 +8671,11 @@ function ActivityFeed({ user }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`border rounded-xl p-3 sm:p-4 mb-3 sm:mb-4 ${getActivityColor(activity.activity_type)} shadow-sm hover:shadow-md transition-shadow duration-200`}
+      className={`border rounded-xl p-3 sm:p-4 mb-3 sm:mb-4 shadow-sm hover:shadow-md transition-shadow duration-200 ${
+        activity.user_role === 'admin' 
+          ? 'border-purple-300 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 shadow-lg' 
+          : getActivityColor(activity.activity_type)
+      }`}
     >
       <div className="flex items-start space-x-3">
         {/* Avatar/Icon - Optimized for mobile */}
