@@ -14,7 +14,7 @@ if (!fs.existsSync(DATA_DIR)) {
 const defaultUsers = [
   {
     id: "1",
-    email: "admin@testhub.com",
+    email: "admin@squiz.com",
     password: "admin123",
     name: "Admin İstifadəçi",
     role: "admin",
@@ -23,10 +23,11 @@ const defaultUsers = [
     is_private: false,
     follower_count: 0,
     following_count: 0,
+    can_create_quiz: true,
   },
   {
     id: "2", 
-    email: "user@testhub.com",
+    email: "user@squiz.com",
     password: "user123",
     name: "Test İstifadəçi",
     role: "user",
@@ -35,6 +36,7 @@ const defaultUsers = [
     is_private: false,
     follower_count: 5,
     following_count: 10,
+    can_create_quiz: true,
   },
 ]
 
