@@ -1,5 +1,7 @@
 'use client'
 
+import MathRenderer from './MathRenderer'
+
 // Utility function to detect if text contains math
 export function containsMath(text: string): boolean {
   return /\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\]|\$\$.*?\$\$/.test(text)
