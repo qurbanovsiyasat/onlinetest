@@ -9705,56 +9705,7 @@ const UserProfile = ({ user, viewingUserId = null }) => {
     </PageTransition>
   );
 };
-              {userFollowers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  Hələ izləyiciniz yoxdur
-                </div>
-              ) : (
-                userFollowers.map((follower) => (
-                  <div key={follower.user.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
-                        {follower.user.avatar ? (
-                          <img src={follower.user.avatar} alt="Avatar" className="w-12 h-12 rounded-full object-cover" />
-                        ) : (
-                          <span className="text-lg font-bold text-indigo-600">
-                            {follower.user.name.charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-gray-800 dark:text-gray-200">{follower.user.name}</h4>
-                        <p className="text-gray-600 dark:text-gray-400 text-sm">{follower.user.email}</p>
-                        <p className="text-xs text-gray-500">
-                          İzləmə tarixi: {new Date(follower.followed_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          follower.user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {follower.user.role === 'admin' ? 'Admin' : 'İstifadəçi'}
-                        </span>
-                        <FollowButton 
-                          userId={follower.user.id}
-                          onFollowChange={() => {
-                            fetchUserActivity('followers');
-                            fetchFollowStats();
-                          }}
-                          className="text-xs px-3 py-1"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </PageTransition>
-  );
-};
+
 
 // Notification Center Component
 const NotificationCenter = ({ user }) => {
