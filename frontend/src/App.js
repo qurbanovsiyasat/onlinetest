@@ -8457,7 +8457,10 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
       </button>
 
       {/* Question Detail */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+      <AdminPostContainer
+        isAdmin={question.user && question.user.role === 'admin'}
+        className="bg-white rounded-lg shadow-sm p-6 mb-6"
+      >
         <div className="flex gap-4">
           {/* Voting Section */}
           <div className="flex flex-col items-center space-y-2">
