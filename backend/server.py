@@ -532,7 +532,7 @@ async def activate_quiz_session(
     session_id: str,
     current_user: dict = Depends(get_current_user)
 ):
-    session = await db.quiz_sessions.find_one({"id": session_id, "user_id": current_user["id"]})
+    session = await db.quiz_sessions.find_one({"id": session_id, "user_id": current_user["id"]}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
