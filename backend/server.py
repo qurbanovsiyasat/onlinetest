@@ -745,7 +745,7 @@ async def get_questions(
         {"$addFields": {
             "user_name": {"$arrayElemAt": ["$user_info.name", 0]}
         }},
-        {"$project": {"user_info": 0}},
+        {"$project": {"user_info": 0, "_id": 0}},
         {"$sort": {"is_pinned": -1, "created_at": -1}},
         {"$skip": offset},
         {"$limit": limit}
