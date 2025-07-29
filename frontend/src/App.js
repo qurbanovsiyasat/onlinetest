@@ -7503,7 +7503,11 @@ function AdminQAManagement() {
             </div>
           ) : (
             questions.map((question) => (
-              <div key={question.id} className="border rounded-lg p-4">
+              <div key={question.id} className={`border rounded-lg p-4 ${
+                question.user && question.user.role === 'admin' 
+                  ? 'border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 shadow-md' 
+                  : 'border-gray-200'
+              }`}>
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
