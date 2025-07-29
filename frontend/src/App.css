@@ -1,0 +1,208 @@
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Custom Tailwind-like utilities */
+.btn-primary {
+  @apply bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out;
+}
+
+.btn-secondary {
+  @apply bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition duration-150 ease-in-out;
+}
+
+.card {
+  @apply bg-white shadow rounded-lg p-6;
+}
+
+.form-input {
+  @apply appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500;
+}
+
+/* Loading spinner */
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Quiz specific styles */
+.quiz-card {
+  @apply bg-white shadow-lg rounded-lg p-6 hover:shadow-xl transition-shadow duration-300;
+}
+
+.quiz-card:hover {
+  transform: translateY(-2px);
+}
+
+.question-card {
+  @apply bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4;
+}
+
+.option-button {
+  @apply w-full text-left p-3 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500;
+}
+
+.option-button.selected {
+  @apply bg-indigo-100 border-indigo-500;
+}
+
+.timer {
+  @apply bg-red-100 border border-red-300 text-red-700 px-4 py-2 rounded-md font-mono;
+}
+
+.timer.warning {
+  @apply bg-yellow-100 border-yellow-300 text-yellow-700;
+}
+
+.timer.danger {
+  @apply bg-red-100 border-red-300 text-red-700 animate-pulse;
+}
+
+/* Forum styles */
+.forum-post {
+  @apply bg-white border border-gray-200 rounded-lg p-6 mb-4 hover:shadow-md transition-shadow;
+}
+
+.forum-post.pinned {
+  @apply border-blue-300 bg-blue-50;
+}
+
+.vote-button {
+  @apply p-2 text-gray-400 hover:text-gray-600 focus:outline-none;
+}
+
+.vote-button.active {
+  @apply text-indigo-600;
+}
+
+/* Admin panel styles */
+.admin-card {
+  @apply bg-white shadow rounded-lg p-6 border-l-4 border-indigo-500;
+}
+
+.stat-card {
+  @apply bg-white overflow-hidden shadow rounded-lg;
+}
+
+.stat-number {
+  @apply text-2xl font-bold text-gray-900;
+}
+
+.stat-label {
+  @apply text-sm font-medium text-gray-500;
+}
+
+/* Responsive design helpers */
+@media (max-width: 640px) {
+  .mobile-hidden {
+    display: none;
+  }
+
+  .mobile-full {
+    width: 100%;
+  }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+  .dark-mode {
+    @apply bg-gray-900 text-white;
+  }
+
+  .dark-mode .card {
+    @apply bg-gray-800 border-gray-700;
+  }
+}
+
+/* Animation utilities */
+.fade-in {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Success/Error message styles */
+.alert {
+  @apply px-4 py-3 rounded border;
+}
+
+.alert-success {
+  @apply bg-green-100 border-green-400 text-green-700;
+}
+
+.alert-error {
+  @apply bg-red-100 border-red-400 text-red-700;
+}
+
+.alert-warning {
+  @apply bg-yellow-100 border-yellow-400 text-yellow-700;
+}
+
+.alert-info {
+  @apply bg-blue-100 border-blue-400 text-blue-700;
+}
