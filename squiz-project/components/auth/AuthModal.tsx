@@ -363,5 +363,7 @@ export default function AuthModal({ isOpen, mode, onClose, onToggleMode }: AuthM
         </Card>
       </motion.div>
     </motion.div>
+      )}
+    </>
   )
 }
