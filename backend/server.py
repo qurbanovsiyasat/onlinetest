@@ -1055,7 +1055,7 @@ async def get_quiz_results(admin_user: dict = Depends(get_admin_user)):
                 "email": {"$arrayElemAt": ["$user_info.email", 0]}
             }
         }},
-        {"$project": {"quiz_info": 0, "user_info": 0}},
+        {"$project": {"quiz_info": 0, "user_info": 0, "_id": 0}},
         {"$sort": {"attempted_at": -1}}
     ]
     
