@@ -3739,7 +3739,7 @@ async def update_my_profile(
             {"$set": update_data}
         )
     
-    return await get_user_profile(current_user.id)
+    return await get_user_profile(current_user.id, current_user)
 
 @api_router.get("/users/{user_id}/questions")
 async def get_user_questions(user_id: str, skip: int = 0, limit: int = 20, current_user: User = Depends(get_current_user)):
