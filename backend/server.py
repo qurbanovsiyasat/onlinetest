@@ -495,7 +495,7 @@ async def start_quiz_session(
     current_user: dict = Depends(get_current_user)
 ):
     # Get quiz
-    quiz = await db.quizzes.find_one({"id": session_data.quiz_id})
+    quiz = await db.quizzes.find_one({"id": session_data.quiz_id}, {"_id": 0})
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
     
