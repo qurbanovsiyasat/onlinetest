@@ -8574,18 +8574,24 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
         {/* Answers List */}
         <div className="space-y-6">
           {answers.map((answer) => (
-            <div key={answer.id} className={`border-l-4 pl-6 ${
-              answer.user && answer.user.role === 'admin' 
-                ? 'border-purple-400 bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-r-lg' 
-                : 'border-gray-200'
-            }`}>
+            <AdminPostContainer
+              key={answer.id}
+              isAdmin={answer.user && answer.user.role === 'admin'}
+              className={`border-l-4 pl-6 ${
+                answer.user && answer.user.role === 'admin' 
+                  ? 'border-purple-400' 
+                  : 'border-gray-200'
+              }`}
+            >
               <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center space-x-2">
-                  <span className="font-medium text-gray-800">{answer.user ? answer.user.name : 'Unknown User'}</span>
+                  <AdminName 
+                    name={answer.user ? answer.user.name : 'Unknown User'}
+                    role={answer.user?.role}
+                    className="font-medium"
+                  />
                   {answer.user && answer.user.role === 'admin' && (
-                    <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-sm">
-                      🛡️ Admin
-                    </span>
+                    <AdminBadge size="default" />
                   )}
                   <span className="text-sm text-gray-500">
                     {new Date(answer.created_at).toLocaleDateString()}
@@ -8602,7 +8608,11 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
                   </span>
                 </div>
               </div>
-              <div className="text-gray-700 whitespace-pre-wrap">{answer.content}</div>
+              <div className={`whitespace-pre-wrap ${
+                answer.user && answer.user.role === 'admin'
+                  ? 'text-purple-800 dark:text-purple-300 font-medium'
+                  : 'text-gray-700 dark:text-gray-300'
+              }`}>{answer.content}</div>
               {answer.image && (
                 <img
                   src={answer.image}
@@ -8613,7 +8623,7 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
               
               {/* Emoji Reactions */}
               <EmojiReactions answerId={answer.id} currentUser={user} />
-            </div>
+            </AdminPostContainer>
           ))}
         </div>
       </div>
