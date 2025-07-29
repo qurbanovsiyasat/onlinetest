@@ -9302,7 +9302,8 @@ const UserProfile = ({ user, viewingUserId = null }) => {
         name: response.data.name,
         bio: response.data.bio || '',
         location: response.data.location || '',
-        website: response.data.website || ''
+        website: response.data.website || '',
+        is_private: response.data.is_private || false
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
