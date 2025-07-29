@@ -119,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfile = async (data: Partial<User>) => {
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch("/api/auth/profile", {
+      const response = await fetch(`${window.location.origin}/api/auth/profile`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
