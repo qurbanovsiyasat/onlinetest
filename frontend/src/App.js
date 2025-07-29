@@ -8772,32 +8772,37 @@ function ActivityFeed({ user }) {
   };
 
   const ActivityItem = ({ activity }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+    <AdminPostContainer
+      isAdmin={activity.user_role === 'admin'}
       className={`border rounded-xl p-3 sm:p-4 mb-3 sm:mb-4 shadow-sm hover:shadow-md transition-shadow duration-200 ${
-        activity.user_role === 'admin' 
-          ? 'border-purple-300 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 shadow-lg' 
-          : getActivityColor(activity.activity_type)
+        activity.user_role !== 'admin' ? getActivityColor(activity.activity_type) : ''
       }`}
     >
-      <div className="flex items-start space-x-3">
-        {/* Avatar/Icon - Optimized for mobile */}
-        <div className="flex-shrink-0">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm border border-gray-200 dark:border-gray-600">
-            <span className="text-lg sm:text-xl">{getActivityIcon(activity.activity_type)}</span>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="flex items-start space-x-3">
+          {/* Avatar/Icon - Optimized for mobile */}
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm border border-gray-200 dark:border-gray-600">
+              <span className="text-lg sm:text-xl">{getActivityIcon(activity.activity_type)}</span>
+            </div>
           </div>
-        </div>
-        
-        <div className="flex-1 min-w-0">
-          {/* Header with timestamp - Mobile optimized */}
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-gray-100 leading-snug">
-                <span className="font-semibold text-indigo-600 dark:text-indigo-400">{activity.user_name}</span>
-                {activity.user_role === 'admin' && (
-                  <span className="ml-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-sm">
-                    🛡️ Admin
+          
+          <div className="flex-1 min-w-0">
+            {/* Header with timestamp - Mobile optimized */}
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm sm:text-base font-medium leading-snug">
+                  <AdminName 
+                    name={activity.user_name}
+                    role={activity.user_role}
+                    className="text-indigo-600 dark:text-indigo-400"
+                  />
+                  {activity.user_role === 'admin' && (
+                    <AdminBadge size="default" className="ml-2" />
+                  )}
                   </span>
                 )}
                 <span className="ml-1">{activity.title}</span>
