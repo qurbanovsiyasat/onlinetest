@@ -227,7 +227,7 @@ async def create_admin_user():
 @app.post("/api/auth/register", response_model=UserResponse)
 async def register(user_data: UserCreate):
     # Check if user already exists
-    existing_user = await db.users.find_one({"email": user_data.email})
+    existing_user = await db.users.find_one({"email": user_data.email}, {"_id": 0})
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
