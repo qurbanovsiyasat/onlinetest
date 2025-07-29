@@ -364,7 +364,7 @@ async def submit_quiz_attempt(
     current_user: dict = Depends(get_current_user)
 ):
     # Get quiz
-    quiz = await db.quizzes.find_one({"id": quiz_id})
+    quiz = await db.quizzes.find_one({"id": quiz_id}, {"_id": 0})
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
     
