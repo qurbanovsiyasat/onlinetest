@@ -8480,10 +8480,19 @@ function QuestionDetail({ question, user, onBack, onQuestionUpdate }) {
         {/* Answers List */}
         <div className="space-y-6">
           {answers.map((answer) => (
-            <div key={answer.id} className="border-l-4 border-gray-200 pl-6">
+            <div key={answer.id} className={`border-l-4 pl-6 ${
+              answer.user && answer.user.role === 'admin' 
+                ? 'border-purple-400 bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-r-lg' 
+                : 'border-gray-200'
+            }`}>
               <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center space-x-2">
                   <span className="font-medium text-gray-800">{answer.user ? answer.user.name : 'Unknown User'}</span>
+                  {answer.user && answer.user.role === 'admin' && (
+                    <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-sm">
+                      🛡️ Admin
+                    </span>
+                  )}
                   <span className="text-sm text-gray-500">
                     {new Date(answer.created_at).toLocaleDateString()}
                   </span>
