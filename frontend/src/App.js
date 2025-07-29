@@ -8076,7 +8076,7 @@ function QuestionCard({ question, onClick, currentUser }) {
           </div>
         </div>
       </div>
-    </div>
+    </AdminPostContainer>
   );
 }
 
