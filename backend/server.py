@@ -348,7 +348,7 @@ async def get_quizzes(
 
 @app.get("/api/quiz/{quiz_id}")
 async def get_quiz(quiz_id: str):
-    quiz = await db.quizzes.find_one({"id": quiz_id})
+    quiz = await db.quizzes.find_one({"id": quiz_id}, {"_id": 0})
     if not quiz:
         raise HTTPException(status_code=404, detail="Quiz not found")
     
