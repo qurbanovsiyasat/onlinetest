@@ -3723,7 +3723,7 @@ async def get_user_profile(user_id: str, current_user: User = Depends(get_curren
 @api_router.get("/profile", response_model=UserProfile)
 async def get_my_profile(current_user: User = Depends(get_current_user)):
     """Get current user's profile"""
-    return await get_user_profile(current_user.id)
+    return await get_user_profile(current_user.id, current_user)
 
 @api_router.put("/profile", response_model=UserProfile)
 async def update_my_profile(
