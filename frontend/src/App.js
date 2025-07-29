@@ -9554,6 +9554,34 @@ const UserProfile = ({ user, viewingUserId = null }) => {
               <p className="text-indigo-100">{profile.bio || 'No bio added yet'}</p>
             )}
           </div>
+
+          {/* Privacy Settings - Only for own profile */}
+          {editing && isOwnProfile && (
+            <div className="mt-4 p-4 bg-white/10 rounded-lg">
+              <h4 className="text-white font-semibold mb-3">🔒 Gizlilik Parametrləri</h4>
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-white font-medium">Gizli Profil</label>
+                  <p className="text-indigo-100 text-sm">Profiliniz gizli olduqda, adınız "abituriyent" kimi göstərilir və profil səhifəniz digərləri üçün əlçatmazdır.</p>
+                </div>
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editData.is_private || false}
+                    onChange={(e) => setEditData({ ...editData, is_private: e.target.checked })}
+                    className="sr-only"
+                  />
+                  <div className={`relative w-12 h-6 rounded-full transition-colors ${
+                    editData.is_private ? 'bg-green-500' : 'bg-gray-400'
+                  }`}>
+                    <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                      editData.is_private ? 'translate-x-6' : 'translate-x-0'
+                    }`}></div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          )}
           
           {/* Location and Website */}
           {editing && isOwnProfile && (
