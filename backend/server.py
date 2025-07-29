@@ -809,7 +809,7 @@ async def get_question_detail(question_id: str):
         {"$addFields": {
             "user_name": {"$arrayElemAt": ["$user_info.name", 0]}
         }},
-        {"$project": {"user_info": 0}}
+        {"$project": {"user_info": 0, "_id": 0}}
     ]
     
     questions = await db.questions.aggregate(pipeline).to_list(1)
