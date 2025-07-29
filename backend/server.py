@@ -948,7 +948,7 @@ async def accept_answer(
 # Admin Endpoints
 @app.get("/api/admin/users")
 async def get_all_users(admin_user: dict = Depends(get_admin_user)):
-    users = await db.users.find({}, {"password": 0}).to_list(None)
+    users = await db.users.find({}, {"password": 0, "_id": 0}).to_list(None)
     return users
 
 @app.post("/api/admin/quiz")
