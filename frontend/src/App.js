@@ -7945,12 +7945,9 @@ function QuestionCard({ question, onClick, currentUser }) {
   const hasDownvoted = currentUser && question.downvoted_by && question.downvoted_by.includes(currentUser.id);
 
   return (
-    <div 
-      className={`bg-white rounded-lg shadow-sm border hover:shadow-md transition duration-200 cursor-pointer ${
-        question.user && question.user.role === 'admin' 
-          ? 'border-purple-200 shadow-lg bg-gradient-to-br from-purple-50 to-pink-50' 
-          : ''
-      }`}
+    <AdminPostContainer
+      isAdmin={question.user && question.user.role === 'admin'}
+      className="bg-white rounded-lg shadow-sm border hover:shadow-md transition duration-200 cursor-pointer"
       onClick={onClick}
     >
       <div className="p-6">
@@ -8009,11 +8006,19 @@ function QuestionCard({ question, onClick, currentUser }) {
               )}
             </div>
 
-            <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
+            <h3 className={`text-lg font-semibold mb-2 line-clamp-2 ${
+              question.user && question.user.role === 'admin'
+                ? 'text-purple-800 dark:text-purple-300 font-bold'
+                : 'text-gray-800 dark:text-gray-200'
+            }`}>
               {question.title}
             </h3>
             
-            <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+            <p className={`text-sm mb-4 line-clamp-2 ${
+              question.user && question.user.role === 'admin'
+                ? 'text-purple-700 dark:text-purple-400 font-medium'
+                : 'text-gray-600 dark:text-gray-400'
+            }`}>
               {question.content}
             </p>
 
@@ -8036,12 +8041,13 @@ function QuestionCard({ question, onClick, currentUser }) {
                 <div className="flex items-center space-x-2">
                   <span className="flex items-center space-x-1">
                     <span>👤</span>
-                    <span>{question.user ? question.user.name : 'Unknown User'}</span>
+                    <AdminName 
+                      name={question.user ? question.user.name : 'Unknown User'}
+                      role={question.user?.role}
+                    />
                   </span>
                   {question.user && question.user.role === 'admin' && (
-                    <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-sm">
-                      🛡️ Admin
-                    </span>
+                    <AdminBadge size="default" />
                   )}
                   {question.user && (
                     <FollowButton 
