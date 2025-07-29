@@ -189,8 +189,11 @@ class QAReviewTester:
             details = f"Status: {response.status_code}"
             
             if success:
-                questions = response.json()
+                data = response.json()
+                questions = data.get('questions', [])
                 details += f", Questions Count: {len(questions)}"
+                details += f", Total: {data.get('total', 0)}"
+                details += f", Page: {data.get('page', 1)}"
                 if len(questions) > 0:
                     first_q = questions[0]
                     details += f", First Q: {first_q.get('title', 'Unknown')[:30]}..."
@@ -205,7 +208,8 @@ class QAReviewTester:
                         timeout=10
                     )
                     if subject_response.status_code == 200:
-                        filtered = subject_response.json()
+                        filtered_data = subject_response.json()
+                        filtered = filtered_data.get('questions', [])
                         details += f", Filtered by Subject: {len(filtered)}"
                 
                 # Test filtering by status
@@ -214,7 +218,8 @@ class QAReviewTester:
                     timeout=10
                 )
                 if status_response.status_code == 200:
-                    status_filtered = status_response.json()
+                    status_data = status_response.json()
+                    status_filtered = status_data.get('questions', [])
                     details += f", Filtered by Status: {len(status_filtered)}"
             else:
                 details += f", Response: {response.text[:200]}"
