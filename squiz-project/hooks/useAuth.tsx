@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = async (token: string) => {
     try {
-      const response = await fetch("/api/auth/me", {
+      const response = await fetch(`${window.location.origin}/api/auth/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
