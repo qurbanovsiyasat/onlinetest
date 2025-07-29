@@ -7528,7 +7528,14 @@ function AdminQAManagement() {
                     <p className="text-gray-600 text-sm mb-2 line-clamp-2">{question.content}</p>
                     
                     <div className="flex items-center text-sm text-gray-500 space-x-4">
-                      <span>👤 {question.user ? question.user.name : 'Unknown User'}</span>
+                      <div className="flex items-center space-x-2">
+                        <span>👤 {question.user ? question.user.name : 'Unknown User'}</span>
+                        {question.user && question.user.role === 'admin' && (
+                          <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-sm">
+                            🛡️ Admin
+                          </span>
+                        )}
+                      </div>
                       <span>💬 {question.answer_count || 0} answers</span>
                       <span>👍 {(question.upvotes || 0) - (question.downvotes || 0)} votes</span>
                       <span>{new Date(question.created_at).toLocaleDateString()}</span>
