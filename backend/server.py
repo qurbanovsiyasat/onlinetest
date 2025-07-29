@@ -2799,17 +2799,36 @@ async def get_user_details(user_id: str, admin_user: User = Depends(get_admin_us
 # ====================================================================
 
 # Helper functions for Q&A system
-async def get_user_info(user_id: str):
-    """Get basic user information for Q&A responses"""
+async def get_user_info(user_id: str, requesting_user_id: str = None):
+    """Get basic user information for Q&A responses, respecting privacy settings"""
     user = await db.users.find_one({"id": user_id})
     if user:
+        # Check if user has private profile and requesting user is different
+        is_private = user.get("is_private", False)
+        
+        # If profile is private and requesting user is not the owner or admin, show anonymous name
+        if is_private and requesting_user_id and requesting_user_id != user_id:
+            # Check if requesting user is admin
+            requesting_user = await db.users.find_one({"id": requesting_user_id})
+            is_admin = requesting_user and requesting_user.get("role") == "admin"
+            
+            if not is_admin:
+                return {
+                    "id": user["id"],
+                    "name": "abituriyen",  # Anonymous name for private profiles
+                    "role": user.get("role", "user"),
+                    "is_admin": user.get("role") == "admin",
+                    "is_private": True
+                }
+        
         return {
             "id": user["id"],
             "name": user["name"],
             "role": user.get("role", "user"),
-            "is_admin": user.get("role") == "admin"
+            "is_admin": user.get("role") == "admin",
+            "is_private": user.get("is_private", False)
         }
-    return {"id": user_id, "name": "Unknown User", "role": "user", "is_admin": False}
+    return {"id": user_id, "name": "Unknown User", "role": "user", "is_admin": False, "is_private": False}
 
 async def update_question_stats(question_id: str):
     """Update question statistics after changes"""
