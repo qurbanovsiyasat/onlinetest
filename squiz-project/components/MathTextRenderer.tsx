@@ -1,6 +1,72 @@
 'use client'
 
-import MathRenderer, { parseMathText } from './MathRenderer'
+// Utility function to detect if text contains math
+export function containsMath(text: string): boolean {
+  return /\$.*?\$|\\\(.*?\\\)|\\\[.*?\\\]|\$\$.*?\$\$/.test(text)
+}
+
+// Utility function to parse text with math
+export function parseMathText(text: string) {
+  const parts: { type: 'text' | 'math'; content: string; display?: boolean }[] = []
+  let currentIndex = 0
+
+  // Regex to match different math delimiters
+  const mathRegex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[^$]*?\$|\\\([^)]*?\\\))/g
+  let match
+
+  while ((match = mathRegex.exec(text)) !== null) {
+    // Add text before math
+    if (match.index > currentIndex) {
+      parts.push({
+        type: 'text',
+        content: text.slice(currentIndex, match.index)
+      })
+    }
+
+    // Add math content
+    const mathContent = match[1]
+    let display = false
+    let cleanMath = mathContent
+
+    if (mathContent.startsWith('$$') && mathContent.endsWith('$$')) {
+      display = true
+      cleanMath = mathContent.slice(2, -2)
+    } else if (mathContent.startsWith('\\[') && mathContent.endsWith('\\]')) {
+      display = true
+      cleanMath = mathContent.slice(2, -2)
+    } else if (mathContent.startsWith('$') && mathContent.endsWith('$')) {
+      cleanMath = mathContent.slice(1, -1)
+    } else if (mathContent.startsWith('\\(') && mathContent.endsWith('\\)')) {
+      cleanMath = mathContent.slice(2, -2)
+    }
+
+    parts.push({
+      type: 'math',
+      content: cleanMath,
+      display
+    })
+
+    currentIndex = match.index + match[0].length
+  }
+
+  // Add remaining text
+  if (currentIndex < text.length) {
+    parts.push({
+      type: 'text',
+      content: text.slice(currentIndex)
+    })
+  }
+
+  // If no math found, return single text part
+  if (parts.length === 0) {
+    parts.push({
+      type: 'text',
+      content: text
+    })
+  }
+
+  return parts
+}
 
 interface MathTextRendererProps {
   text: string
