@@ -2858,7 +2858,8 @@ async def get_questions(
     page: int = 1,
     limit: int = 20,
     sort_by: str = "created_at",  # created_at, upvotes, answer_count, updated_at
-    sort_order: str = "desc"
+    sort_order: str = "desc",
+    current_user: User = Depends(get_current_user)
 ):
     """Get all questions with optional filtering and pagination"""
     skip = (page - 1) * limit
@@ -2882,7 +2883,7 @@ async def get_questions(
     # Enrich with user information
     enriched_questions = []
     for question in questions:
-        user_info = await get_user_info(question["user_id"])
+        user_info = await get_user_info(question["user_id"], current_user.id)
         question["user"] = user_info
         enriched_questions.append(Question(**question))
     
