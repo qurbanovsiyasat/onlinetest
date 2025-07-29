@@ -2896,7 +2896,7 @@ async def get_questions(
     }
 
 @api_router.get("/questions/{question_id}")
-async def get_question_detail(question_id: str):
+async def get_question_detail(question_id: str, current_user: User = Depends(get_current_user)):
     """Get detailed question with answers and discussions"""
     # Get question
     question = await db.questions.find_one({"id": question_id})
@@ -2904,14 +2904,14 @@ async def get_question_detail(question_id: str):
         raise HTTPException(status_code=404, detail="Question not found")
     
     # Get question user info
-    question_user = await get_user_info(question["user_id"])
+    question_user = await get_user_info(question["user_id"], current_user.id)
     question["user"] = question_user
     
     # Get answers
     answers = await db.answers.find({"question_id": question_id}).sort("created_at", -1).to_list(100)
     enriched_answers = []
     for answer in answers:
-        user_info = await get_user_info(answer["user_id"])
+        user_info = await get_user_info(answer["user_id"], current_user.id)
         answer["user"] = user_info
         enriched_answers.append(Answer(**answer))
     
@@ -2919,9 +2919,15 @@ async def get_question_detail(question_id: str):
     discussions = await db.discussions.find({"question_id": question_id}).sort("created_at", 1).to_list(100)
     enriched_discussions = []
     for discussion in discussions:
-        user_info = await get_user_info(discussion["user_id"])
+        user_info = await get_user_info(discussion["user_id"], current_user.id)
         discussion["user"] = user_info
         enriched_discussions.append(Discussion(**discussion))
+    
+    return {
+        "question": Question(**question),
+        "answers": enriched_answers,
+        "discussions": enriched_discussions
+    }
     
     return {
         "question": Question(**question),
