@@ -72,7 +72,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navigation = [
     { name: "Testlər", href: "/quizzes", icon: BookOpen },
-    { name: "Paylaşılmış Suallar", href: "/questions", icon: MessageSquare },
+    { name: "Paylaşılmış Suallar", href: "/questions", icon: HelpCircle },
     { name: "Forum", href: "/forum", icon: MessageSquare },
     { name: "Test Yarat", href: "/quiz/create", icon: Plus },
   ]
