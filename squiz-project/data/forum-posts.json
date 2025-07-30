@@ -1,0 +1,24 @@
+[
+  {
+    "id": "1",
+    "title": "JavaScript-də Async/Await necə işləyir?",
+    "content": "Salam, JavaScript-də async/await konsepsiyasını başa düşməkdə çətinlik çəkirəm. Kimsə izah edə bilər?",
+    "author": {
+      "id": "1",
+      "name": "Admin İstifadəçi",
+      "avatar": "",
+      "role": "Admin"
+    },
+    "category": "Proqramlaşdırma",
+    "tags": ["javascript", "async", "await"],
+    "created_at": "2025-01-29T10:00:00Z",
+    "updated_at": "2025-01-29T10:00:00Z",
+    "views": 45,
+    "likes": 12,
+    "replies": 0,
+    "is_solved": false,
+    "is_pinned": false,
+    "images": [],
+    "user_liked": false
+  }
+]

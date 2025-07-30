@@ -1,0 +1,57 @@
+[
+  {
+    "id": "1",
+    "title": "JavaScript Əsasları",
+    "description": "JavaScript programlaşdırma dilinin əsas anlayışları, dəyişənlər, funksiyalar və DOM manipulyasiyası",
+    "category": "Programlaşdırma",
+    "subject": "Veb İnkişaf",
+    "subcategory": "Frontend",
+    "questions": [
+      {
+        "id": "1",
+        "question_text": "JavaScript-də dəyişən müəyyən etmək üçün hansı açar söz istifadə olunur?",
+        "question_type": "multiple_choice",
+        "options": [
+          { "text": "var", "is_correct": true },
+          { "text": "variable", "is_correct": false },
+          { "text": "define", "is_correct": false },
+          { "text": "set", "is_correct": false }
+        ],
+        "multiple_correct": false,
+        "difficulty": "easy",
+        "points": 1,
+        "explanation": "JavaScript-də dəyişən müəyyən etmək üçün var, let və ya const açar sözləri istifadə olunur."
+      },
+      {
+        "id": "2",
+        "question_text": "Aşağıdakılardan hansı JavaScript-də funksiya yaratmaq üçün istifadə olunur?",
+        "question_type": "multiple_choice",
+        "options": [
+          { "text": "def myFunction():", "is_correct": false },
+          { "text": "function myFunction() {}", "is_correct": true },
+          { "text": "create function myFunction", "is_correct": false },
+          { "text": "func myFunction() {}", "is_correct": false }
+        ],
+        "multiple_correct": false,
+        "difficulty": "easy",
+        "points": 1,
+        "explanation": "JavaScript-də function açar sözü ilə funksiya yaradılır."
+      }
+    ],
+    "is_public": true,
+    "min_pass_percentage": 70,
+    "time_limit_minutes": 30,
+    "shuffle_questions": false,
+    "shuffle_options": false,
+    "created_at": "2025-01-20T10:00:00Z",
+    "creator_id": "1",
+    "creator_name": "Admin İstifadəçi",
+    "total_questions": 2,
+    "total_points": 2,
+    "total_attempts": 245,
+    "average_score": 78.5,
+    "difficulty": "medium",
+    "tags": ["javascript", "veb", "frontend"],
+    "is_featured": true
+  }
+]
