@@ -218,3 +218,79 @@ export function getUserProgress(userId: string) {
     }
   }
 }
+
+// Forum Posts Functions
+export function getForumPosts() {
+  try {
+    if (fs.existsSync(FORUM_POSTS_FILE)) {
+      const data = fs.readFileSync(FORUM_POSTS_FILE, 'utf8')
+      return JSON.parse(data)
+    } else {
+      const defaultPosts = [
+        {
+          id: "1",
+          title: "JavaScript-də Async/Await necə işləyir?",
+          content: "Salam, JavaScript-də async/await konsepsiyasını başa düşməkdə çətinlik çəkirəm. Kimsə izah edə bilər?",
+          author: {
+            id: "1",
+            name: "Admin İstifadəçi",
+            avatar: "",
+            role: "Admin",
+          },
+          category: "Proqramlaşdırma",
+          tags: ["javascript", "async", "await"],
+          created_at: "2025-01-29T10:00:00Z",
+          updated_at: "2025-01-29T10:00:00Z",
+          views: 45,
+          likes: 12,
+          replies: 0,
+          is_solved: false,
+          is_pinned: false,
+          images: [],
+          user_liked: false,
+        }
+      ]
+      fs.writeFileSync(FORUM_POSTS_FILE, JSON.stringify(defaultPosts, null, 2))
+      return defaultPosts
+    }
+  } catch (error) {
+    console.error('Error reading forum posts:', error)
+    return []
+  }
+}
+
+export function saveForumPosts(posts: any[]) {
+  try {
+    fs.writeFileSync(FORUM_POSTS_FILE, JSON.stringify(posts, null, 2))
+    return true
+  } catch (error) {
+    console.error('Error saving forum posts:', error)
+    return false
+  }
+}
+
+// Forum Replies Functions
+export function getForumReplies() {
+  try {
+    if (fs.existsSync(FORUM_REPLIES_FILE)) {
+      const data = fs.readFileSync(FORUM_REPLIES_FILE, 'utf8')
+      return JSON.parse(data)
+    } else {
+      fs.writeFileSync(FORUM_REPLIES_FILE, JSON.stringify([], null, 2))
+      return []
+    }
+  } catch (error) {
+    console.error('Error reading forum replies:', error)
+    return []
+  }
+}
+
+export function saveForumReplies(replies: any[]) {
+  try {
+    fs.writeFileSync(FORUM_REPLIES_FILE, JSON.stringify(replies, null, 2))
+    return true
+  } catch (error) {
+    console.error('Error saving forum replies:', error)
+    return false
+  }
+}
