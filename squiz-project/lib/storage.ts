@@ -6,6 +6,8 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json')
 const QUIZZES_FILE = path.join(DATA_DIR, 'quizzes.json')
 const RESULTS_FILE = path.join(DATA_DIR, 'quiz-results.json')
 const ATTEMPTS_FILE = path.join(DATA_DIR, 'quiz-attempts.json')
+const FORUM_POSTS_FILE = path.join(DATA_DIR, 'forum-posts.json')
+const FORUM_REPLIES_FILE = path.join(DATA_DIR, 'forum-replies.json')
 
 // Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
